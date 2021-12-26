@@ -11,5 +11,5 @@ fn main_not_found() {
         .failure()
         .code(1)
         .stdout("")
-        .stderr("Error: Could not find or load main class ABC");
+        .stderr("Error: Could not find or load main class ABC\n");
 }
