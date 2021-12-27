@@ -12,7 +12,7 @@ pub struct Class {
     pub this_class: String,
     pub super_class: Option<Rc<Class>>,
     pub interfaces: Vec<String>,
-    pub methods: Vec<Method>,
+    pub methods: Vec<Rc<Method>>,
 }
 
 pub struct Iter<'a> {
@@ -20,10 +20,11 @@ pub struct Iter<'a> {
 }
 
 impl Class {
-    pub fn find_method(&self, name: &str, descriptor: &str) -> Option<&Method> {
+    pub fn find_method(&self, name: &str, descriptor: &str) -> Option<Rc<Method>> {
         self.parent_iter()
             .flat_map(|class| class.methods.iter())
             .find(|method| method.name.eq(name) && method.descriptor.eq(descriptor))
+            .map(|method| method.clone())
     }
 
     fn parent_iter(&self) -> Iter {

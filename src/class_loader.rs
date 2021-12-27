@@ -101,12 +101,12 @@ impl ClassLoader {
                     }).unwrap();
                 code.code.clone()
             };
-            class::Method {
+            Rc::new(class::Method {
                 name: String::from_utf8(name.bytes.clone()).unwrap(),
                 descriptor: String::from_utf8(descriptor.bytes.clone()).unwrap(),
                 native,
                 code,
-            }
+            })
         }).collect();
 
         Rc::from(Class {
