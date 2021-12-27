@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
+
 use crate::class;
 use crate::class::{Class, Method};
-use crate::class_file::{ClassFile, Reader};
+use crate::class_file::{ClassFile, Field, Reader};
 use crate::class_file;
 
 // TODO: This is extremely brittle!
@@ -12,7 +13,7 @@ const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
 const ACC_NATIVE: u16 = 0x0100;
 
 pub struct ClassLoader {
-    loaded: HashMap<String, Rc<Class>>
+    loaded: HashMap<String, Rc<Class>>,
 }
 
 impl ClassLoader {
@@ -47,7 +48,21 @@ impl ClassLoader {
                     let class_file::Utf8 { bytes } = class_file.get_const(class.name_idx).expect_utf8();
                     let name = String::from_utf8(bytes.clone()).unwrap();
                     class::Const::Class(class::ClassRef { name })
-                },
+                }
+                class_file::Const::FieldRef(field_ref) => {
+                    let class = class_file.get_const(field_ref.class_idx).expect_class();
+                    let class_name = class_file.get_const(class.name_idx).expect_utf8();
+
+                    let name_and_type = class_file.get_const(field_ref.name_and_type_idx).expect_name_and_type();
+                    let name = class_file.get_const(name_and_type.name_idx).expect_utf8();
+                    let descriptor = class_file.get_const(name_and_type.descriptor_idx).expect_utf8();
+
+                    let class_name = String::from_utf8(class_name.bytes.clone()).unwrap();
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
+
+                    class::Const::Field(class::FieldRef { class: class_name, name, descriptor })
+                }
                 class_file::Const::MethodRef(method_ref) => {
                     let class = class_file.get_const(method_ref.class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();
@@ -61,9 +76,9 @@ impl ClassLoader {
                     let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
 
                     class::Const::Method(class::MethodRef { class: class_name, name, descriptor })
-                },
+                }
                 _ => {
-                    continue
+                    continue;
                 }
             };
             let key = (idx + 1) as u16;
@@ -87,6 +102,15 @@ impl ClassLoader {
             let interface = class_file.get_const(idx.clone()).expect_class();
             let interface_name = class_file.get_const(interface.name_idx).expect_utf8();
             String::from_utf8(interface_name.bytes.clone()).unwrap()
+        }).collect();
+
+        let fields = class_file.fields.iter().map(|field| {
+            let name = class_file.get_const(field.name_idx).expect_utf8();
+            let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
+            Rc::new(class::Field {
+                name: String::from_utf8(name.bytes.clone()).unwrap(),
+                descriptor: String::from_utf8(descriptor.bytes.clone()).unwrap(),
+            })
         }).collect();
 
         let methods = class_file.methods.iter().map(|method| {
@@ -117,8 +141,8 @@ impl ClassLoader {
             this_class,
             super_class,
             interfaces,
+            fields,
             methods,
         })
     }
-
 }

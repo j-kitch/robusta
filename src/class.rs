@@ -12,6 +12,7 @@ pub struct Class {
     pub this_class: String,
     pub super_class: Option<Rc<Class>>,
     pub interfaces: Vec<String>,
+    pub fields: Vec<Rc<Field>>,
     pub methods: Vec<Rc<Method>>,
 }
 
@@ -50,6 +51,7 @@ impl<'a> Iterator for Iter<'a> {
 pub enum Const {
     Class(ClassRef),
     Method(MethodRef),
+    Field(FieldRef),
 }
 
 #[derive(Debug)]
@@ -58,8 +60,21 @@ pub struct ClassRef {
 }
 
 #[derive(Debug)]
+pub struct FieldRef {
+    pub class: String,
+    pub name: String,
+    pub descriptor: String,
+}
+
+#[derive(Debug)]
 pub struct MethodRef {
     pub class: String,
+    pub name: String,
+    pub descriptor: String,
+}
+
+#[derive(Debug)]
+pub struct Field {
     pub name: String,
     pub descriptor: String,
 }

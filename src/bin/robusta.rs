@@ -11,6 +11,9 @@ fn main() {
     let main_class_name = env::args().nth(1).unwrap()
         .replace(".", "/");
     let mut loader = ClassLoader::new();
+
+    loader.load("java/lang/String");
+
     let mut class = loader.load(&main_class_name);
     if class.is_none() {
         eprintln!("Error: Could not find or load main class {}", &main_class_name);

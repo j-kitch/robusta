@@ -46,14 +46,12 @@ impl<'a> Reader<'a> {
         let interfaces_len = self.read_u16();
         let interfaces = (0..interfaces_len).map(|_| self.read_u16()).collect();
         let fields_len = self.read_u16();
-        if fields_len > 0 {
-            panic!("Not implemented fields");
-        }
+        let fields = (0..fields_len).map(|_| self.read_field(&const_pool[..])).collect();
         let methods_len = self.read_u16();
         let methods = (0..methods_len).map(|_| self.read_method(&const_pool[..])).collect();
         let attributes_len = self.read_u16();
         let attributes = (0..attributes_len).map(|_| self.read_attribute(&const_pool[..])).collect();
-        ClassFile { minor_version, major_version, const_pool, access_flags, this_class, super_class, interfaces, methods, attributes }
+        ClassFile { minor_version, major_version, const_pool, access_flags, this_class, super_class, interfaces, fields, methods, attributes }
     }
 
     fn read_const(&mut self) -> Const {
@@ -69,6 +67,11 @@ impl<'a> Reader<'a> {
                 let name_idx = self.read_u16();
                 Const::Class(Class { name_idx })
             }
+            9 => {
+                let class_idx = self.read_u16();
+                let name_and_type_idx = self.read_u16();
+                Const::FieldRef(FieldRef { class_idx, name_and_type_idx })
+            }
             10 => {
                 let class_idx = self.read_u16();
                 let name_and_type_idx = self.read_u16();
@@ -83,6 +86,15 @@ impl<'a> Reader<'a> {
                 panic!("Unknown tag {}", tag);
             }
         }
+    }
+
+    fn read_field(&mut self, const_pool: &[Const]) -> Field {
+        let access_flags = self.read_u16();
+        let name_idx = self.read_u16();
+        let descriptor_idx = self.read_u16();
+        let attr_count = self.read_u16();
+        let attributes = (0..attr_count).map(|_| self.read_attribute(const_pool)).collect();
+        Field { access_flags, name_idx, descriptor_idx, attributes }
     }
 
     fn read_method(&mut self, const_pool: &[Const]) -> Method {
@@ -136,6 +148,7 @@ pub struct ClassFile {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
+    pub fields: Vec<Field>,
     pub methods: Vec<Method>,
     pub attributes: Vec<Attribute>,
 }
@@ -157,6 +170,12 @@ pub struct Class {
 }
 
 #[derive(Debug)]
+pub struct FieldRef {
+    pub class_idx: u16,
+    pub name_and_type_idx: u16,
+}
+
+#[derive(Debug)]
 pub struct MethodRef {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
@@ -172,6 +191,7 @@ pub struct NameAndType {
 pub enum Const {
     Utf8(Utf8),
     Class(Class),
+    FieldRef(FieldRef),
     MethodRef(MethodRef),
     NameAndType(NameAndType),
 }
@@ -191,6 +211,13 @@ impl Const {
         }
     }
 
+    pub fn expect_field_ref(&self) -> &FieldRef {
+        match self {
+            Const::FieldRef(field_ref) => field_ref,
+            _ => panic!("error")
+        }
+    }
+
     pub fn expect_method_ref(&self) -> &MethodRef {
         match self {
             Const::MethodRef(method_ref) => method_ref,
@@ -204,6 +231,14 @@ impl Const {
             _ => panic!("error")
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub access_flags: u16,
+    pub name_idx: u16,
+    pub descriptor_idx: u16,
+    pub attributes: Vec<Attribute>,
 }
 
 #[derive(Debug)]
