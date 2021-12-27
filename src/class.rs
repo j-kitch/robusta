@@ -6,14 +6,14 @@ const ACC_NATIVE: u16 = 0x0100;
 
 #[derive(Debug)]
 pub struct Class {
-    minor_version: u16,
-    major_version: u16,
-    const_pool: HashMap<u16, Const>,
-    access_flags: u16,
-    this_class: String,
-    super_class: Option<String>,
-    interfaces: Vec<String>,
-    methods: Vec<Method>,
+    pub minor_version: u16,
+    pub major_version: u16,
+    pub const_pool: HashMap<u16, Const>,
+    pub access_flags: u16,
+    pub this_class: String,
+    pub super_class: Option<String>,
+    pub interfaces: Vec<String>,
+    pub methods: Vec<Method>,
 }
 
 impl Class {
@@ -101,25 +101,25 @@ impl Class {
 }
 
 #[derive(Debug)]
-enum Const {
+pub enum Const {
     Class(ClassRef),
     Method(MethodRef),
 }
 
 #[derive(Debug)]
-struct ClassRef {
+pub struct ClassRef {
     name: String,
 }
 
 #[derive(Debug)]
-struct MethodRef {
+pub struct MethodRef {
     class: String,
     name: String,
     descriptor: String,
 }
 
 #[derive(Debug)]
-struct Method {
+pub struct Method {
     name: String,
     descriptor: String,
     native: bool,
