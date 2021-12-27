@@ -11,6 +11,7 @@ use robusta::heap::{Heap, Object, Value};
 use robusta::heap::Ref::Obj;
 use robusta::thread::{Frame, Thread};
 use robusta::thread::local_vars::LocalVars;
+use robusta::thread::op_stack::OperandStack;
 
 fn main() {
     let main_class_name = env::args().nth(1).unwrap()
@@ -57,6 +58,7 @@ fn main() {
                 pc: 0,
                 class: class.clone(),
                 local_vars: LocalVars::new(main.max_locals.clone()),
+                op_stack: OperandStack::new(main.max_stack.clone()),
                 method: main,
             }
         ]

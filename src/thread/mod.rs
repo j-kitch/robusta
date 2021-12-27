@@ -1,10 +1,12 @@
-mod op;
-pub mod local_vars;
-
 use std::rc::Rc;
 
 use crate::class::{Class, Method};
 use crate::thread::local_vars::LocalVars;
+use crate::thread::op_stack::OperandStack;
+
+mod op;
+pub mod local_vars;
+pub mod op_stack;
 
 pub struct Thread {
     pub frames: Vec<Frame>,
@@ -15,6 +17,7 @@ pub struct Frame {
     pub class: Rc<Class>,
     pub method: Rc<Method>,
     pub local_vars: LocalVars,
+    pub op_stack: OperandStack,
 }
 
 impl Thread {
