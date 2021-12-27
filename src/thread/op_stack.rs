@@ -11,7 +11,7 @@ impl OperandStack {
         self.stack.push(op);
     }
 
-    pub fn load_ref(&mut self) -> u32 {
+    pub fn pop_ref(&mut self) -> u32 {
         self.stack.pop().unwrap()
     }
 }
