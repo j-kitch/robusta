@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::{FlatMap, Map};
 use std::rc::Rc;
 use crate::class_file;
 use crate::class_file::ClassFile;
@@ -20,7 +21,17 @@ pub struct Iter<'a> {
     curr: Option<&'a Class>
 }
 
+type FieldIter<'a> = Map<FlatMap<Iter<'a>, std::slice::Iter<'a, Rc<Field>>, fn(&'a Class) -> std::slice::Iter<'a, Rc<Field>>>, fn(&Rc<Field>) -> Rc<Field>>;
+
 impl Class {
+
+    pub fn for_each_field<F>(&self, f: F) where F: FnMut(Rc<Field>) {
+        self.parent_iter()
+            .flat_map(|class| class.fields.iter())
+            .map(|f| f.clone())
+            .for_each(f)
+    }
+
     pub fn find_method(&self, name: &str, descriptor: &str) -> Option<Rc<Method>> {
         self.parent_iter()
             .flat_map(|class| class.methods.iter())
