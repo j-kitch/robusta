@@ -39,7 +39,7 @@ impl<'a> Reader<'a> {
         let minor_version = self.read_u16();
         let major_version = self.read_u16();
         let const_pool_len = self.read_u16();
-        let const_pool = (1..const_pool_len).map(|_| self.read_const()).collect();
+        let const_pool: Vec<Const> = (1..const_pool_len).map(|_| self.read_const()).collect();
         let access_flags = self.read_u16();
         let this_class = self.read_u16();
         let super_class = self.read_u16();
@@ -50,9 +50,9 @@ impl<'a> Reader<'a> {
             panic!("Not implemented fields");
         }
         let methods_len = self.read_u16();
-        let methods = (0..methods_len).map(|_| self.read_method()).collect();
+        let methods = (0..methods_len).map(|_| self.read_method(&const_pool[..])).collect();
         let attributes_len = self.read_u16();
-        let attributes = (0..attributes_len).map(|_| self.read_attribute()).collect();
+        let attributes = (0..attributes_len).map(|_| self.read_attribute(&const_pool[..])).collect();
         ClassFile { minor_version, major_version, const_pool, access_flags, this_class, super_class, interfaces, methods, attributes }
     }
 
@@ -85,76 +85,160 @@ impl<'a> Reader<'a> {
         }
     }
 
-    fn read_method(&mut self) -> Method {
+    fn read_method(&mut self, const_pool: &[Const]) -> Method {
         let access_flags = self.read_u16();
         let name_idx = self.read_u16();
         let descriptor_idx = self.read_u16();
         let attr_count = self.read_u16();
-        let attributes = (0..attr_count).map(|_| self.read_attribute()).collect();
+        let attributes = (0..attr_count).map(|_| self.read_attribute(const_pool)).collect();
         Method { access_flags, name_idx, descriptor_idx, attributes }
     }
 
-    fn read_attribute(&mut self) -> Attribute {
+    fn read_attribute(&mut self, const_pool: &[Const]) -> Attribute {
         let name_idx = self.read_u16();
-        let attr_len = self.read_u32();
-        let bytes = self.read_bytes(attr_len as usize);
-        Attribute { name_idx, bytes }
+        let name = const_pool.get((name_idx - 1) as usize).unwrap().expect_utf8();
+        let name = String::from_utf8(name.bytes.clone()).unwrap();
+
+        match name.as_ref() {
+            "Code" => {
+                self.read_u32();
+                let max_stack = self.read_u16();
+                let max_locals = self.read_u16();
+                let code_len = self.read_u32();
+                let code = self.read_bytes(code_len as usize);
+                let handler_len = self.read_u16();
+                let ex_handlers = (0..handler_len).map(|_| {
+                    let start_pc = self.read_u16();
+                    let end_pc = self.read_u16();
+                    let handler_pc = self.read_u16();
+                    let catch_type = self.read_u16();
+                    ExHandler { start_pc, end_pc, handler_pc, catch_type }
+                }).collect();
+                let attrs_len = self.read_u16();
+                let attributes = (0..attrs_len).map(|_| self.read_attribute(const_pool)).collect();
+                Attribute::Code(Code { max_stack, max_locals, code, ex_handlers, attributes })
+            }
+            _ => {
+                let attr_len = self.read_u32();
+                let bytes = self.read_bytes(attr_len as usize);
+                Attribute::Unknown(UnknownAttr { name_idx, bytes })
+            }
+        }
     }
 }
 
 #[derive(Debug)]
 pub struct ClassFile {
-    minor_version: u16,
-    major_version: u16,
-    const_pool: Vec<Const>,
-    access_flags: u16,
-    this_class: u16,
-    super_class: u16,
-    interfaces: Vec<u16>,
-    methods: Vec<Method>,
-    attributes: Vec<Attribute>,
+    pub minor_version: u16,
+    pub major_version: u16,
+    pub const_pool: Vec<Const>,
+    pub access_flags: u16,
+    pub this_class: u16,
+    pub super_class: u16,
+    pub interfaces: Vec<u16>,
+    pub methods: Vec<Method>,
+    pub attributes: Vec<Attribute>,
+}
+
+impl ClassFile {
+    pub fn get_const(&self, idx: u16) -> &Const {
+        self.const_pool.get((idx - 1) as usize).unwrap()
+    }
 }
 
 #[derive(Debug)]
-struct Utf8 {
-    bytes: Vec<u8>,
+pub struct Utf8 {
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct Class {
-    name_idx: u16,
+pub struct Class {
+    pub name_idx: u16,
 }
 
 #[derive(Debug)]
-struct MethodRef {
-    class_idx: u16,
-    name_and_type_idx: u16,
+pub struct MethodRef {
+    pub class_idx: u16,
+    pub name_and_type_idx: u16,
 }
 
 #[derive(Debug)]
-struct NameAndType {
-    name_idx: u16,
-    descriptor_idx: u16,
+pub struct NameAndType {
+    pub name_idx: u16,
+    pub descriptor_idx: u16,
 }
 
 #[derive(Debug)]
-enum Const {
+pub enum Const {
     Utf8(Utf8),
     Class(Class),
     MethodRef(MethodRef),
     NameAndType(NameAndType),
 }
 
-#[derive(Debug)]
-struct Method {
-    access_flags: u16,
-    name_idx: u16,
-    descriptor_idx: u16,
-    attributes: Vec<Attribute>,
+impl Const {
+    pub fn expect_utf8(&self) -> &Utf8 {
+        match self {
+            Const::Utf8(utf8) => utf8,
+            _ => panic!("error")
+        }
+    }
+
+    pub fn expect_class(&self) -> &Class {
+        match self {
+            Const::Class(class) => class,
+            _ => panic!("error")
+        }
+    }
+
+    pub fn expect_method_ref(&self) -> &MethodRef {
+        match self {
+            Const::MethodRef(method_ref) => method_ref,
+            _ => panic!("error")
+        }
+    }
+
+    pub fn expect_name_and_type(&self) -> &NameAndType {
+        match self {
+            Const::NameAndType(name_and_type) => name_and_type,
+            _ => panic!("error")
+        }
+    }
 }
 
 #[derive(Debug)]
-struct Attribute {
+pub struct Method {
+    pub access_flags: u16,
+    pub name_idx: u16,
+    pub descriptor_idx: u16,
+    pub attributes: Vec<Attribute>,
+}
+
+#[derive(Debug)]
+pub enum Attribute {
+    Unknown(UnknownAttr),
+    Code(Code),
+}
+
+#[derive(Debug)]
+pub struct UnknownAttr {
     name_idx: u16,
     bytes: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub struct Code {
+    pub max_stack: u16,
+    pub max_locals: u16,
+    pub code: Vec<u8>,
+    pub ex_handlers: Vec<ExHandler>,
+    pub attributes: Vec<Attribute>,
+}
+
+#[derive(Debug)]
+pub struct ExHandler {
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: u16,
 }
