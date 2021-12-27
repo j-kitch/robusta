@@ -1,14 +1,17 @@
 use std::{env, format};
 use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::ops::DerefMut;
+use std::rc::Rc;
 
 use robusta::class::Class;
 use robusta::class_file::Reader;
 use robusta::class_loader::ClassLoader;
 use robusta::heap::{Heap, Object, Value};
 use robusta::heap::Ref::Obj;
+use robusta::runtime::Runtime;
 use robusta::thread::{Frame, Thread};
 use robusta::thread::local_vars::LocalVars;
 use robusta::thread::op_stack::OperandStack;
@@ -52,7 +55,12 @@ fn main() {
     let main = class.as_ref()
         .find_method("main", "([Ljava/lang/String;)V")
         .unwrap();
+
     let mut thread = Thread {
+        rt: Rc::from(RefCell::from(Runtime {
+            class_loader: loader,
+            heap,
+        })),
         frames: vec![
             Frame {
                 pc: 0,

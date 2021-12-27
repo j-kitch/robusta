@@ -60,6 +60,10 @@ impl Heap {
         self.objects.insert(key, object.clone());
         (key, object)
     }
+
+    pub fn get(&self, key: u32) -> Rc<RefCell<Ref>> {
+        self.objects.get(&key).unwrap().clone()
+    }
 }
 
 pub enum Ref {
@@ -85,4 +89,15 @@ pub enum Array {
     Ref(Vec<u32>),
     Byte(Vec<i8>),
     Char(Vec<u16>),
+}
+
+impl Array {
+    pub fn len(&self) -> i32 {
+        let len = match self {
+            Array::Ref(v) => v.len(),
+            Array::Byte(v) => v.len(),
+            Array::Char(v) => v.len(),
+        };
+        len as i32
+    }
 }

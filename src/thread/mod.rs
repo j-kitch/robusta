@@ -1,6 +1,11 @@
+use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::class::{Class, Method};
+use crate::heap::Ref;
+use crate::runtime::Runtime;
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
@@ -9,6 +14,7 @@ pub mod local_vars;
 pub mod op_stack;
 
 pub struct Thread {
+    pub rt: Rc<RefCell<Runtime>>,
     pub frames: Vec<Frame>,
 }
 
@@ -40,6 +46,18 @@ impl Thread {
         let op_code = curr.read_u8();
         let op = op::get_op(curr, op_code);
         op(self);
+    }
+
+    pub fn object(&self, key: u32) -> Rc<RefCell<Ref>> {
+        self.rt.as_ref().borrow().deref().heap.get(key)
+    }
+
+    pub fn pop_ref(&mut self) -> u32 {
+        self.curr().op_stack.pop_ref()
+    }
+
+    pub fn push_int(&mut self, op: i32) {
+        self.curr().op_stack.push_int(op);
     }
 }
 
