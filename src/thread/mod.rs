@@ -1,4 +1,5 @@
 use std::rc::Rc;
+
 use crate::class::{Class, Method};
 
 pub struct Thread<'a> {
@@ -8,7 +9,7 @@ pub struct Thread<'a> {
 pub struct Frame<'a> {
     pub pc: u32,
     pub class: Rc<Class>,
-    pub method: &'a Method
+    pub method: &'a Method,
 }
 
 impl<'a> Thread<'a> {
@@ -21,6 +22,11 @@ impl<'a> Thread<'a> {
     fn next(&mut self) {
         let frame = self.frames.last_mut().unwrap();
         let op = frame.method.code.get(frame.pc as usize).unwrap().clone();
-        panic!("Unknown op {:#02x}", op);
+        panic!("Unknown op at {}.{}{} PC {} {:#02x}",
+               &frame.class.this_class,
+               &frame.method.name,
+               &frame.method.descriptor,
+               frame.pc,
+               op);
     }
 }
