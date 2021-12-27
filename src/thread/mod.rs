@@ -1,8 +1,10 @@
 mod op;
+pub mod local_vars;
 
 use std::rc::Rc;
 
 use crate::class::{Class, Method};
+use crate::thread::local_vars::LocalVars;
 
 pub struct Thread {
     pub frames: Vec<Frame>,
@@ -12,6 +14,7 @@ pub struct Frame {
     pub pc: u32,
     pub class: Rc<Class>,
     pub method: Rc<Method>,
+    pub local_vars: LocalVars,
 }
 
 impl Thread {

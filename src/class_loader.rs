@@ -117,18 +117,24 @@ impl ClassLoader {
             let name = class_file.get_const(method.name_idx).expect_utf8();
             let descriptor = class_file.get_const(method.descriptor_idx).expect_utf8();
             let native = (method.access_flags & ACC_NATIVE) != 0;
+            let mut max_locals = 0;
+            let mut max_stack = 0;
             let code = if native { vec![] } else {
                 let code = method.attributes.iter()
                     .find_map(|attr| match attr {
                         class_file::Attribute::Code(code) => Some(code),
                         _ => None
                     }).unwrap();
+                max_locals = code.max_locals;
+                max_stack = code.max_stack;
                 code.code.clone()
             };
             Rc::new(class::Method {
                 name: String::from_utf8(name.bytes.clone()).unwrap(),
                 descriptor: String::from_utf8(descriptor.bytes.clone()).unwrap(),
                 native,
+                max_locals,
+                max_stack,
                 code,
             })
         }).collect();

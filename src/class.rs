@@ -95,5 +95,7 @@ pub struct Method {
     pub name: String,
     pub descriptor: String,
     pub native: bool,
+    pub max_stack: u16,
+    pub max_locals: u16,
     pub code: Vec<u8>,
 }

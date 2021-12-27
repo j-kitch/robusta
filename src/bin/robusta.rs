@@ -10,6 +10,7 @@ use robusta::class_loader::ClassLoader;
 use robusta::heap::{Heap, Object, Value};
 use robusta::heap::Ref::Obj;
 use robusta::thread::{Frame, Thread};
+use robusta::thread::local_vars::LocalVars;
 
 fn main() {
     let main_class_name = env::args().nth(1).unwrap()
@@ -55,10 +56,13 @@ fn main() {
             Frame {
                 pc: 0,
                 class: class.clone(),
+                local_vars: LocalVars::new(main.max_locals.clone()),
                 method: main,
             }
         ]
     };
+
+    thread.frames.last_mut().unwrap().local_vars.store_ref(0, args_arr_ref);
 
     thread.run();
 }
