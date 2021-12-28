@@ -56,6 +56,14 @@ impl Thread {
         self.curr().op_stack.pop_ref()
     }
 
+    pub fn push_ref(&mut self, op: u32) {
+        self.curr().op_stack.push_ref(op);
+    }
+
+    pub fn pop_int(&mut self) -> i32 {
+        self.curr().op_stack.pop_int()
+    }
+
     pub fn push_int(&mut self, op: i32) {
         self.curr().op_stack.push_int(op);
     }
@@ -66,5 +74,12 @@ impl Frame {
         let u8 = self.method.code.get(self.pc as usize).unwrap().clone();
         self.pc += 1;
         u8
+    }
+
+    fn read_i16(&mut self) -> i16 {
+        let mut bytes = [0, 0];
+        bytes[0] = self.read_u8();
+        bytes[1] = self.read_u8();
+        i16::from_be_bytes(bytes)
     }
 }

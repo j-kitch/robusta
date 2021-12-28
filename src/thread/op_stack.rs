@@ -20,4 +20,10 @@ impl OperandStack {
     pub fn pop_ref(&mut self) -> u32 {
         self.stack.pop().unwrap()
     }
+
+    pub fn pop_int(&mut self) -> i32 {
+        let u32 = self.pop_ref();
+        let bytes: [u8; 4] = u32.to_be_bytes();
+        i32::from_be_bytes(bytes)
+    }
 }
