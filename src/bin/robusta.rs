@@ -9,6 +9,7 @@ use std::rc::Rc;
 use robusta::class::Class;
 use robusta::class_file::Reader;
 use robusta::class_loader::ClassLoader;
+use robusta::descriptor::MethodDescriptor;
 use robusta::heap::{Heap, Object, Value};
 use robusta::heap::Ref::Obj;
 use robusta::runtime::Runtime;
@@ -53,7 +54,7 @@ fn main() {
     }
     let class = class.unwrap();
     let main = class.as_ref()
-        .find_method("main", "([Ljava/lang/String;)V")
+        .find_method("main", &MethodDescriptor::parse("([Ljava/lang/String;)V"))
         .unwrap();
 
     let mut thread = Thread {

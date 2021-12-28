@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use crate::class;
 use crate::class::Class;
+use crate::descriptor::Descriptor;
 use crate::heap::Ref::Obj;
 
 pub struct Heap {
@@ -49,8 +50,8 @@ impl Heap {
 
         let mut fields = vec![];
         class.for_each_field(|field| {
-            let value = match &field.descriptor[..1] {
-                "L" | "[" => Value::Ref(0),
+            let value = match &field.descriptor {
+                Descriptor::Object(_) | Descriptor::Array(_) => Value::Ref(0),
                 _ => panic!("Not implemented value of type {}", &field.descriptor)
             };
             fields.push(Field { field, value });

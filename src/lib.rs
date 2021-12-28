@@ -4,3 +4,4 @@ pub mod class_loader;
 pub mod thread;
 pub mod heap;
 pub mod runtime;
+pub mod descriptor;

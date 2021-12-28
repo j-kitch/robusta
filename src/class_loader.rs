@@ -7,6 +7,7 @@ use crate::class;
 use crate::class::{Class, Method};
 use crate::class_file::{ClassFile, Field, Reader};
 use crate::class_file;
+use crate::descriptor::{Descriptor, MethodDescriptor};
 
 // TODO: This is extremely brittle!
 const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
@@ -61,7 +62,7 @@ impl ClassLoader {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
 
-                    class::Const::Field(class::FieldRef { class: class_name, name, descriptor })
+                    class::Const::Field(class::FieldRef { class: class_name, name, descriptor: Descriptor::parse(&descriptor) })
                 }
                 class_file::Const::MethodRef(method_ref) => {
                     let class = class_file.get_const(method_ref.class_idx).expect_class();
@@ -75,7 +76,7 @@ impl ClassLoader {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
 
-                    class::Const::Method(class::MethodRef { class: class_name, name, descriptor })
+                    class::Const::Method(class::MethodRef { class: class_name, name, descriptor: MethodDescriptor::parse(&descriptor) })
                 }
                 _ => {
                     continue;
@@ -109,7 +110,8 @@ impl ClassLoader {
             let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
             Rc::new(class::Field {
                 name: String::from_utf8(name.bytes.clone()).unwrap(),
-                descriptor: String::from_utf8(descriptor.bytes.clone()).unwrap(),
+                descriptor: Descriptor::parse(
+                    String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
             })
         }).collect();
 
@@ -131,7 +133,8 @@ impl ClassLoader {
             };
             Rc::new(class::Method {
                 name: String::from_utf8(name.bytes.clone()).unwrap(),
-                descriptor: String::from_utf8(descriptor.bytes.clone()).unwrap(),
+                descriptor: MethodDescriptor::parse(
+                    String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
                 native,
                 max_locals,
                 max_stack,

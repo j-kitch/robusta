@@ -3,6 +3,7 @@ use std::iter::{FlatMap, Map};
 use std::rc::Rc;
 use crate::class_file;
 use crate::class_file::ClassFile;
+use crate::descriptor::{Descriptor, MethodDescriptor};
 
 #[derive(Debug)]
 pub struct Class {
@@ -32,7 +33,7 @@ impl Class {
             .for_each(f)
     }
 
-    pub fn find_method(&self, name: &str, descriptor: &str) -> Option<Rc<Method>> {
+    pub fn find_method(&self, name: &str, descriptor: &MethodDescriptor) -> Option<Rc<Method>> {
         self.parent_iter()
             .flat_map(|class| class.methods.iter())
             .find(|method| method.name.eq(name) && method.descriptor.eq(descriptor))
@@ -74,26 +75,26 @@ pub struct ClassRef {
 pub struct FieldRef {
     pub class: String,
     pub name: String,
-    pub descriptor: String,
+    pub descriptor: Descriptor,
 }
 
 #[derive(Debug)]
 pub struct MethodRef {
     pub class: String,
     pub name: String,
-    pub descriptor: String,
+    pub descriptor: MethodDescriptor,
 }
 
 #[derive(Debug)]
 pub struct Field {
     pub name: String,
-    pub descriptor: String,
+    pub descriptor: Descriptor,
 }
 
 #[derive(Debug)]
 pub struct Method {
     pub name: String,
-    pub descriptor: String,
+    pub descriptor: MethodDescriptor,
     pub native: bool,
     pub max_stack: u16,
     pub max_locals: u16,
