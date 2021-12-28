@@ -45,6 +45,11 @@ impl Thread {
         self.curr().read_u8()
     }
 
+    fn read_i8(&mut self) -> i8 {
+        let u8 = self.curr().read_u8();
+        i8::from_be_bytes([u8])
+    }
+
     fn read_i16(&mut self) -> i16 {
         self.curr().read_i16()
     }

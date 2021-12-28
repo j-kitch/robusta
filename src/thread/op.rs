@@ -37,6 +37,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x4C => |t| astore_n(t, 1),
         0x4D => |t| astore_n(t, 2),
         0x4E => |t| astore_n(t, 3),
+        0x84 => iinc,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
         0xA1 => |t| if_icmp_cond(t, |i1, i2| i1 < i2),
@@ -189,4 +190,12 @@ fn invoke_static(thread: &mut Thread) {
 
         thread.frames.push(frame);
     }
+}
+
+fn iinc(thread: &mut Thread) {
+    let idx = thread.read_u8();
+    let inc = thread.read_i8() as i32;
+    let int = thread.curr().local_vars.load_int(idx as u16);
+    let (result, _) = int.overflowing_add(inc);
+    thread.curr().local_vars.store_int(idx as u16, result)
 }
