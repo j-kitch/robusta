@@ -44,6 +44,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA2 => |t| if_icmp_cond(t, |i1, i2| i1 >= i2),
         0xA3 => |t| if_icmp_cond(t, |i1, i2| i1 > i2),
         0xA4 => |t| if_icmp_cond(t, |i1, i2| i1 <= i2),
+        0xA7 => goto,
         0xB8 => invoke_static,
         0xBE => array_length,
         _ => panic!("Unknown op at {}.{}{} PC {} {:#02x}",
@@ -198,4 +199,11 @@ fn iinc(thread: &mut Thread) {
     let int = thread.curr().local_vars.load_int(idx as u16);
     let (result, _) = int.overflowing_add(inc);
     thread.curr().local_vars.store_int(idx as u16, result)
+}
+
+fn goto(thread: &mut Thread) {
+    let off = thread.read_i16();
+    let start_pc = thread.curr().pc as i64 - 3;
+    let result = start_pc + off as i64;
+    thread.curr().pc = result as u32;
 }
