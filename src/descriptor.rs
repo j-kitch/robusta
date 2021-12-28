@@ -43,6 +43,13 @@ impl Descriptor {
             Descriptor::Array(component) => format!("[{}", component.descriptor()),
         }
     }
+
+    pub fn category(&self) -> usize {
+        match self {
+            Descriptor::Double | Descriptor::Long => 2,
+            _ => 1,
+        }
+    }
 }
 
 impl Display for Descriptor {
@@ -81,6 +88,13 @@ impl MethodDescriptor {
         let arg_parts: String = self.args.iter().map(|d| d.descriptor()).collect();
         let returns = self.returns.as_ref().map_or(String::from("V"), |d| d.descriptor());
         format!("({}){}", arg_parts, returns)
+    }
+
+    pub fn category(&self) -> usize {
+        self.args.iter()
+            .map(|a| a.category())
+            .reduce(|a, b| a + b)
+            .unwrap()
     }
 }
 

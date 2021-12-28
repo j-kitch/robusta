@@ -5,3 +5,4 @@ pub mod thread;
 pub mod heap;
 pub mod runtime;
 pub mod descriptor;
+pub mod native;

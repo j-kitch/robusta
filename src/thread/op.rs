@@ -160,24 +160,33 @@ fn invoke_static(thread: &mut Thread) {
     let class = thread.load(&method_ref.class).unwrap();
     let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
 
-    let n_args = method.descriptor.args.len();
+    let n_args = method.descriptor.category();
     let mut args: Vec<u32> = (0..n_args).map(|_| thread.pop_ref()).collect();
     args.reverse();
 
     if method.native {
-        panic!("native method!")
-    }
+        let mut local_vars = LocalVars::new(args.len() as u16);
+        for (idx, word) in args.iter().enumerate() {
+            local_vars.store_ref(idx as u16, word.clone());
+        }
+        let rt = thread.rt.clone();
+        let rt = rt.deref().borrow();
+        let func = rt.deref().native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
+        func(thread, local_vars);
+        // TODO: Assuming no returned value atm.
+    } else {
+        let mut local_vars = LocalVars::new(method.max_locals.clone());
+        for (idx, word) in args.iter().enumerate() {
+            local_vars.store_ref(idx as u16, word.clone());
+        }
+        let mut frame = Frame {
+            pc: 0,
+            class: class.clone(),
+            local_vars,
+            op_stack: OperandStack::new(method.max_stack.clone()),
+            method: method,
+        };
 
-    let mut frame = Frame {
-        pc: 0,
-        class: class.clone(),
-        local_vars: LocalVars::new(method.max_locals.clone()),
-        op_stack: OperandStack::new(method.max_stack.clone()),
-        method: method,
-    };
-    for (idx, word) in args.iter().enumerate() {
-        frame.local_vars.store_ref(idx as u16, word.clone());
+        thread.frames.push(frame);
     }
-
-    thread.frames.push(frame);
 }

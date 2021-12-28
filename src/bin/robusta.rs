@@ -12,6 +12,7 @@ use robusta::class_loader::ClassLoader;
 use robusta::descriptor::MethodDescriptor;
 use robusta::heap::{Heap, Object, Value};
 use robusta::heap::Ref::Obj;
+use robusta::native::NativeMethods;
 use robusta::runtime::Runtime;
 use robusta::thread::{Frame, Thread};
 use robusta::thread::local_vars::LocalVars;
@@ -61,6 +62,7 @@ fn main() {
         rt: Rc::from(RefCell::from(Runtime {
             class_loader: loader,
             heap,
+            native: NativeMethods::load(),
         })),
         frames: vec![
             Frame {
