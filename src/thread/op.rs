@@ -3,6 +3,8 @@ use std::ops::Deref;
 
 use crate::heap::Array;
 use crate::thread::{Frame, Thread};
+use crate::thread::local_vars::LocalVars;
+use crate::thread::op_stack::OperandStack;
 
 type Op = fn(&mut Thread);
 
@@ -41,6 +43,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA2 => |t| if_icmp_cond(t, |i1, i2| i1 >= i2),
         0xA3 => |t| if_icmp_cond(t, |i1, i2| i1 > i2),
         0xA4 => |t| if_icmp_cond(t, |i1, i2| i1 <= i2),
+        0xB8 => invoke_static,
         0xBE => array_length,
         _ => panic!("Unknown op at {}.{}{} PC {} {:#02x}",
                     &frame.class.this_class,
@@ -146,4 +149,35 @@ fn aa_load(thread: &mut Thread) {
     let arr_val = arr[idx as usize];
 
     thread.push_ref(arr_val);
+}
+
+fn invoke_static(thread: &mut Thread) {
+    let method_idx = thread.read_u16();
+    let method_ref = match thread.curr().class.const_pool.get(&method_idx).unwrap() {
+        crate::class::Const::Method(ref method_ref) => method_ref.clone(),
+        _ => panic!("err")
+    };
+    let class = thread.load(&method_ref.class).unwrap();
+    let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
+
+    let n_args = method.descriptor.args.len();
+    let mut args: Vec<u32> = (0..n_args).map(|_| thread.pop_ref()).collect();
+    args.reverse();
+
+    if method.native {
+        panic!("native method!")
+    }
+
+    let mut frame = Frame {
+        pc: 0,
+        class: class.clone(),
+        local_vars: LocalVars::new(method.max_locals.clone()),
+        op_stack: OperandStack::new(method.max_stack.clone()),
+        method: method,
+    };
+    for (idx, word) in args.iter().enumerate() {
+        frame.local_vars.store_ref(idx as u16, word.clone());
+    }
+
+    thread.frames.push(frame);
 }

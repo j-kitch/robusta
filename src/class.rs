@@ -78,7 +78,7 @@ pub struct FieldRef {
     pub descriptor: Descriptor,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MethodRef {
     pub class: String,
     pub name: String,

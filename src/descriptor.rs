@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Descriptor {
     Boolean,
     Byte,
@@ -14,7 +14,7 @@ pub enum Descriptor {
     Array(Box<Descriptor>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MethodDescriptor {
     pub args: Vec<Descriptor>,
     pub returns: Option<Descriptor>,
