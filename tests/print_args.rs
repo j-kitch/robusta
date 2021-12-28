@@ -20,7 +20,7 @@ fn one_arg() {
 
     command
         .current_dir("java")
-        .arg("PrintArgs hello")
+        .args("PrintArgs hello".split_whitespace())
         .assert()
         .success()
         .code(0)
@@ -34,7 +34,7 @@ fn multiple_args() {
 
     command
         .current_dir("java")
-        .arg("PrintArgs hello world how are you")
+        .args("PrintArgs hello world how are you".split_whitespace())
         .assert()
         .success()
         .code(0)
