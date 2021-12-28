@@ -133,7 +133,7 @@ impl<'a> Reader<'a> {
             _ => {
                 let attr_len = self.read_u32();
                 let bytes = self.read_bytes(attr_len as usize);
-                Attribute::Unknown(UnknownAttr { name_idx, bytes })
+                Attribute::Unknown(UnknownAttr { _name_idx: name_idx, _bytes: bytes })
             }
         }
     }
@@ -257,8 +257,8 @@ pub enum Attribute {
 
 #[derive(Debug)]
 pub struct UnknownAttr {
-    name_idx: u16,
-    bytes: Vec<u8>,
+    _name_idx: u16,
+    _bytes: Vec<u8>,
 }
 
 #[derive(Debug)]

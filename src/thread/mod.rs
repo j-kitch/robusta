@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
@@ -66,11 +66,11 @@ impl Thread {
     }
 
     pub fn load(&mut self, class_name: &str) -> Option<Rc<Class>> {
-        let mut rt = self.rt.clone();
-        let mut rt = rt.deref();
+        let rt = self.rt.clone();
+        let rt = rt.deref();
         let mut rt = rt.borrow_mut();
-        let mut rt = rt.deref_mut();
-        let mut class_loader = rt.class_loader.borrow_mut();
+        let rt = rt.deref_mut();
+        let class_loader = rt.class_loader.borrow_mut();
         class_loader.load(class_name)
     }
 

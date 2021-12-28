@@ -67,7 +67,6 @@ fn robusta_println_string(thread: &mut Thread, local_vars: LocalVars) -> Option<
 
     let chars = match &chars.value {
         Value::Ref(chars_ref) => chars_ref.clone(),
-        _ => panic!("err")
     };
 
     let chars_arr = thread.object(chars);

@@ -4,8 +4,8 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::class;
-use crate::class::{Class, Method};
-use crate::class_file::{ClassFile, Field, Reader};
+use crate::class::Class;
+use crate::class_file::{ClassFile, Reader};
 use crate::class_file;
 use crate::descriptor::{Descriptor, MethodDescriptor};
 

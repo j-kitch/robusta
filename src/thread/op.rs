@@ -1,4 +1,3 @@
-use std::borrow::{Borrow, BorrowMut};
 use std::ops::Deref;
 
 use crate::heap::Array;
@@ -61,7 +60,7 @@ fn return_op(thread: &mut Thread) {
 }
 
 fn aload_n(thread: &mut Thread, n: u16) {
-    let mut curr = thread.curr();
+    let curr = thread.curr();
     let local_ref = curr.local_vars.load_ref(n);
     curr.op_stack.push_ref(local_ref);
 }
@@ -79,24 +78,24 @@ fn aload(thread: &mut Thread) {
 }
 
 fn astore_n(thread: &mut Thread, n: u16) {
-    let mut curr = thread.curr();
+    let curr = thread.curr();
     let stack_ref = curr.op_stack.pop_ref();
     curr.local_vars.store_ref(n, stack_ref);
 }
 
 fn iconst_n(thread: &mut Thread, n: i32) {
-    let mut curr = thread.curr();
+    let curr = thread.curr();
     curr.op_stack.push_int(n);
 }
 
 fn istore_n(thread: &mut Thread, n: u16) {
-    let mut curr = thread.curr();
+    let curr = thread.curr();
     let stack_int = curr.op_stack.pop_int();
     curr.local_vars.store_int(n, stack_int);
 }
 
 fn iload_n(thread: &mut Thread, n: u16) {
-    let mut curr = thread.curr();
+    let curr = thread.curr();
     let local_int = curr.local_vars.load_int(n);
     curr.op_stack.push_int(local_int);
 }
@@ -181,7 +180,7 @@ fn invoke_static(thread: &mut Thread) {
         for (idx, word) in args.iter().enumerate() {
             local_vars.store_ref(idx as u16, word.clone());
         }
-        let mut frame = Frame {
+        let frame = Frame {
             pc: 0,
             class: class.clone(),
             local_vars,

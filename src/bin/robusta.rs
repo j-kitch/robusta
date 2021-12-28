@@ -1,16 +1,12 @@
-use std::{env, format};
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
-use std::fs::File;
-use std::io::Read;
+use std::env;
 use std::ops::DerefMut;
 use std::rc::Rc;
 
-use robusta::class::Class;
-use robusta::class_file::Reader;
 use robusta::class_loader::ClassLoader;
 use robusta::descriptor::MethodDescriptor;
-use robusta::heap::{Heap, Object, Value};
+use robusta::heap::{Heap, Value};
 use robusta::heap::Ref::Obj;
 use robusta::native::NativeMethods;
 use robusta::runtime::Runtime;
@@ -24,31 +20,31 @@ fn main() {
     let args: Vec<String> = env::args().skip(2).collect();
     let mut loader = ClassLoader::new();
     let mut heap = Heap::new();
-    let stringClass = loader.load("java/lang/String").unwrap();
+    let string_class = loader.load("java/lang/String").unwrap();
 
     let args_arr = args.iter().map(|arg| {
-        let (strRef, mut strObject) = heap.create(stringClass.clone());
-        let mut strObject = strObject.borrow_mut();
-        let mut strObject = strObject.as_ref();
-        let mut strObject = strObject.borrow_mut();
-        let mut strObject = match strObject.deref_mut() {
+        let (str_ref, mut str_obj) = heap.create(string_class.clone());
+        let str_obj = str_obj.borrow_mut();
+        let str_obj = str_obj.as_ref();
+        let mut str_obj = str_obj.borrow_mut();
+        let str_obj = match str_obj.deref_mut() {
             Obj(obj) => obj,
             _ => panic!("not an array")
         };
 
-        let mut field = strObject.fields.iter_mut()
+        let mut field = str_obj.fields.iter_mut()
             .find(|f| f.field.name.eq("chars"))
             .unwrap();
 
         let utf16: Vec<u16> = arg.encode_utf16().collect();
         let chars_ref = heap.insert_char_array(utf16);
         field.value = Value::Ref(chars_ref);
-        strRef
+        str_ref
     }).collect();
 
     let args_arr_ref = heap.insert_ref_array(args_arr);
 
-    let mut class = loader.load(&main_class_name);
+    let class = loader.load(&main_class_name);
     if class.is_none() {
         eprintln!("Error: Could not find or load main class {}", &main_class_name);
         std::process::exit(1);
@@ -72,7 +68,7 @@ fn main() {
                 op_stack: OperandStack::new(main.max_stack.clone()),
                 method: main,
             }
-        ]
+        ],
     };
 
     thread.frames.last_mut().unwrap().local_vars.store_ref(0, args_arr_ref);
