@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use crate::class::{Class, Method};
-use crate::heap::Ref;
+use crate::heap::{Ref, Value};
 use crate::runtime::Runtime;
 use crate::thread::local_vars::{Locals, LocalVars};
 use crate::thread::op_stack::{OperandStack, OpStack};
@@ -27,6 +27,30 @@ pub struct Frame {
 }
 
 impl Thread {
+    pub fn new(rt: Runtime) -> Self {
+        Thread { rt: Rc::new(RefCell::new(rt)), frames: vec![] }
+    }
+
+    pub fn create_frame(&mut self, class: Rc<Class>, method: Rc<Method>, args: Vec<Value>) {
+        let mut frame = Frame {
+            pc: 0,
+            class: class.clone(),
+            local_vars: LocalVars::new(method.max_locals.clone()),
+            op_stack: OperandStack::new(method.max_stack.clone()),
+            method,
+        };
+        let mut idx = 0;
+        for arg in args.iter() {
+            match arg {
+                Value::Ref(val) => {
+                    frame.local_vars.store_ref(idx, val.clone());
+                    idx += 1;
+                }
+            }
+        }
+        self.frames.push(frame);
+    }
+
     pub fn run(&mut self) {
         while self.alive() {
             self.next();

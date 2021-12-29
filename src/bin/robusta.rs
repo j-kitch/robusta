@@ -1,12 +1,9 @@
-use std::cell::RefCell;
 use std::env;
-use std::rc::Rc;
 
 use robusta::descriptor::MethodDescriptor;
+use robusta::heap::Value;
 use robusta::runtime::Runtime;
-use robusta::thread::{Frame, Thread};
-use robusta::thread::local_vars::{Locals, LocalVars};
-use robusta::thread::op_stack::OperandStack;
+use robusta::thread::Thread;
 
 fn main() {
     let main_class_name = env::args().nth(1).unwrap()
@@ -25,19 +22,7 @@ fn main() {
         .find_method("main", &MethodDescriptor::parse("([Ljava/lang/String;)V"))
         .unwrap();
 
-    let mut thread = Thread {
-        rt: Rc::new(RefCell::new(rt)),
-        frames: vec![
-            Frame {
-                pc: 0,
-                class: class.clone(),
-                local_vars: LocalVars::new(main.max_locals.clone()),
-                op_stack: OperandStack::new(main.max_stack.clone()),
-                method: main,
-            }
-        ],
-    };
-
-    thread.store_ref(0, args_arr_ref);
+    let mut thread = Thread::new(rt);
+    thread.create_frame(class, main, vec![Value::Ref(args_arr_ref)]);
     thread.run();
 }
