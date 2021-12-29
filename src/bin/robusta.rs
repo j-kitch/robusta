@@ -11,7 +11,7 @@ use robusta::heap::Ref::Obj;
 use robusta::native::NativeMethods;
 use robusta::runtime::Runtime;
 use robusta::thread::{Frame, Thread};
-use robusta::thread::local_vars::LocalVars;
+use robusta::thread::local_vars::{Locals, LocalVars};
 use robusta::thread::op_stack::OperandStack;
 
 fn main() {
@@ -71,7 +71,7 @@ fn main() {
         ],
     };
 
-    thread.frames.last_mut().unwrap().local_vars.store_ref(0, args_arr_ref);
+    thread.store_ref(0, args_arr_ref);
 
     thread.run();
 }

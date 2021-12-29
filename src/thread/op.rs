@@ -2,8 +2,8 @@ use std::ops::Deref;
 
 use crate::heap::Array;
 use crate::thread::{Frame, Thread};
-use crate::thread::local_vars::LocalVars;
-use crate::thread::op_stack::OperandStack;
+use crate::thread::local_vars::{Locals, LocalVars};
+use crate::thread::op_stack::{OperandStack, OpStack};
 
 type Op = fn(&mut Thread);
 
@@ -60,44 +60,39 @@ fn return_op(thread: &mut Thread) {
 }
 
 fn aload_n(thread: &mut Thread, n: u16) {
-    let curr = thread.curr();
-    let local_ref = curr.local_vars.load_ref(n);
-    curr.op_stack.push_ref(local_ref);
+    let local_ref = thread.load_ref(n);
+    thread.push_ref(local_ref);
 }
 
 fn astore(thread: &mut Thread) {
-    let idx = thread.curr().read_u8() as u16;
+    let idx = thread.frame_mut().read_u8() as u16;
     let object_ref = thread.pop_ref();
-    thread.curr().local_vars.store_ref(idx, object_ref);
+    thread.store_ref(idx, object_ref);
 }
 
 fn aload(thread: &mut Thread) {
-    let idx = thread.curr().read_u8() as u16;
-    let object_ref = thread.curr().local_vars.load_ref(idx);
+    let idx = thread.frame_mut().read_u8() as u16;
+    let object_ref = thread.load_ref(idx);
     thread.push_ref(object_ref);
 }
 
 fn astore_n(thread: &mut Thread, n: u16) {
-    let curr = thread.curr();
-    let stack_ref = curr.op_stack.pop_ref();
-    curr.local_vars.store_ref(n, stack_ref);
+    let stack_ref = thread.pop_ref();
+    thread.store_ref(n, stack_ref);
 }
 
 fn iconst_n(thread: &mut Thread, n: i32) {
-    let curr = thread.curr();
-    curr.op_stack.push_int(n);
+    thread.push_int(n);
 }
 
 fn istore_n(thread: &mut Thread, n: u16) {
-    let curr = thread.curr();
-    let stack_int = curr.op_stack.pop_int();
-    curr.local_vars.store_int(n, stack_int);
+    let stack_int = thread.pop_int();
+    thread.store_int(n, stack_int);
 }
 
 fn iload_n(thread: &mut Thread, n: u16) {
-    let curr = thread.curr();
-    let local_int = curr.local_vars.load_int(n);
-    curr.op_stack.push_int(local_int);
+    let local_int = thread.load_int(n);
+    thread.push_int(local_int);
 }
 
 fn array_length(thread: &mut Thread) {
@@ -117,17 +112,16 @@ fn array_length(thread: &mut Thread) {
 }
 
 fn if_icmp_cond<F>(thread: &mut Thread, pred: F) where F: Fn(i32, i32) -> bool {
-    let mut curr = thread.curr();
-    let signed_off = curr.read_i16();
-    let start_pc = curr.pc - 3;
+    let signed_off = thread.read_i16();
+    let start_pc = thread.frame().pc - 3;
 
-    let value2 = curr.op_stack.pop_int();
-    let value1 = curr.op_stack.pop_int();
+    let value2 = thread.pop_int();
+    let value1 = thread.pop_int();
 
     if pred(value1, value2) {
         let mut pc: i64 = start_pc as i64;
         pc += signed_off as i64;
-        curr.pc = pc as u32;
+        thread.frame_mut().pc = pc as u32;
     }
 }
 
@@ -154,7 +148,7 @@ fn aa_load(thread: &mut Thread) {
 
 fn invoke_static(thread: &mut Thread) {
     let method_idx = thread.read_u16();
-    let method_ref = match thread.curr().class.const_pool.get(&method_idx).unwrap() {
+    let method_ref = match thread.frame_mut().class.const_pool.get(&method_idx).unwrap() {
         crate::class::Const::Method(ref method_ref) => method_ref.clone(),
         _ => panic!("err")
     };
@@ -195,14 +189,14 @@ fn invoke_static(thread: &mut Thread) {
 fn iinc(thread: &mut Thread) {
     let idx = thread.read_u8();
     let inc = thread.read_i8() as i32;
-    let int = thread.curr().local_vars.load_int(idx as u16);
+    let int = thread.load_int(idx as u16);
     let (result, _) = int.overflowing_add(inc);
-    thread.curr().local_vars.store_int(idx as u16, result)
+    thread.store_int(idx as u16, result)
 }
 
 fn goto(thread: &mut Thread) {
     let off = thread.read_i16();
-    let start_pc = thread.curr().pc as i64 - 3;
+    let start_pc = thread.frame_mut().pc as i64 - 3;
     let result = start_pc + off as i64;
-    thread.curr().pc = result as u32;
+    thread.frame_mut().pc = result as u32;
 }

@@ -6,8 +6,8 @@ use std::rc::Rc;
 use crate::class::{Class, Method};
 use crate::heap::Ref;
 use crate::runtime::Runtime;
-use crate::thread::local_vars::LocalVars;
-use crate::thread::op_stack::OperandStack;
+use crate::thread::local_vars::{Locals, LocalVars};
+use crate::thread::op_stack::{OperandStack, OpStack};
 
 mod op;
 pub mod local_vars;
@@ -37,29 +37,33 @@ impl Thread {
         !self.frames.is_empty()
     }
 
-    fn curr(&mut self) -> &mut Frame {
+    fn frame_mut(&mut self) -> &mut Frame {
         self.frames.last_mut().unwrap()
     }
 
+    fn frame(&self) -> &Frame {
+        self.frames.last().unwrap()
+    }
+
     fn read_u8(&mut self) -> u8 {
-        self.curr().read_u8()
+        self.frame_mut().read_u8()
     }
 
     fn read_i8(&mut self) -> i8 {
-        let u8 = self.curr().read_u8();
+        let u8 = self.frame_mut().read_u8();
         i8::from_be_bytes([u8])
     }
 
     fn read_i16(&mut self) -> i16 {
-        self.curr().read_i16()
+        self.frame_mut().read_i16()
     }
 
     fn read_u16(&mut self) -> u16 {
-        self.curr().read_u16()
+        self.frame_mut().read_u16()
     }
 
     fn next(&mut self) {
-        let curr = self.curr();
+        let curr = self.frame_mut();
         let op_code = curr.read_u8();
         let op = op::get_op(curr, op_code);
         op(self);
@@ -77,21 +81,41 @@ impl Thread {
     pub fn object(&self, key: u32) -> Rc<RefCell<Ref>> {
         self.rt.as_ref().borrow().deref().heap.get(key)
     }
+}
 
-    pub fn pop_ref(&mut self) -> u32 {
-        self.curr().op_stack.pop_ref()
+impl OpStack for Thread {
+    fn push_ref(&mut self, value: u32) {
+        self.frame_mut().op_stack.push_ref(value)
     }
 
-    pub fn push_ref(&mut self, op: u32) {
-        self.curr().op_stack.push_ref(op);
+    fn push_int(&mut self, value: i32) {
+        self.frame_mut().op_stack.push_int(value)
     }
 
-    pub fn pop_int(&mut self) -> i32 {
-        self.curr().op_stack.pop_int()
+    fn pop_ref(&mut self) -> u32 {
+        self.frame_mut().op_stack.pop_ref()
     }
 
-    pub fn push_int(&mut self, op: i32) {
-        self.curr().op_stack.push_int(op);
+    fn pop_int(&mut self) -> i32 {
+        self.frame_mut().op_stack.pop_int()
+    }
+}
+
+impl Locals for Thread {
+    fn store_ref(&mut self, idx: u16, value: u32) {
+        self.frame_mut().local_vars.store_ref(idx, value)
+    }
+
+    fn store_int(&mut self, idx: u16, value: i32) {
+        self.frame_mut().local_vars.store_int(idx, value)
+    }
+
+    fn load_ref(&self, idx: u16) -> u32 {
+        self.frame().local_vars.load_ref(idx)
+    }
+
+    fn load_int(&self, idx: u16) -> i32 {
+        self.frame().local_vars.load_int(idx)
     }
 }
 
