@@ -7,6 +7,4 @@ public class String {
     public String() {
         chars = new char[0];
     }
-
-    private static native String fromConst(byte[] utf8);
 }
