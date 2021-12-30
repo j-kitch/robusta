@@ -1,0 +1,24 @@
+# TODO
+
+- Handle CLI properly
+- Separate build into separate packages?
+- Build Java files automatically, and properly
+- Proper java library, java test library, java native library?
+- Java Native interface API and dynamic loading?
+- Multi-threading!
+- Proper heap structure
+- Garbage collection
+- Proper strong, weak references
+- Use more sophisticated reference key allocation
+- Handling all data types
+- Rest of bytecode instructions
+- Code structure?
+- Proper memory handling within Rust
+- Unit testing
+- Implement java standard library 
+- Implement all class file and class sections
+- exception handling 
+- error handling
+- proper loading, linking, verification of class files 
+- native functions returning values
+- a better, more comprehensive integration test suite
