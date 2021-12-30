@@ -1,29 +1,37 @@
 pub struct OperandStack {
-    stack: Vec<u32>,
+    stack: Vec<u8>,
 }
 
 impl OperandStack {
     pub fn new(max_stack: u16) -> Self {
-        OperandStack { stack: Vec::with_capacity(max_stack as usize) }
+        OperandStack { stack: Vec::with_capacity((max_stack as usize) * 4) }
+    }
+
+    fn push_bytes(&mut self, word: &[u8]) {
+        self.stack.extend(word);
+    }
+
+    fn pop_word(&mut self) -> [u8; 4] {
+        let mut word = [0; 4];
+        for i in (0..4).rev() {
+            word[i] = self.stack.pop().unwrap();
+        }
+        word
     }
 
     pub fn push_ref(&mut self, op: u32) {
-        self.stack.push(op);
+        self.push_bytes(&op.to_be_bytes())
     }
 
     pub fn push_int(&mut self, op: i32) {
-        let bytes: [u8; 4] = op.to_be_bytes();
-        let u32 = u32::from_be_bytes(bytes);
-        self.stack.push(u32);
+        self.push_bytes(&op.to_be_bytes())
     }
 
     pub fn pop_ref(&mut self) -> u32 {
-        self.stack.pop().unwrap()
+        u32::from_be_bytes(self.pop_word())
     }
 
     pub fn pop_int(&mut self) -> i32 {
-        let u32 = self.pop_ref();
-        let bytes: [u8; 4] = u32.to_be_bytes();
-        i32::from_be_bytes(bytes)
+        i32::from_be_bytes(self.pop_word())
     }
 }
