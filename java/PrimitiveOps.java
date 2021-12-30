@@ -7,8 +7,9 @@ public class PrimitiveOps {
     }
 
     private static void intOperations(int i) {
-        Robusta.println(i);
-        i *= 54326;
-        Robusta.println(i);
+        Robusta.println(i * 54326);
+        Robusta.println(i + 4325435);
+        Robusta.println(i / 3);
+        Robusta.println(i - 54326);
     }
 }

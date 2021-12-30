@@ -37,7 +37,10 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x4C => |t| astore_n(t, 1),
         0x4D => |t| astore_n(t, 2),
         0x4E => |t| astore_n(t, 3),
+        0x60 => iadd,
+        0x64 => isub,
         0x68 => imul,
+        0x6C => idiv,
         0x84 => iinc,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
@@ -214,6 +217,36 @@ fn imul(thread: &mut Thread) {
     let value1 = current.op_stack.pop_int();
 
     let (result, _) = value1.overflowing_mul(value2);
+
+    current.op_stack.push_int(result);
+}
+
+fn iadd(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let (result, _) = value1.overflowing_add(value2);
+
+    current.op_stack.push_int(result);
+}
+
+fn idiv(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let (result, _) = value1.overflowing_div(value2);
+
+    current.op_stack.push_int(result);
+}
+
+fn isub(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let (result, _) = value1.overflowing_sub(value2);
 
     current.op_stack.push_int(result);
 }
