@@ -113,6 +113,34 @@ impl Value {
             _ => panic!("err")
         }
     }
+
+    pub fn int(&self) -> i32 {
+        match self {
+            Value::Int(i32) => i32.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn long(&self) -> i64 {
+        match self {
+            Value::Long(i64) => i64.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn float(&self) -> f32 {
+        match self {
+            Value::Float(f32) => f32.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double(&self) -> f64 {
+        match self {
+            Value::Double(f64) => f64.clone(),
+            _ => panic!("err")
+        }
+    }
 }
 
 pub enum Array {

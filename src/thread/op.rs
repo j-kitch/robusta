@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
@@ -156,6 +156,9 @@ fn invoke_static(thread: &mut Thread) {
             Descriptor::Object(_) | Descriptor::Array(_) => {
                 args.push(Value::Ref(current.op_stack.pop_ref()));
             }
+            Descriptor::Boolean | Descriptor::Byte | Descriptor::Char | Descriptor::Short | Descriptor::Int => {
+                args.push(Value::Int(current.op_stack.pop_int()));
+            }
             _ => panic!("err")
         }
     }
@@ -163,8 +166,11 @@ fn invoke_static(thread: &mut Thread) {
 
     if method.native {
         let func = thread.rt.as_ref().borrow().native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
-        func(thread, args);
-        // TODO: Assuming no returned value atm.
+        let mut runtime = thread.rt.as_ref().borrow_mut();
+        let result = func(runtime.deref_mut(), args);
+        if method.descriptor.returns.is_some() {
+            current.op_stack.push(result.unwrap());
+        }
     } else {
         thread.create_frame(class.clone(), method, args);
     }

@@ -1,3 +1,5 @@
+use crate::heap::Value;
+
 pub struct OperandStack {
     stack: Vec<u8>,
 }
@@ -25,6 +27,28 @@ impl OperandStack {
 
     pub fn push_int(&mut self, op: i32) {
         self.push_bytes(&op.to_be_bytes())
+    }
+
+    pub fn push_long(&mut self, op: i64) {
+        self.push_bytes(&op.to_be_bytes())
+    }
+
+    pub fn push_float(&mut self, op: f32) {
+        self.push_bytes(&op.to_be_bytes())
+    }
+
+    pub fn push_double(&mut self, op: f64) {
+        self.push_bytes(&op.to_be_bytes())
+    }
+
+    pub fn push(&mut self, op: Value) {
+        match op {
+            Value::Ref(op) => self.push_ref(op),
+            Value::Int(op) => self.push_int(op),
+            Value::Long(op) => self.push_long(op),
+            Value::Float(op) => self.push_float(op),
+            Value::Double(op) => self.push_double(op),
+        }
     }
 
     pub fn pop_ref(&mut self) -> u32 {
