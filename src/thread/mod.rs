@@ -83,6 +83,22 @@ impl Thread {
                     frame.local_vars.store_ref(idx, val.clone());
                     idx += 1;
                 }
+                Value::Int(int) => {
+                    frame.local_vars.store_int(idx, int.clone());
+                    idx += 1;
+                }
+                Value::Long(long) => {
+                    frame.local_vars.store_long(idx, long.clone());
+                    idx += 2;
+                }
+                Value::Float(float) => {
+                    frame.local_vars.store_float(idx, float.clone());
+                    idx += 1;
+                }
+                Value::Double(double) => {
+                    frame.local_vars.store_double(idx, double.clone());
+                    idx += 2;
+                }
             }
         }
         self.frames.push(frame);

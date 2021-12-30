@@ -99,6 +99,10 @@ pub struct Field {
 }
 
 pub enum Value {
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
     Ref(u32),
 }
 
@@ -106,6 +110,7 @@ impl Value {
     pub fn reference(&self) -> u32 {
         match self {
             Value::Ref(u32) => u32.clone(),
+            _ => panic!("err")
         }
     }
 }
