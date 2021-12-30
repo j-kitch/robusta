@@ -2,7 +2,6 @@ use std::ops::Deref;
 
 use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Ref, Value};
-use crate::thread::local_vars::LocalVars;
 use crate::thread::Thread;
 
 pub struct NativeMethods {
@@ -49,10 +48,10 @@ struct NativeMethod {
     function: NativeFunction,
 }
 
-type NativeFunction = fn(thread: &mut Thread, local_vars: LocalVars) -> Option<Value>;
+type NativeFunction = fn(thread: &mut Thread, args: Vec<Value>) -> Option<Value>;
 
-fn robusta_println_string(thread: &mut Thread, local_vars: LocalVars) -> Option<Value> {
-    let string_ref = local_vars.load_ref(0);
+fn robusta_println_string(thread: &mut Thread, args: Vec<Value>) -> Option<Value> {
+    let Value::Ref(string_ref) = args[0];
     let string_obj = thread.object(string_ref);
     let string_obj = string_obj.as_ref();
     let string_obj = string_obj.borrow();

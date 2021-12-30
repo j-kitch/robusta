@@ -1,9 +1,8 @@
 use std::ops::Deref;
+use crate::descriptor::Descriptor;
 
-use crate::heap::Ref;
+use crate::heap::{Ref, Value};
 use crate::thread::{Frame, Thread};
-use crate::thread::local_vars::LocalVars;
-use crate::thread::op_stack::OperandStack;
 
 type Op = fn(&mut Thread);
 
@@ -163,32 +162,23 @@ fn invoke_static(thread: &mut Thread) {
     let class = runtime.load_class(&method_ref.class);
     let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
 
-    let n_args = method.descriptor.category();
-    let mut args: Vec<u32> = (0..n_args).map(|_| current.op_stack.pop_ref()).collect();
+    let mut args = vec![];
+    for arg in method.descriptor.args.iter().rev() {
+        match arg {
+            Descriptor::Object(_) | Descriptor::Array(_) => {
+                args.push(Value::Ref(current.op_stack.pop_ref()));
+            },
+            _ => panic!("err")
+        }
+    }
     args.reverse();
 
     if method.native {
-        let mut local_vars = LocalVars::new(args.len() as u16);
-        for (idx, word) in args.iter().enumerate() {
-            local_vars.store_ref(idx as u16, word.clone());
-        }
         let func = runtime.native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
-        func(thread, local_vars);
+        func(thread, args);
         // TODO: Assuming no returned value atm.
     } else {
-        let mut local_vars = LocalVars::new(method.max_locals.clone());
-        for (idx, word) in args.iter().enumerate() {
-            local_vars.store_ref(idx as u16, word.clone());
-        }
-        let frame = Frame {
-            pc: 0,
-            class: class.clone(),
-            local_vars,
-            op_stack: OperandStack::new(method.max_stack.clone()),
-            method,
-        };
-
-        thread.frames.push(frame);
+        thread.create_frame(class.clone(), method, args);
     }
 }
 
