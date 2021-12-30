@@ -8,8 +8,5 @@ fn main_not_found() {
         .current_dir("java")
         .arg("ABC")
         .assert()
-        .failure()
-        .code(1)
-        .stdout("")
-        .stderr("Error: Could not find or load main class ABC\n");
+        .failure();
 }

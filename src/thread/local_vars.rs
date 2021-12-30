@@ -8,7 +8,7 @@ impl LocalVars {
     }
 
     fn store_bytes(&mut self, idx: u16, bytes: &[u8]) {
-        let mut idx = idx as usize;
+        let mut idx = idx as usize * 4;
         for byte in bytes {
             self.bytes[idx] = byte.clone();
             idx += 1;
@@ -16,7 +16,7 @@ impl LocalVars {
     }
 
     fn load_word(&self, idx: u16) -> [u8; 4] {
-        let idx = idx as usize;
+        let idx = idx as usize * 4;
         let mut bytes = [0; 4];
         for i in 0..4 {
             bytes[i]  = self.bytes[idx + i];

@@ -143,13 +143,11 @@ fn aa_load(thread: &mut Thread) {
 }
 
 fn invoke_static(thread: &mut Thread) {
-    let runtime = thread.rt.clone();
-    let mut runtime = runtime.borrow_mut();
     let current = thread.frames.current_mut();
 
     let method_idx = current.read_u16();
     let method_ref = current.class.const_method(method_idx);
-    let class = runtime.load_class(&method_ref.class);
+    let class = thread.rt.clone().borrow_mut().load_class(&method_ref.class);
     let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
 
     let mut args = vec![];
@@ -164,7 +162,7 @@ fn invoke_static(thread: &mut Thread) {
     args.reverse();
 
     if method.native {
-        let func = runtime.native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
+        let func = thread.rt.as_ref().borrow().native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
         func(thread, args);
         // TODO: Assuming no returned value atm.
     } else {
