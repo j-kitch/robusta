@@ -6,6 +6,8 @@ public class Robusta {
 
     public static native void println(String string);
 
+    public static native boolean parseBoolean(String string);
+
     public static native byte parseByte(String string);
 
     public static native short parseShort(String string);
