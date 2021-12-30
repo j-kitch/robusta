@@ -21,6 +21,13 @@ pub struct Iter<'a> {
 
 impl Class {
 
+    pub fn const_method(&self, idx: u16) -> &MethodRef {
+        match self.const_pool.get(&idx).unwrap() {
+            Const::Method(method_ref) => method_ref,
+            _ => panic!("err")
+        }
+    }
+
     pub fn for_each_field<F>(&self, f: F) where F: FnMut(Rc<Field>) {
         self.parent_iter()
             .flat_map(|class| class.fields.iter())

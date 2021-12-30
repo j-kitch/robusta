@@ -1,10 +1,9 @@
 use std::ops::Deref;
 
-use crate::class::Const;
 use crate::heap::Ref;
 use crate::thread::{Frame, Thread};
-use crate::thread::local_vars::{Locals, LocalVars};
-use crate::thread::op_stack::{OperandStack, OpStack};
+use crate::thread::local_vars::LocalVars;
+use crate::thread::op_stack::OperandStack;
 
 type Op = fn(&mut Thread);
 
@@ -160,10 +159,7 @@ fn invoke_static(thread: &mut Thread) {
     let current = thread.frames.current_mut();
 
     let method_idx = current.read_u16();
-    let method_ref = match current.class.const_pool.get(&method_idx).unwrap() {
-        Const::Method(ref method_ref) => method_ref.clone(),
-        _ => panic!("err")
-    };
+    let method_ref = current.class.const_method(method_idx);
     let class = runtime.load_class(&method_ref.class);
     let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
 

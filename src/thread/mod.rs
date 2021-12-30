@@ -6,7 +6,7 @@ use std::rc::Rc;
 use crate::class::{Class, Method};
 use crate::heap::{Ref, Value};
 use crate::runtime::Runtime;
-use crate::thread::local_vars::{Locals, LocalVars};
+use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
 mod op;

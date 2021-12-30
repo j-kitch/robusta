@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Ref, Value};
-use crate::thread::local_vars::{Locals, LocalVars};
+use crate::thread::local_vars::LocalVars;
 use crate::thread::Thread;
 
 pub struct NativeMethods {
