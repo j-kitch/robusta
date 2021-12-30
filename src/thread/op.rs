@@ -1,7 +1,7 @@
 use std::ops::Deref;
-use crate::descriptor::Descriptor;
 
-use crate::heap::{Ref, Value};
+use crate::descriptor::Descriptor;
+use crate::heap::Value;
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -107,10 +107,7 @@ fn array_length(thread: &mut Thread) {
     let array_ref = current.op_stack.pop_ref();
     let array_obj = runtime.load_object(array_ref);
     let array_obj = array_obj.deref().borrow();
-    let array = match array_obj.deref() {
-        Ref::Arr(arr) => arr,
-        _ => panic!("err)")
-    };
+    let array = array_obj.arr();
 
     let array_len = array.len();
 
@@ -138,14 +135,7 @@ fn aa_load(thread: &mut Thread) {
     let array_ref = current.op_stack.pop_ref();
     let array_obj = runtime.load_object(array_ref);
     let array_obj = array_obj.as_ref().borrow();
-    let array = match array_obj.deref() {
-        Ref::Arr(arr) => arr,
-        _ => panic!("err)")
-    };
-    let array = match array {
-        crate::heap::Array::Ref(array) => array,
-        _ => panic!("err")
-    };
+    let array = array_obj.arr().reference();
 
     let array_value = array[elem_idx as usize];
 
@@ -167,7 +157,7 @@ fn invoke_static(thread: &mut Thread) {
         match arg {
             Descriptor::Object(_) | Descriptor::Array(_) => {
                 args.push(Value::Ref(current.op_stack.pop_ref()));
-            },
+            }
             _ => panic!("err")
         }
     }
