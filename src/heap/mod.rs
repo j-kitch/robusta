@@ -72,6 +72,22 @@ pub enum Ref {
     Arr(Array),
 }
 
+impl Ref {
+    pub fn obj(&self) -> &Object {
+        match self {
+            Ref::Obj(obj) => obj,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn arr(&self) -> &Array {
+        match self {
+            Ref::Arr(arr) => arr,
+            _ => panic!("err")
+        }
+    }
+}
+
 pub struct Object {
     pub class: Rc<Class>,
     pub fields: Vec<Field>,
@@ -86,10 +102,41 @@ pub enum Value {
     Ref(u32),
 }
 
+impl Value {
+    pub fn reference(&self) -> u32 {
+        match self {
+            Value::Ref(u32) => u32.clone(),
+        }
+    }
+}
+
 pub enum Array {
     Ref(Vec<u32>),
     Byte(Vec<i8>),
     Char(Vec<u16>),
+}
+
+impl Array {
+    pub fn reference(&self) -> &Vec<u32> {
+        match self {
+            Array::Ref(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn byte(&self) -> &Vec<i8> {
+        match self {
+            Array::Byte(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn char(&self) -> &Vec<u16> {
+        match self {
+            Array::Char(vec) => vec,
+            _ => panic!("err")
+        }
+    }
 }
 
 impl Array {

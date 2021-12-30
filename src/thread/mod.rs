@@ -1,6 +1,5 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::class::{Class, Method};
@@ -100,15 +99,6 @@ impl Thread {
         let op_code = current.read_u8();
         let op = op::get_op(current, op_code);
         op(self);
-    }
-
-    pub fn load(&mut self, class_name: &str) -> Option<Rc<Class>> {
-        let rt = self.rt.clone();
-        let rt = rt.deref();
-        let mut rt = rt.borrow_mut();
-        let rt = rt.deref_mut();
-        let class_loader = rt.class_loader.borrow_mut();
-        class_loader.load(class_name)
     }
 
     pub fn object(&self, key: u32) -> Rc<RefCell<Ref>> {

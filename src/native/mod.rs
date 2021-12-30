@@ -1,7 +1,5 @@
-use std::ops::Deref;
-
 use crate::descriptor::MethodDescriptor;
-use crate::heap::{Array, Ref, Value};
+use crate::heap::Value;
 use crate::thread::Thread;
 
 pub struct NativeMethods {
@@ -51,36 +49,23 @@ struct NativeMethod {
 type NativeFunction = fn(thread: &mut Thread, args: Vec<Value>) -> Option<Value>;
 
 fn robusta_println_string(thread: &mut Thread, args: Vec<Value>) -> Option<Value> {
-    let Value::Ref(string_ref) = args[0];
-    let string_obj = thread.object(string_ref);
-    let string_obj = string_obj.as_ref();
-    let string_obj = string_obj.borrow();
-    let string_obj = match string_obj.deref() {
-        Ref::Obj(obj) => obj,
-        _ => panic!("err")
-    };
+    let runtime = thread.rt.borrow_mut();
+
+    let string_ref = args[0].reference();
+    let string_obj = runtime.load_object(string_ref);
+    let string_obj = string_obj.as_ref().borrow();
+    let string_obj = string_obj.obj();
 
     let chars = string_obj.fields.iter()
         .find(|f| f.field.as_ref().name.eq("chars"))
         .unwrap();
+    let chars = chars.value.reference();
 
-    let chars = match &chars.value {
-        Value::Ref(chars_ref) => chars_ref.clone(),
-    };
+    let chars_arr = runtime.load_object(chars);
+    let chars_arr = chars_arr.as_ref().borrow();
+    let chars_array = chars_arr.arr().char();
 
-    let chars_arr = thread.object(chars);
-    let chars_arr = chars_arr.as_ref();
-    let chars_arr = chars_arr.borrow();
-    let chars_arr = match chars_arr.deref() {
-        Ref::Arr(arr) => arr,
-        _ => panic!("err")
-    };
-    let chars_arr = match chars_arr {
-        Array::Char(chars) => chars,
-        _ => panic!("err")
-    };
-
-    let utf8_chars = String::from_utf16(chars_arr).unwrap();
+    let utf8_chars = String::from_utf16(chars_array).unwrap();
     println!("{}", utf8_chars);
 
     None
