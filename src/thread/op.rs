@@ -51,6 +51,9 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA7 => goto,
         0xB8 => invoke_static,
         0xBE => array_length,
+        0xCA => reserved,
+        0xFE => reserved,
+        0xFF => reserved,
         _ => panic!("Unknown op at {}.{}{} PC {} {:#02x}",
                     &frame.class.this_class,
                     &frame.method.name,
@@ -249,4 +252,13 @@ fn isub(thread: &mut Thread) {
     let (result, _) = value1.overflowing_sub(value2);
 
     current.op_stack.push_int(result);
+}
+
+fn reserved(thread: &mut Thread) {
+    let current = thread.frames.current();
+    panic!("encountered reserved opcode {} at {}.{}{}",
+        current.method.code[current.pc - 1],
+        &current.class.this_class,
+        &current.method.name,
+        current.method.descriptor.descriptor());
 }
