@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use crate::class::Const;
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
@@ -15,6 +16,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x06 => |t| iconst_n(t, 3),
         0x07 => |t| iconst_n(t, 4),
         0x08 => |t| iconst_n(t, 5),
+        0x12 => ldc,
         0x19 => aload,
         0x1A => |t| iload_n(t, 0),
         0x1B => |t| iload_n(t, 1),
@@ -191,4 +193,16 @@ fn goto(thread: &mut Thread) {
     let start_pc = current.pc as i64 - 3;
     let result = start_pc + off as i64;
     current.pc = result as u32;
+}
+
+fn ldc(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let idx = current.read_u8() as u16;
+    let con = current.class.const_pool.get(&idx).unwrap();
+    match con {
+        Const::Int(i) => {
+            current.op_stack.push_int(i.int);
+        }
+        _ => panic!("err")
+    }
 }

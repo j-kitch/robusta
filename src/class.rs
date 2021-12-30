@@ -66,11 +66,17 @@ pub enum Const {
     Class(ClassRef),
     Method(MethodRef),
     Field(FieldRef),
+    Int(Integer),
 }
 
 #[derive(Debug)]
 pub struct ClassRef {
     pub name: String,
+}
+
+#[derive(Debug)]
+pub struct Integer {
+    pub int: i32,
 }
 
 #[derive(Debug)]

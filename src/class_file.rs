@@ -28,6 +28,11 @@ impl<'a> Reader<'a> {
         u32::from_be_bytes(self.u32_buf)
     }
 
+    fn read_i32(&mut self) -> i32 {
+        self.file.read_exact(&mut self.u32_buf).unwrap();
+        i32::from_be_bytes(self.u32_buf)
+    }
+
     fn read_bytes(&mut self, len: usize) -> Vec<u8> {
         let mut bytes = vec![0; len];
         self.file.read_exact(&mut bytes).unwrap();
@@ -62,6 +67,10 @@ impl<'a> Reader<'a> {
                 let length = self.read_u16();
                 let bytes = self.read_bytes(length as usize);
                 Const::Utf8(Utf8 { bytes })
+            }
+            3 => {
+                let int = self.read_i32();
+                Const::Int(Integer { int })
             }
             7 => {
                 let name_idx = self.read_u16();
@@ -170,6 +179,11 @@ pub struct Class {
 }
 
 #[derive(Debug)]
+pub struct Integer {
+    pub int: i32,
+}
+
+#[derive(Debug)]
 pub struct FieldRef {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
@@ -190,6 +204,7 @@ pub struct NameAndType {
 #[derive(Debug)]
 pub enum Const {
     Utf8(Utf8),
+    Int(Integer),
     Class(Class),
     FieldRef(FieldRef),
     MethodRef(MethodRef),

@@ -50,6 +50,9 @@ impl ClassLoader {
                     let name = String::from_utf8(bytes.clone()).unwrap();
                     class::Const::Class(class::ClassRef { name })
                 }
+                class_file::Const::Int(int) => {
+                    class::Const::Int(class::Integer { int: int.int })
+                }
                 class_file::Const::FieldRef(field_ref) => {
                     let class = class_file.get_const(field_ref.class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();
