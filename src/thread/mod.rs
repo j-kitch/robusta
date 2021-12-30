@@ -7,7 +7,7 @@ use crate::class::{Class, Method};
 use crate::heap::{Ref, Value};
 use crate::runtime::Runtime;
 use crate::thread::local_vars::{Locals, LocalVars};
-use crate::thread::op_stack::{OperandStack, OpStack};
+use crate::thread::op_stack::OperandStack;
 
 mod op;
 pub mod local_vars;
@@ -15,7 +15,39 @@ pub mod op_stack;
 
 pub struct Thread {
     pub rt: Rc<RefCell<Runtime>>,
-    pub frames: Vec<Frame>,
+    pub frames: FrameStack,
+}
+
+pub struct FrameStack {
+    current: Option<Frame>,
+    rest: Vec<Frame>,
+}
+
+impl FrameStack {
+    pub fn has_frames(&self) -> bool {
+        self.current.is_some()
+    }
+
+    pub fn current_mut(&mut self) -> &mut Frame {
+        self.current.as_mut().unwrap()
+    }
+
+    pub fn current(&self) -> &Frame {
+        self.current.as_ref().unwrap()
+    }
+
+    pub fn push(&mut self, frame: Frame) -> &mut Frame {
+        if let Some(old_current) = self.current.take() {
+            self.rest.push(old_current);
+        }
+        self.current = Some(frame);
+        self.current_mut()
+    }
+
+    pub fn pop(&mut self) -> Option<&mut Frame> {
+        self.current = self.rest.pop();
+        self.current.as_mut()
+    }
 }
 
 pub struct Frame {
@@ -28,7 +60,13 @@ pub struct Frame {
 
 impl Thread {
     pub fn new(rt: Runtime) -> Self {
-        Thread { rt: Rc::new(RefCell::new(rt)), frames: vec![] }
+        Thread {
+            rt: Rc::new(RefCell::new(rt)),
+            frames: FrameStack {
+                current: None,
+                rest: vec![],
+            },
+        }
     }
 
     pub fn create_frame(&mut self, class: Rc<Class>, method: Rc<Method>, args: Vec<Value>) {
@@ -52,44 +90,15 @@ impl Thread {
     }
 
     pub fn run(&mut self) {
-        while self.alive() {
+        while self.frames.has_frames() {
             self.next();
         }
     }
 
-    fn alive(&self) -> bool {
-        !self.frames.is_empty()
-    }
-
-    fn frame_mut(&mut self) -> &mut Frame {
-        self.frames.last_mut().unwrap()
-    }
-
-    fn frame(&self) -> &Frame {
-        self.frames.last().unwrap()
-    }
-
-    fn read_u8(&mut self) -> u8 {
-        self.frame_mut().read_u8()
-    }
-
-    fn read_i8(&mut self) -> i8 {
-        let u8 = self.frame_mut().read_u8();
-        i8::from_be_bytes([u8])
-    }
-
-    fn read_i16(&mut self) -> i16 {
-        self.frame_mut().read_i16()
-    }
-
-    fn read_u16(&mut self) -> u16 {
-        self.frame_mut().read_u16()
-    }
-
     fn next(&mut self) {
-        let curr = self.frame_mut();
-        let op_code = curr.read_u8();
-        let op = op::get_op(curr, op_code);
+        let current = self.frames.current_mut();
+        let op_code = current.read_u8();
+        let op = op::get_op(current, op_code);
         op(self);
     }
 
@@ -107,43 +116,12 @@ impl Thread {
     }
 }
 
-impl OpStack for Thread {
-    fn push_ref(&mut self, value: u32) {
-        self.frame_mut().op_stack.push_ref(value)
-    }
-
-    fn push_int(&mut self, value: i32) {
-        self.frame_mut().op_stack.push_int(value)
-    }
-
-    fn pop_ref(&mut self) -> u32 {
-        self.frame_mut().op_stack.pop_ref()
-    }
-
-    fn pop_int(&mut self) -> i32 {
-        self.frame_mut().op_stack.pop_int()
-    }
-}
-
-impl Locals for Thread {
-    fn store_ref(&mut self, idx: u16, value: u32) {
-        self.frame_mut().local_vars.store_ref(idx, value)
-    }
-
-    fn store_int(&mut self, idx: u16, value: i32) {
-        self.frame_mut().local_vars.store_int(idx, value)
-    }
-
-    fn load_ref(&self, idx: u16) -> u32 {
-        self.frame().local_vars.load_ref(idx)
-    }
-
-    fn load_int(&self, idx: u16) -> i32 {
-        self.frame().local_vars.load_int(idx)
-    }
-}
-
 impl Frame {
+    fn read_i8(&mut self) -> i8 {
+        let bytes = [self.read_u8(); 1];
+        i8::from_be_bytes(bytes)
+    }
+
     fn read_u8(&mut self) -> u8 {
         let u8 = self.method.code.get(self.pc as usize).unwrap().clone();
         self.pc += 1;

@@ -28,6 +28,10 @@ impl Runtime {
         self.heap.create(class)
     }
 
+    pub fn load_object(&self, reference: u32) -> Rc<RefCell<Ref>> {
+        self.heap.get(reference)
+    }
+
     pub fn insert_char_array(&mut self, char_arr: Vec<u16>) -> u32 {
         self.heap.insert_char_array(char_arr)
     }
