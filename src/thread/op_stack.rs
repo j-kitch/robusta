@@ -21,6 +21,14 @@ impl OperandStack {
         word
     }
 
+    fn pop_dword(&mut self) -> [u8; 8] {
+        let mut dword = [0; 8];
+        for i in (0..8).rev() {
+            dword[i] = self.stack.pop().unwrap();
+        }
+        dword
+    }
+
     pub fn push_ref(&mut self, op: u32) {
         self.push_bytes(&op.to_be_bytes())
     }
@@ -57,5 +65,9 @@ impl OperandStack {
 
     pub fn pop_int(&mut self) -> i32 {
         i32::from_be_bytes(self.pop_word())
+    }
+
+    pub fn pop_long(&mut self) -> i64 {
+        i64::from_be_bytes(self.pop_dword())
     }
 }

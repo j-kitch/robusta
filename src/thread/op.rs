@@ -17,11 +17,16 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x07 => |t| iconst_n(t, 4),
         0x08 => |t| iconst_n(t, 5),
         0x12 => ldc,
+        0x14 => ldc2_w,
         0x19 => aload,
         0x1A => |t| iload_n(t, 0),
         0x1B => |t| iload_n(t, 1),
         0x1C => |t| iload_n(t, 2),
         0x1D => |t| iload_n(t, 3),
+        0x1E => |t| lload_n(t, 0),
+        0x1F => |t| lload_n(t, 1),
+        0x20 => |t| lload_n(t, 2),
+        0x21 => |t| lload_n(t, 3),
         0xB1 => return_op,
         0x2A => |t| aload_n(t, 0),
         0x2B => |t| aload_n(t, 1),
@@ -33,6 +38,10 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x3C => |t| istore_n(t, 1),
         0x3D => |t| istore_n(t, 2),
         0x3E => |t| istore_n(t, 3),
+        0x3F => |t| lstore_n(t, 0),
+        0x40 => |t| lstore_n(t, 1),
+        0x41 => |t| lstore_n(t, 2),
+        0x42 => |t| lstore_n(t, 3),
         0x4B => |t| astore_n(t, 0),
         0x4C => |t| astore_n(t, 1),
         0x4D => |t| astore_n(t, 2),
@@ -40,6 +49,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x60 => iadd,
         0x64 => isub,
         0x68 => imul,
+        0x69 => lmul,
         0x6C => idiv,
         0x70 => irem,
         0x74 => ineg,
@@ -112,10 +122,22 @@ fn istore_n(thread: &mut Thread, n: u16) {
     current.local_vars.store_int(n, int);
 }
 
+fn lstore_n(thread: &mut Thread, n: u16) {
+    let current = thread.frames.current_mut();
+    let long = current.op_stack.pop_long();
+    current.local_vars.store_long(n, long);
+}
+
 fn iload_n(thread: &mut Thread, n: u16) {
     let current = thread.frames.current_mut();
     let int = current.local_vars.load_int(n);
     current.op_stack.push_int(int);
+}
+
+fn lload_n(thread: &mut Thread, n: u16) {
+    let current = thread.frames.current_mut();
+    let long = current.local_vars.load_long(n);
+    current.op_stack.push_long(long);
 }
 
 fn array_length(thread: &mut Thread) {
@@ -176,6 +198,9 @@ fn invoke_static(thread: &mut Thread) {
             Descriptor::Boolean | Descriptor::Byte | Descriptor::Char | Descriptor::Short | Descriptor::Int => {
                 args.push(Value::Int(current.op_stack.pop_int()));
             }
+            Descriptor::Long => {
+                args.push(Value::Long(current.op_stack.pop_long()))
+            }
             _ => panic!("err")
         }
     }
@@ -222,6 +247,18 @@ fn ldc(thread: &mut Thread) {
     }
 }
 
+fn ldc2_w(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let idx = current.read_u16();
+    let con = current.class.const_pool.get(&idx).unwrap();
+    match con {
+        Const::Long(l) => {
+            current.op_stack.push_long(l.long);
+        }
+        _ => panic!("err")
+    }
+}
+
 fn imul(thread: &mut Thread) {
     let current = thread.frames.current_mut();
     let value2 = current.op_stack.pop_int();
@@ -230,6 +267,16 @@ fn imul(thread: &mut Thread) {
     let (result, _) = value1.overflowing_mul(value2);
 
     current.op_stack.push_int(result);
+}
+
+fn lmul(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_long();
+    let value1 = current.op_stack.pop_long();
+
+    let (result, _) = value1.overflowing_mul(value2);
+
+    current.op_stack.push_long(result);
 }
 
 fn iadd(thread: &mut Thread) {
