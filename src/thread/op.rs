@@ -41,6 +41,14 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x64 => isub,
         0x68 => imul,
         0x6C => idiv,
+        0x70 => irem,
+        0x74 => ineg,
+        0x78 => ishl,
+        0x7A => ishr,
+        0x7C => iushr,
+        0x7E => iand,
+        0x80 => ior,
+        0x82 => ixor,
         0x84 => iinc,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
@@ -254,10 +262,97 @@ fn isub(thread: &mut Thread) {
     current.op_stack.push_int(result);
 }
 
+fn irem(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let (result, _) = value1.overflowing_rem(value2);
+
+    current.op_stack.push_int(result);
+}
+
+fn ineg(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value1 = current.op_stack.pop_int();
+
+    let result = -value1;
+
+    current.op_stack.push_int(result);
+}
+
+fn ishl(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let s = (0x1F & value2) as u32;
+
+    let (result, _) = value1.overflowing_shl(s);
+
+    current.op_stack.push_int(result);
+}
+
+fn ishr(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let s = (0x1F & value2) as u32;
+
+    let (result, _) = value1.overflowing_shr(s);
+
+    current.op_stack.push_int(result);
+}
+
+fn iushr(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let s = (0x1F & value2) as u32;
+    let uns_value1 = u32::from_be_bytes(value1.to_be_bytes());
+
+    let (result, _) = uns_value1.overflowing_shr(s);
+    let result = i32::from_be_bytes(result.to_be_bytes());
+
+    current.op_stack.push_int(result);
+}
+
+fn iand(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let result = value1 & value2;
+
+    current.op_stack.push_int(result);
+}
+
+fn ior(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let result = value1 | value2;
+
+    current.op_stack.push_int(result);
+}
+
+fn ixor(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_int();
+    let value1 = current.op_stack.pop_int();
+
+    let result = value1 ^ value2;
+
+    current.op_stack.push_int(result);
+}
+
 fn reserved(thread: &mut Thread) {
     let current = thread.frames.current();
     panic!("encountered reserved opcode {} at {}.{}{}",
-        current.method.code[current.pc - 1],
+        current.method.code[(current.pc - 1) as usize],
         &current.class.this_class,
         &current.method.name,
         current.method.descriptor.descriptor());
