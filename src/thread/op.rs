@@ -49,16 +49,16 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x4D => |t| astore_n(t, 2),
         0x4E => |t| astore_n(t, 3),
         0x5C => dup2,
-        0x60 => iadd,
-        0x61 => ladd,
-        0x64 => isub,
-        0x65 => lsub,
-        0x68 => imul,
-        0x69 => lmul,
-        0x6C => idiv,
-        0x6D => ldiv,
-        0x70 => irem,
-        0x71 => lrem,
+        0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
+        0x61 => |t| long_binary_op(t, |l1, l2| l1.overflowing_add(l2).0),
+        0x64 => |t| int_binary_op(t, |i1, i2| i1.overflowing_sub(i2).0),
+        0x65 => |t| long_binary_op(t, |l1, l2| l1.overflowing_sub(l2).0),
+        0x68 => |t| int_binary_op(t, |i1, i2| i1.overflowing_mul(i2).0),
+        0x69 => |t| long_binary_op(t, |l1, l2| l1.overflowing_mul(l2).0),
+        0x6C => |t| int_binary_op(t, |i1, i2| i1.overflowing_div(i2).0),
+        0x6D => |t| long_binary_op(t, |l1, l2| l1.overflowing_div(l2).0),
+        0x70 => |t| int_binary_op(t, |i1, i2| i1.overflowing_rem(i2).0),
+        0x71 => |t| long_binary_op(t, |l1, l2| l1.overflowing_rem(l2).0),
         0x74 => ineg,
         0x75 => lneg,
         0x78 => ishl,
@@ -67,12 +67,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x7B => lshr,
         0x7C => iushr,
         0x7D => lushr,
-        0x7E => iand,
-        0x7F => land,
-        0x80 => ior,
-        0x81 => lor,
-        0x82 => ixor,
-        0x83 => lxor,
+        0x7E => |t| int_binary_op(t, |i1, i2| i1 & i2),
+        0x7F => |t| long_binary_op(t, |l1, l2| l1 & l2),
+        0x80 => |t| int_binary_op(t, |i1, i2| i1 | i2),
+        0x81 => |t| long_binary_op(t, |l1, l2| l1 | l2),
+        0x82 => |t| int_binary_op(t, |i1, i2| i1 ^ i2),
+        0x83 => |t| long_binary_op(t, |l1, l2| l1 ^ l2),
         0x84 => iinc,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
@@ -285,102 +285,22 @@ fn ldc2_w(thread: &mut Thread) {
     }
 }
 
-fn imul(thread: &mut Thread) {
+fn int_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i32, i32) -> i32 {
     let current = thread.frames.current_mut();
     let value2 = current.op_stack.pop_int();
     let value1 = current.op_stack.pop_int();
 
-    let (result, _) = value1.overflowing_mul(value2);
+    let result = op(value1, value2);
 
     current.op_stack.push_int(result);
 }
 
-fn lmul(thread: &mut Thread) {
+fn long_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i64, i64) -> i64 {
     let current = thread.frames.current_mut();
     let value2 = current.op_stack.pop_long();
     let value1 = current.op_stack.pop_long();
 
-    let (result, _) = value1.overflowing_mul(value2);
-
-    current.op_stack.push_long(result);
-}
-
-fn iadd(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let (result, _) = value1.overflowing_add(value2);
-
-    current.op_stack.push_int(result);
-}
-
-fn ladd(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let (result, _) = value1.overflowing_add(value2);
-
-    current.op_stack.push_long(result);
-}
-
-fn idiv(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let (result, _) = value1.overflowing_div(value2);
-
-    current.op_stack.push_int(result);
-}
-
-fn ldiv(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let (result, _) = value1.overflowing_div(value2);
-
-    current.op_stack.push_long(result);
-}
-
-fn isub(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let (result, _) = value1.overflowing_sub(value2);
-
-    current.op_stack.push_int(result);
-}
-
-fn lsub(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let (result, _) = value1.overflowing_sub(value2);
-
-    current.op_stack.push_long(result);
-}
-
-fn irem(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let (result, _) = value1.overflowing_rem(value2);
-
-    current.op_stack.push_int(result);
-}
-
-fn lrem(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let (result, _) = value1.overflowing_rem(value2);
+    let result = op(value1, value2);
 
     current.op_stack.push_long(result);
 }
@@ -475,67 +395,6 @@ fn lushr(thread: &mut Thread) {
 
     let (result, _) = uns_value1.overflowing_shr(s);
     let result = i64::from_be_bytes(result.to_be_bytes());
-
-    current.op_stack.push_long(result);
-}
-
-fn iand(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let result = value1 & value2;
-
-    current.op_stack.push_int(result);
-}
-
-fn land(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let result = value1 & value2;
-
-    current.op_stack.push_long(result);
-}
-
-
-fn ior(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let result = value1 | value2;
-
-    current.op_stack.push_int(result);
-}
-
-fn lor(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let result = value1 | value2;
-
-    current.op_stack.push_long(result);
-}
-
-fn ixor(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let result = value1 ^ value2;
-
-    current.op_stack.push_int(result);
-}
-
-fn lxor(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let result = value1 ^ value2;
 
     current.op_stack.push_long(result);
 }
