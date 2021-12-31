@@ -43,7 +43,7 @@ impl ClassLoader {
 
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
         let mut const_pool = HashMap::new();
-        for (idx, con) in class_file.const_pool.iter().enumerate() {
+        for (idx, con) in class_file.const_pool.iter() {
             let con = match con {
                 class_file::Const::Class(class) => {
                     let class_file::Utf8 { bytes } = class_file.get_const(class.name_idx).expect_utf8();
@@ -52,6 +52,9 @@ impl ClassLoader {
                 }
                 class_file::Const::Int(int) => {
                     class::Const::Int(class::Integer { int: int.int })
+                }
+                class_file::Const::Long(long) => {
+                    class::Const::Long(class::Long { long: long.long })
                 }
                 class_file::Const::FieldRef(field_ref) => {
                     let class = class_file.get_const(field_ref.class_idx).expect_class();
@@ -85,8 +88,7 @@ impl ClassLoader {
                     continue;
                 }
             };
-            let key = (idx + 1) as u16;
-            const_pool.insert(key, con);
+            const_pool.insert(idx.clone(), con);
         }
 
         let this_class = class_file.get_const(class_file.this_class).expect_class();

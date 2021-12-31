@@ -67,6 +67,7 @@ pub enum Const {
     Method(MethodRef),
     Field(FieldRef),
     Int(Integer),
+    Long(Long),
 }
 
 #[derive(Debug)]
@@ -77,6 +78,11 @@ pub struct ClassRef {
 #[derive(Debug)]
 pub struct Integer {
     pub int: i32,
+}
+
+#[derive(Debug)]
+pub struct Long {
+    pub long: i64,
 }
 
 #[derive(Debug)]
