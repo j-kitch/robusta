@@ -202,6 +202,41 @@ impl Array {
             _ => panic!("err")
         }
     }
+
+    pub fn short(&self) -> &Vec<i16> {
+        match self {
+            Array::Short(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn int(&self) -> &Vec<i32> {
+        match self {
+            Array::Int(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn long(&self) -> &Vec<i64> {
+        match self {
+            Array::Long(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn float(&self) -> &Vec<f32> {
+        match self {
+            Array::Float(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double(&self) -> &Vec<f64> {
+        match self {
+            Array::Double(vec) => vec,
+            _ => panic!("err")
+        }
+    }
 }
 
 impl Array {
