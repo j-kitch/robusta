@@ -1,10 +1,9 @@
 use std::ops::{Deref, DerefMut};
-use crate::class::Const;
 
+use crate::class::Const;
 use crate::descriptor::Descriptor;
-use crate::heap;
 use crate::heap::Value;
-use crate::instruction::array_load;
+use crate::instruction::{array_load, array_store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -83,13 +82,13 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x4C => |t| astore_n(t, 1),
         0x4D => |t| astore_n(t, 2),
         0x4E => |t| astore_n(t, 3),
-        0x4F => iastore,
-        0x50 => lastore,
-        0x51 => fastore,
-        0x52 => dastore,
-        0x54 => bastore,
-        0x55 => castore,
-        0x56 => sastore,
+        0x4F => array_store::int,
+        0x50 => array_store::long,
+        0x51 => array_store::float,
+        0x52 => array_store::double,
+        0x54 => array_store::byte,
+        0x55 => array_store::char,
+        0x56 => array_store::short,
         0x59 => dup,
         0x5C => dup2,
         0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
@@ -574,10 +573,10 @@ fn double_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(f64, f64) -> f64 
 fn reserved(thread: &mut Thread) {
     let current = thread.frames.current();
     panic!("encountered reserved opcode {} at {}.{}{}",
-        current.method.code[(current.pc - 1) as usize],
-        &current.class.this_class,
-        &current.method.name,
-        current.method.descriptor.descriptor());
+           current.method.code[(current.pc - 1) as usize],
+           &current.class.this_class,
+           &current.method.name,
+           current.method.descriptor.descriptor());
 }
 
 fn i2b(thread: &mut Thread) {
@@ -740,121 +739,6 @@ fn new_array(thread: &mut Thread) {
     current.op_stack.push_ref(array);
 }
 
-fn bastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_int() as i8;
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let byte_array = match array {
-        heap::Array::Byte(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    byte_array[index] = value;
-}
-
-fn castore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_int() as u16;
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let char_array = match array {
-        heap::Array::Char(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    char_array[index] = value;
-}
-
-fn sastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_int() as i16;
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let short_array = match array {
-        heap::Array::Short(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    short_array[index] = value;
-}
-
-fn iastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_int();
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let int_array = match array {
-        heap::Array::Int(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    int_array[index] = value;
-}
-
-fn lastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_long();
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let long_array = match array {
-        heap::Array::Long(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    long_array[index] = value;
-}
-
 fn bipush(thread: &mut Thread) {
     let current = thread.frames.current_mut();
     let byte = current.read_i8() as i32;
@@ -865,50 +749,4 @@ fn sipush(thread: &mut Thread) {
     let current = thread.frames.current_mut();
     let byte = current.read_i16() as i32;
     current.op_stack.push_int(byte);
-}
-
-fn fastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_float();
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let float_array = match array {
-        heap::Array::Float(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    float_array[index] = value;
-}
-
-fn dastore(thread: &mut Thread) {
-    let runtime = thread.rt.borrow();
-    let current = thread.frames.current_mut();
-
-    let value = current.op_stack.pop_double();
-    let index = current.op_stack.pop_int() as usize;
-    let array_ref = current.op_stack.pop_ref();
-
-    let array = runtime.heap.get(array_ref);
-    let mut array = array.as_ref().borrow_mut();
-    let array = match array.deref_mut() {
-        heap::Ref::Arr(arr) => arr,
-        _ => panic!("err"),
-    };
-
-    let double_array = match array {
-        heap::Array::Double(vec) => vec,
-        _ => panic!("err"),
-    };
-
-    double_array[index] = value;
 }

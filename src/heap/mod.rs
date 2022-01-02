@@ -113,6 +113,13 @@ impl Ref {
             _ => panic!("err")
         }
     }
+
+    pub fn arr_mut(&mut self) -> &mut Array {
+        match self {
+            Ref::Arr(arr) => arr,
+            _ => panic!("err")
+        }
+    }
 }
 
 pub struct Object {
@@ -189,6 +196,13 @@ impl Array {
         }
     }
 
+    pub fn reference_mut(&mut self) -> &mut Vec<u32> {
+        match self {
+            Array::Ref(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
     pub fn byte(&self) -> &Vec<i8> {
         match self {
             Array::Byte(vec) => vec,
@@ -196,7 +210,22 @@ impl Array {
         }
     }
 
+    pub fn byte_mut(&mut self) -> &mut Vec<i8> {
+        match self {
+            Array::Byte(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+
     pub fn char(&self) -> &Vec<u16> {
+        match self {
+            Array::Char(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn char_mut(&mut self) -> &mut Vec<u16> {
         match self {
             Array::Char(vec) => vec,
             _ => panic!("err")
@@ -210,7 +239,21 @@ impl Array {
         }
     }
 
+    pub fn short_mut(&mut self) -> &mut Vec<i16> {
+        match self {
+            Array::Short(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
     pub fn int(&self) -> &Vec<i32> {
+        match self {
+            Array::Int(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn int_mut(&mut self) -> &mut Vec<i32> {
         match self {
             Array::Int(vec) => vec,
             _ => panic!("err")
@@ -224,6 +267,13 @@ impl Array {
         }
     }
 
+    pub fn long_mut(&mut self) -> &mut Vec<i64> {
+        match self {
+            Array::Long(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
     pub fn float(&self) -> &Vec<f32> {
         match self {
             Array::Float(vec) => vec,
@@ -231,7 +281,21 @@ impl Array {
         }
     }
 
+    pub fn float_mut(&mut self) -> &mut Vec<f32> {
+        match self {
+            Array::Float(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
     pub fn double(&self) -> &Vec<f64> {
+        match self {
+            Array::Double(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double_mut(&mut self) -> &mut Vec<f64> {
         match self {
             Array::Double(vec) => vec,
             _ => panic!("err")
