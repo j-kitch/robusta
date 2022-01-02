@@ -1,6 +1,10 @@
 use crate::thread::op_stack::OperandStack;
 use crate::thread::Thread;
 
+pub fn reference_null(thread: &mut Thread) {
+    push_const(thread, 0, OperandStack::push_ref)
+}
+
 pub fn int_m1(thread: &mut Thread) {
     push_const(thread, -1, OperandStack::push_int)
 }

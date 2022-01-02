@@ -3,13 +3,15 @@ use std::ops::{Deref, DerefMut};
 use crate::class::Const;
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, push_const};
+use crate::instruction::{array_load, array_store, push, push_const};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
 
 pub fn get_op(frame: &mut Frame, code: u8) -> Op {
     match code {
+        0x00 => nop,
+        0x01 => push_const::reference_null,
         0x02 => push_const::int_m1,
         0x03 => push_const::int_0,
         0x04 => push_const::int_1,
@@ -24,8 +26,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x0D => push_const::float_2,
         0x0E => push_const::double_0,
         0x0F => push_const::double_1,
-        0x10 => bipush,
-        0x11 => sipush,
+        0x10 => push::byte,
+        0x11 => push::short,
         0x12 => ldc,
         0x14 => ldc2_w,
         0x17 => fload,
@@ -165,6 +167,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
                     code)
     }
 }
+
+fn nop(_: &mut Thread) {}
 
 fn return_op(thread: &mut Thread) {
     thread.frames.pop();
@@ -717,16 +721,4 @@ fn new_array(thread: &mut Thread) {
     let array = runtime.heap.create_array(arr_type, count);
 
     current.op_stack.push_ref(array);
-}
-
-fn bipush(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let byte = current.read_i8() as i32;
-    current.op_stack.push_int(byte);
-}
-
-fn sipush(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let byte = current.read_i16() as i32;
-    current.op_stack.push_int(byte);
 }

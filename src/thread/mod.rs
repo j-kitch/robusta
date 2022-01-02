@@ -123,25 +123,25 @@ impl Thread {
 }
 
 impl Frame {
-    fn read_i8(&mut self) -> i8 {
+    pub fn read_i8(&mut self) -> i8 {
         let bytes = [self.read_u8(); 1];
         i8::from_be_bytes(bytes)
     }
 
-    fn read_u8(&mut self) -> u8 {
+    pub fn read_u8(&mut self) -> u8 {
         let u8 = self.method.code.get(self.pc as usize).unwrap().clone();
         self.pc += 1;
         u8
     }
 
-    fn read_i16(&mut self) -> i16 {
+    pub fn read_i16(&mut self) -> i16 {
         let mut bytes = [0, 0];
         bytes[0] = self.read_u8();
         bytes[1] = self.read_u8();
         i16::from_be_bytes(bytes)
     }
 
-    fn read_u16(&mut self) -> u16 {
+    pub fn read_u16(&mut self) -> u16 {
         let mut bytes = [0, 0];
         bytes[0] = self.read_u8();
         bytes[1] = self.read_u8();
