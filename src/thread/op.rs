@@ -3,29 +3,29 @@ use std::ops::{Deref, DerefMut};
 use crate::class::Const;
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store};
+use crate::instruction::{array_load, array_store, push_const};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
 
 pub fn get_op(frame: &mut Frame, code: u8) -> Op {
     match code {
-        0x02 => |t| iconst_n(t, -1),
-        0x03 => |t| iconst_n(t, 0),
-        0x04 => |t| iconst_n(t, 1),
-        0x05 => |t| iconst_n(t, 2),
-        0x06 => |t| iconst_n(t, 3),
-        0x07 => |t| iconst_n(t, 4),
-        0x08 => |t| iconst_n(t, 5),
-        0x09 => |t| lconst_n(t, 0),
+        0x02 => push_const::int_m1,
+        0x03 => push_const::int_0,
+        0x04 => push_const::int_1,
+        0x05 => push_const::int_2,
+        0x06 => push_const::int_3,
+        0x07 => push_const::int_4,
+        0x08 => push_const::int_5,
+        0x09 => push_const::long_0,
+        0x0A => push_const::long_1,
+        0x0B => push_const::float_0,
+        0x0C => push_const::float_1,
+        0x0D => push_const::float_2,
+        0x0E => push_const::double_0,
+        0x0F => push_const::double_1,
         0x10 => bipush,
         0x11 => sipush,
-        0x0A => |t| lconst_n(t, 1),
-        0x0B => |t| fconst_n(t, 0.),
-        0x0C => |t| fconst_n(t, 1.),
-        0x0D => |t| fconst_n(t, 2.),
-        0x0E => |t| dconst_n(t, 0.),
-        0x0F => |t| dconst_n(t, 1.),
         0x12 => ldc,
         0x14 => ldc2_w,
         0x17 => fload,
@@ -232,26 +232,6 @@ fn dstore(thread: &mut Thread) {
     let current = thread.frames.current_mut();
     let idx = current.read_u8() as u16;
     dstore_n(thread, idx)
-}
-
-fn dconst_n(thread: &mut Thread, n: f64) {
-    let current = thread.frames.current_mut();
-    current.op_stack.push_double(n)
-}
-
-fn iconst_n(thread: &mut Thread, n: i32) {
-    let current = thread.frames.current_mut();
-    current.op_stack.push_int(n);
-}
-
-fn fconst_n(thread: &mut Thread, n: f32) {
-    let current = thread.frames.current_mut();
-    current.op_stack.push_float(n);
-}
-
-fn lconst_n(thread: &mut Thread, n: i64) {
-    let current = thread.frames.current_mut();
-    current.op_stack.push_long(n);
 }
 
 fn fstore_n(thread: &mut Thread, n: u16) {
