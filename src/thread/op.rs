@@ -111,6 +111,21 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x82 => |t| int_binary_op(t, |i1, i2| i1 ^ i2),
         0x83 => |t| long_binary_op(t, |l1, l2| l1 ^ l2),
         0x84 => iinc,
+        0x85 => i2l,
+        0x86 => i2f,
+        0x87 => i2d,
+        0x88 => l2i,
+        0x89 => l2f,
+        0x8A => l2d,
+        0x8B => f2i,
+        0x8C => f2l,
+        0x8D => f2d,
+        0x8E => d2i,
+        0x8F => d2l,
+        0x90 => d2f,
+        0x91 => i2b,
+        0x92 => i2c,
+        0x93 => i2s,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
         0xA1 => |t| if_icmp_cond(t, |i1, i2| i1 < i2),
@@ -558,4 +573,141 @@ fn reserved(thread: &mut Thread) {
         &current.class.this_class,
         &current.method.name,
         current.method.descriptor.descriptor());
+}
+
+fn i2b(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value & 0xFF;
+
+    current.op_stack.push_int(result);
+}
+
+fn i2c(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value & 0xFF_FF;
+
+    current.op_stack.push_int(result);
+}
+
+fn i2d(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value as f64;
+
+    current.op_stack.push_double(result);
+}
+
+fn i2f(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value as f32;
+
+    current.op_stack.push_float(result);
+}
+
+fn i2l(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value as i64;
+
+    current.op_stack.push_long(result);
+}
+
+fn i2s(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_int();
+
+    let result = value & 0xFF_FF;
+
+    current.op_stack.push_int(result);
+}
+
+fn l2i(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_long();
+
+    let bytes: [u8; 8] = value.to_be_bytes();
+    let low_order_bytes: [u8; 4] = [bytes[4], bytes[5], bytes[6], bytes[7]];
+    let int = i32::from_be_bytes(low_order_bytes);
+
+    current.op_stack.push_int(int);
+}
+
+fn l2f(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_long();
+
+    let result = value as f32;
+
+    current.op_stack.push_float(result);
+}
+
+fn l2d(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_long();
+
+    let result = value as f64;
+
+    current.op_stack.push_double(result);
+}
+
+fn f2i(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_float();
+
+    let result = value as i32;
+
+    current.op_stack.push_int(result);
+}
+
+fn f2l(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_float();
+
+    let result = value as i64;
+
+    current.op_stack.push_long(result);
+}
+
+fn f2d(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_float();
+
+    let result = value as f64;
+
+    current.op_stack.push_double(result);
+}
+
+fn d2i(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_double();
+
+    let result = value as i32;
+
+    current.op_stack.push_int(result);
+}
+
+fn d2l(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_double();
+
+    let result = value as i64;
+
+    current.op_stack.push_long(result);
+}
+
+fn d2f(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value = current.op_stack.pop_double();
+
+    let result = value as f32;
+
+    current.op_stack.push_float(result);
 }

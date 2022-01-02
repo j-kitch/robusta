@@ -28,6 +28,12 @@ public class PrimitiveOps {
         Robusta.println(i >> 5);
         Robusta.println(i >>> 5);
         Robusta.println(-i);
+        Robusta.println((byte) i);
+        Robusta.println((short) i);
+        Robusta.println((char) i);
+        Robusta.println((long) i);
+        Robusta.println((float) i);
+        Robusta.println((double) i);
     }
 
     private static void longOperations(long l) {
@@ -46,6 +52,12 @@ public class PrimitiveOps {
         Robusta.println(l >> 5);
         Robusta.println(l >>> 5);
         Robusta.println(-l);
+        Robusta.println((byte) l);
+        Robusta.println((short) l);
+        Robusta.println((char) l);
+        Robusta.println((int) l);
+        Robusta.println((float) l);
+        Robusta.println((double) l);
     }
 
     private static void floatOperations(float f) {
@@ -57,6 +69,12 @@ public class PrimitiveOps {
         Robusta.println(f++);
         Robusta.println(f--);
         Robusta.println(-f);
+        Robusta.println((byte) f);
+        Robusta.println((short) f);
+        Robusta.println((char) f);
+        Robusta.println((int) f);
+        Robusta.println((long) f);
+        Robusta.println((double) f);
     }
 
     private static void doubleOperations(double d) {
@@ -68,5 +86,11 @@ public class PrimitiveOps {
         Robusta.println(d++);
         Robusta.println(d--);
         Robusta.println(-d);
+        Robusta.println((byte) d);
+        Robusta.println((short) d);
+        Robusta.println((char) d);
+        Robusta.println((int) d);
+        Robusta.println((long) d);
+        Robusta.println((float) d);
     }
 }
