@@ -68,6 +68,7 @@ pub enum Const {
     Field(FieldRef),
     Int(Integer),
     Float(Float),
+    Double(Double),
     Long(Long),
 }
 
@@ -89,6 +90,11 @@ pub struct Float {
 #[derive(Debug)]
 pub struct Long {
     pub long: i64,
+}
+
+#[derive(Debug)]
+pub struct Double {
+    pub double: f64,
 }
 
 #[derive(Debug)]

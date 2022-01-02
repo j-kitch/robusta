@@ -71,6 +71,10 @@ impl OperandStack {
         f32::from_be_bytes(self.pop_word())
     }
 
+    pub fn pop_double(&mut self) -> f64 {
+        f64::from_be_bytes(self.pop_dword())
+    }
+
     pub fn pop_long(&mut self) -> i64 {
         i64::from_be_bytes(self.pop_dword())
     }

@@ -4,10 +4,12 @@ public class PrimitiveOps {
         int i = Robusta.parseInt(args[0]);
         long l = Robusta.parseLong(args[1]);
         float f = Robusta.parseFloat(args[2]);
+        double d = Robusta.parseDouble(args[3]);
 
         intOperations(i);
         longOperations(l);
         floatOperations(f);
+        doubleOperations(d);
     }
 
     private static void intOperations(int i) {
@@ -55,5 +57,16 @@ public class PrimitiveOps {
         Robusta.println(f++);
         Robusta.println(f--);
         Robusta.println(-f);
+    }
+
+    private static void doubleOperations(double d) {
+        Robusta.println(d * 54326);
+        Robusta.println(d + 4325435);
+        Robusta.println(d / 3);
+        Robusta.println(d - 54326);
+        Robusta.println(d % 54326);
+        Robusta.println(d++);
+        Robusta.println(d--);
+        Robusta.println(-d);
     }
 }

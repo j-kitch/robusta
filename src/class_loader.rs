@@ -59,6 +59,9 @@ impl ClassLoader {
                 class_file::Const::Long(long) => {
                     class::Const::Long(class::Long { long: long.long })
                 }
+                class_file::Const::Double(double) => {
+                    class::Const::Double(class::Double { double: double.double })
+                }
                 class_file::Const::FieldRef(field_ref) => {
                     let class = class_file.get_const(field_ref.class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();

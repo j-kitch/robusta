@@ -45,6 +45,11 @@ impl<'a> Reader<'a> {
         i64::from_be_bytes(self.u64_buf)
     }
 
+    fn read_f64(&mut self) -> f64 {
+        self.file.read_exact(&mut self.u64_buf).unwrap();
+        f64::from_be_bytes(self.u64_buf)
+    }
+
     fn read_bytes(&mut self, len: usize) -> Vec<u8> {
         let mut bytes = vec![0; len];
         self.file.read_exact(&mut bytes).unwrap();
@@ -61,7 +66,7 @@ impl<'a> Reader<'a> {
         while const_pool_idx < const_pool_len {
             let con = self.read_const();
             let size = match &con {
-                Const::Long(_) => 2,
+                Const::Long(_) | Const::Double(_) => 2,
                 _ => 1,
             };
             const_pool.insert(const_pool_idx, con);
@@ -101,6 +106,10 @@ impl<'a> Reader<'a> {
             5 => {
                 let long = self.read_i64();
                 Const::Long(Long { long })
+            }
+            6 => {
+                let double = self.read_f64();
+                Const::Double(Double { double })
             }
             7 => {
                 let name_idx = self.read_u16();
@@ -224,6 +233,11 @@ pub struct Long {
 }
 
 #[derive(Debug)]
+pub struct Double {
+    pub double: f64,
+}
+
+#[derive(Debug)]
 pub struct FieldRef {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
@@ -247,6 +261,7 @@ pub enum Const {
     Int(Integer),
     Float(Float),
     Long(Long),
+    Double(Double),
     Class(Class),
     FieldRef(FieldRef),
     MethodRef(MethodRef),
