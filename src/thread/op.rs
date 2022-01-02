@@ -1,9 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::class::Const;
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, load_const, push, push_const};
+use crate::instruction::{array_load, array_store, load, load_const, push, push_const};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -31,21 +30,23 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x12 => load_const::category_1,
         0x13 => load_const::category_1_wide,
         0x14 => load_const::category_2_wide,
-        0x17 => fload,
+        0x15 => load::int,
+        0x16 => load::long,
+        0x17 => load::float,
         0x18 => dload,
         0x19 => aload,
-        0x1A => |t| iload_n(t, 0),
-        0x1B => |t| iload_n(t, 1),
-        0x1C => |t| iload_n(t, 2),
-        0x1D => |t| iload_n(t, 3),
-        0x1E => |t| lload_n(t, 0),
-        0x1F => |t| lload_n(t, 1),
-        0x20 => |t| lload_n(t, 2),
-        0x21 => |t| lload_n(t, 3),
-        0x22 => |t| fload_n(t, 0),
-        0x23 => |t| fload_n(t, 1),
-        0x24 => |t| fload_n(t, 2),
-        0x25 => |t| fload_n(t, 3),
+        0x1A => load::int_0,
+        0x1B => load::int_1,
+        0x1C => load::int_2,
+        0x1D => load::int_3,
+        0x1E => load::long_0,
+        0x1F => load::long_1,
+        0x20 => load::long_2,
+        0x21 => load::long_3,
+        0x22 => load::float_0,
+        0x23 => load::float_1,
+        0x24 => load::float_2,
+        0x25 => load::float_3,
         0x26 => |t| dload_n(t, 0),
         0x27 => |t| dload_n(t, 1),
         0x28 => |t| dload_n(t, 2),
@@ -251,18 +252,6 @@ fn fstore(thread: &mut Thread) {
     fstore_n(thread, idx)
 }
 
-fn fload(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8() as u16;
-    fload_n(thread, idx)
-}
-
-fn fload_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let float = current.local_vars.load_float(n);
-    current.op_stack.push_float(float)
-}
-
 fn istore_n(thread: &mut Thread, n: u16) {
     let current = thread.frames.current_mut();
     let int = current.op_stack.pop_int();
@@ -273,18 +262,6 @@ fn lstore_n(thread: &mut Thread, n: u16) {
     let current = thread.frames.current_mut();
     let long = current.op_stack.pop_long();
     current.local_vars.store_long(n, long);
-}
-
-fn iload_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let int = current.local_vars.load_int(n);
-    current.op_stack.push_int(int);
-}
-
-fn lload_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let long = current.local_vars.load_long(n);
-    current.op_stack.push_long(long);
 }
 
 fn array_length(thread: &mut Thread) {
