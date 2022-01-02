@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::class::Const;
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, push, push_const};
+use crate::instruction::{array_load, array_store, load_const, push, push_const};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -28,8 +28,9 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x0F => push_const::double_1,
         0x10 => push::byte,
         0x11 => push::short,
-        0x12 => ldc,
-        0x14 => ldc2_w,
+        0x12 => load_const::category_1,
+        0x13 => load_const::category_1_wide,
+        0x14 => load_const::category_2_wide,
         0x17 => fload,
         0x18 => dload,
         0x19 => aload,
@@ -370,36 +371,6 @@ fn goto(thread: &mut Thread) {
     let start_pc = current.pc as i64 - 3;
     let result = start_pc + off as i64;
     current.pc = result as u32;
-}
-
-fn ldc(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8() as u16;
-    let con = current.class.const_pool.get(&idx).unwrap();
-    match con {
-        Const::Int(i) => {
-            current.op_stack.push_int(i.int);
-        }
-        Const::Float(f) => {
-            current.op_stack.push_float(f.float);
-        }
-        _ => panic!("err")
-    }
-}
-
-fn ldc2_w(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u16();
-    let con = current.class.const_pool.get(&idx).unwrap();
-    match con {
-        Const::Long(l) => {
-            current.op_stack.push_long(l.long);
-        }
-        Const::Double(d) => {
-            current.op_stack.push_double(d.double);
-        }
-        _ => panic!("err")
-    }
 }
 
 fn int_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i32, i32) -> i32 {
