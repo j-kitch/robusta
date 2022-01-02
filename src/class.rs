@@ -67,6 +67,7 @@ pub enum Const {
     Method(MethodRef),
     Field(FieldRef),
     Int(Integer),
+    Float(Float),
     Long(Long),
 }
 
@@ -78,6 +79,11 @@ pub struct ClassRef {
 #[derive(Debug)]
 pub struct Integer {
     pub int: i32,
+}
+
+#[derive(Debug)]
+pub struct Float {
+    pub float: f32,
 }
 
 #[derive(Debug)]

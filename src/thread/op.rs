@@ -18,8 +18,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x08 => |t| iconst_n(t, 5),
         0x09 => |t| lconst_n(t, 0),
         0x0A => |t| lconst_n(t, 1),
+        0x0B => |t| fconst_n(t, 0.),
+        0x0C => |t| fconst_n(t, 1.),
+        0x0D => |t| fconst_n(t, 2.),
         0x12 => ldc,
         0x14 => ldc2_w,
+        0x17 => fload,
         0x19 => aload,
         0x1A => |t| iload_n(t, 0),
         0x1B => |t| iload_n(t, 1),
@@ -29,12 +33,16 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x1F => |t| lload_n(t, 1),
         0x20 => |t| lload_n(t, 2),
         0x21 => |t| lload_n(t, 3),
-        0xB1 => return_op,
+        0x22 => |t| fload_n(t, 0),
+        0x23 => |t| fload_n(t, 1),
+        0x24 => |t| fload_n(t, 2),
+        0x25 => |t| fload_n(t, 3),
         0x2A => |t| aload_n(t, 0),
         0x2B => |t| aload_n(t, 1),
         0x2C => |t| aload_n(t, 2),
         0x2D => |t| aload_n(t, 3),
         0x32 => aa_load,
+        0x38 => fstore,
         0x3A => astore,
         0x3B => |t| istore_n(t, 0),
         0x3C => |t| istore_n(t, 1),
@@ -44,23 +52,34 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x40 => |t| lstore_n(t, 1),
         0x41 => |t| lstore_n(t, 2),
         0x42 => |t| lstore_n(t, 3),
+        0x43 => |t| fstore_n(t, 0),
+        0x44 => |t| fstore_n(t, 1),
+        0x45 => |t| fstore_n(t, 2),
+        0x46 => |t| fstore_n(t, 3),
         0x4B => |t| astore_n(t, 0),
         0x4C => |t| astore_n(t, 1),
         0x4D => |t| astore_n(t, 2),
         0x4E => |t| astore_n(t, 3),
+        0x59 => dup,
         0x5C => dup2,
         0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
         0x61 => |t| long_binary_op(t, |l1, l2| l1.overflowing_add(l2).0),
+        0x62 => |t| float_binary_op(t, |f1, f2| f1 + f2),
         0x64 => |t| int_binary_op(t, |i1, i2| i1.overflowing_sub(i2).0),
         0x65 => |t| long_binary_op(t, |l1, l2| l1.overflowing_sub(l2).0),
+        0x66 => |t| float_binary_op(t, |f1, f2| f1 - f2),
         0x68 => |t| int_binary_op(t, |i1, i2| i1.overflowing_mul(i2).0),
         0x69 => |t| long_binary_op(t, |l1, l2| l1.overflowing_mul(l2).0),
+        0x6A => |t| float_binary_op(t, |f1, f2| f1 * f2),
         0x6C => |t| int_binary_op(t, |i1, i2| i1.overflowing_div(i2).0),
         0x6D => |t| long_binary_op(t, |l1, l2| l1.overflowing_div(l2).0),
+        0x6E => |t| float_binary_op(t, |f1, f2| f1 / f2),
         0x70 => |t| int_binary_op(t, |i1, i2| i1.overflowing_rem(i2).0),
         0x71 => |t| long_binary_op(t, |l1, l2| l1.overflowing_rem(l2).0),
+        0x72 => |t| float_binary_op(t, |f1, f2| f1 % f2),
         0x74 => ineg,
         0x75 => lneg,
+        0x76 => fneg,
         0x78 => ishl,
         0x79 => lshl,
         0x7A => ishr,
@@ -81,6 +100,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA3 => |t| if_icmp_cond(t, |i1, i2| i1 > i2),
         0xA4 => |t| if_icmp_cond(t, |i1, i2| i1 <= i2),
         0xA7 => goto,
+        0xB1 => return_op,
         0xB8 => invoke_static,
         0xBE => array_length,
         0xCA => reserved,
@@ -97,6 +117,13 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
 
 fn return_op(thread: &mut Thread) {
     thread.frames.pop();
+}
+
+fn dup(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let four_byte_word = current.op_stack.pop_ref();
+    current.op_stack.push_ref(four_byte_word);
+    current.op_stack.push_ref(four_byte_word);
 }
 
 fn dup2(thread: &mut Thread) {
@@ -137,9 +164,38 @@ fn iconst_n(thread: &mut Thread, n: i32) {
     current.op_stack.push_int(n);
 }
 
+fn fconst_n(thread: &mut Thread, n: f32) {
+    let current = thread.frames.current_mut();
+    current.op_stack.push_float(n);
+}
+
 fn lconst_n(thread: &mut Thread, n: i64) {
     let current = thread.frames.current_mut();
     current.op_stack.push_long(n);
+}
+
+fn fstore_n(thread: &mut Thread, n: u16) {
+    let current = thread.frames.current_mut();
+    let float = current.op_stack.pop_float();
+    current.local_vars.store_float(n, float);
+}
+
+fn fstore(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let idx = current.read_u8() as u16;
+    fstore_n(thread, idx)
+}
+
+fn fload(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let idx = current.read_u8() as u16;
+    fload_n(thread, idx)
+}
+
+fn fload_n(thread: &mut Thread, n: u16) {
+    let current = thread.frames.current_mut();
+    let float = current.local_vars.load_float(n);
+    current.op_stack.push_float(float)
 }
 
 fn istore_n(thread: &mut Thread, n: u16) {
@@ -224,6 +280,9 @@ fn invoke_static(thread: &mut Thread) {
             Descriptor::Boolean | Descriptor::Byte | Descriptor::Char | Descriptor::Short | Descriptor::Int => {
                 args.push(Value::Int(current.op_stack.pop_int()));
             }
+            Descriptor::Float => {
+                args.push(Value::Float(current.op_stack.pop_float()))
+            }
             Descriptor::Long => {
                 args.push(Value::Long(current.op_stack.pop_long()))
             }
@@ -268,6 +327,9 @@ fn ldc(thread: &mut Thread) {
     match con {
         Const::Int(i) => {
             current.op_stack.push_int(i.int);
+        }
+        Const::Float(f) => {
+            current.op_stack.push_float(f.float);
         }
         _ => panic!("err")
     }
@@ -321,6 +383,15 @@ fn lneg(thread: &mut Thread) {
     let result = -value1;
 
     current.op_stack.push_long(result);
+}
+
+fn fneg(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value1 = current.op_stack.pop_float();
+
+    let result = -value1;
+
+    current.op_stack.push_float(result);
 }
 
 fn ishl(thread: &mut Thread) {
@@ -397,6 +468,16 @@ fn lushr(thread: &mut Thread) {
     let result = i64::from_be_bytes(result.to_be_bytes());
 
     current.op_stack.push_long(result);
+}
+
+fn float_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(f32, f32) -> f32 {
+    let current = thread.frames.current_mut();
+    let value2 = current.op_stack.pop_float();
+    let value1 = current.op_stack.pop_float();
+
+    let result = op(value1, value2);
+
+    current.op_stack.push_float(result);
 }
 
 fn reserved(thread: &mut Thread) {

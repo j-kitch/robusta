@@ -35,6 +35,11 @@ impl<'a> Reader<'a> {
         i32::from_be_bytes(self.u32_buf)
     }
 
+    fn read_f32(&mut self) -> f32 {
+        self.file.read_exact(&mut self.u32_buf).unwrap();
+        f32::from_be_bytes(self.u32_buf)
+    }
+
     fn read_i64(&mut self) -> i64 {
         self.file.read_exact(&mut self.u64_buf).unwrap();
         i64::from_be_bytes(self.u64_buf)
@@ -88,6 +93,10 @@ impl<'a> Reader<'a> {
             3 => {
                 let int = self.read_i32();
                 Const::Int(Integer { int })
+            }
+            4 => {
+                let float = self.read_f32();
+                Const::Float(Float { float })
             }
             5 => {
                 let long = self.read_i64();
@@ -205,6 +214,11 @@ pub struct Integer {
 }
 
 #[derive(Debug)]
+pub struct Float {
+    pub float: f32,
+}
+
+#[derive(Debug)]
 pub struct Long {
     pub long: i64,
 }
@@ -231,6 +245,7 @@ pub struct NameAndType {
 pub enum Const {
     Utf8(Utf8),
     Int(Integer),
+    Float(Float),
     Long(Long),
     Class(Class),
     FieldRef(FieldRef),

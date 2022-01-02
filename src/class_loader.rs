@@ -53,6 +53,9 @@ impl ClassLoader {
                 class_file::Const::Int(int) => {
                     class::Const::Int(class::Integer { int: int.int })
                 }
+                class_file::Const::Float(float) => {
+                    class::Const::Float(class::Float { float: float.float })
+                }
                 class_file::Const::Long(long) => {
                     class::Const::Long(class::Long { long: long.long })
                 }
