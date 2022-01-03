@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, dup, load, load_const, pop, push, push_const, store};
+use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -104,26 +104,26 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x5D => dup::dup2_x1,
         0x5E => dup::dup2_x2,
         0x5F => dup::swap,
-        0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
-        0x61 => |t| long_binary_op(t, |l1, l2| l1.overflowing_add(l2).0),
-        0x62 => |t| float_binary_op(t, |f1, f2| f1 + f2),
-        0x63 => |t| double_binary_op(t, |d1, d2| d1 + d2),
-        0x64 => |t| int_binary_op(t, |i1, i2| i1.overflowing_sub(i2).0),
-        0x65 => |t| long_binary_op(t, |l1, l2| l1.overflowing_sub(l2).0),
-        0x66 => |t| float_binary_op(t, |f1, f2| f1 - f2),
-        0x67 => |t| double_binary_op(t, |d1, d2| d1 - d2),
-        0x68 => |t| int_binary_op(t, |i1, i2| i1.overflowing_mul(i2).0),
-        0x69 => |t| long_binary_op(t, |l1, l2| l1.overflowing_mul(l2).0),
-        0x6A => |t| float_binary_op(t, |f1, f2| f1 * f2),
-        0x6B => |t| double_binary_op(t, |d1, d2| d1 * d2),
-        0x6C => |t| int_binary_op(t, |i1, i2| i1.overflowing_div(i2).0),
-        0x6D => |t| long_binary_op(t, |l1, l2| l1.overflowing_div(l2).0),
-        0x6E => |t| float_binary_op(t, |f1, f2| f1 / f2),
-        0x6F => |t| double_binary_op(t, |d1, d2| d1 / d2),
-        0x70 => |t| int_binary_op(t, |i1, i2| i1.overflowing_rem(i2).0),
-        0x71 => |t| long_binary_op(t, |l1, l2| l1.overflowing_rem(l2).0),
-        0x72 => |t| float_binary_op(t, |f1, f2| f1 % f2),
-        0x73 => |t| double_binary_op(t, |d1, d2| d1 % d2),
+        0x60 => binary_op::int_add,
+        0x61 => binary_op::long_add,
+        0x62 => binary_op::float_add,
+        0x63 => binary_op::double_add,
+        0x64 => binary_op::int_sub,
+        0x65 => binary_op::long_sub,
+        0x66 => binary_op::float_sub,
+        0x67 => binary_op::double_sub,
+        0x68 => binary_op::int_mul,
+        0x69 => binary_op::long_mul,
+        0x6A => binary_op::float_mul,
+        0x6B => binary_op::double_mul,
+        0x6C => binary_op::int_div,
+        0x6D => binary_op::long_div,
+        0x6E => binary_op::float_div,
+        0x6F => binary_op::double_div,
+        0x70 => binary_op::int_rem,
+        0x71 => binary_op::long_rem,
+        0x72 => binary_op::float_rem,
+        0x73 => binary_op::double_rem,
         0x74 => ineg,
         0x75 => lneg,
         0x76 => fneg,
@@ -401,26 +401,6 @@ fn lushr(thread: &mut Thread) {
     let result = i64::from_be_bytes(result.to_be_bytes());
 
     current.op_stack.push_long(result);
-}
-
-fn float_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(f32, f32) -> f32 {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_float();
-    let value1 = current.op_stack.pop_float();
-
-    let result = op(value1, value2);
-
-    current.op_stack.push_float(result);
-}
-
-fn double_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(f64, f64) -> f64 {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_double();
-    let value1 = current.op_stack.pop_double();
-
-    let result = op(value1, value2);
-
-    current.op_stack.push_double(result);
 }
 
 fn reserved(thread: &mut Thread) {
