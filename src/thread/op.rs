@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, load, load_const, pop, push, push_const, store};
+use crate::instruction::{array_load, array_store, dup, load, load_const, pop, push, push_const, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -97,8 +97,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x56 => array_store::short,
         0x57 => pop::category_1,
         0x58 => pop::category_2,
-        0x59 => dup,
-        0x5C => dup2,
+        0x59 => dup::dup,
+        0x5A => dup::dup_x1,
+        0x5B => dup::dup_x2,
+        0x5C => dup::dup2,
+        0x5D => dup::dup2_x1,
+        0x5E => dup::dup2_x2,
         0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
         0x61 => |t| long_binary_op(t, |l1, l2| l1.overflowing_add(l2).0),
         0x62 => |t| float_binary_op(t, |f1, f2| f1 + f2),
@@ -178,20 +182,6 @@ fn nop(_: &mut Thread) {}
 
 fn return_op(thread: &mut Thread) {
     thread.frames.pop();
-}
-
-fn dup(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let four_byte_word = current.op_stack.pop_ref();
-    current.op_stack.push_ref(four_byte_word);
-    current.op_stack.push_ref(four_byte_word);
-}
-
-fn dup2(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let eight_byte_op = current.op_stack.pop_long();
-    current.op_stack.push_long(eight_byte_op);
-    current.op_stack.push_long(eight_byte_op);
 }
 
 fn array_length(thread: &mut Thread) {
