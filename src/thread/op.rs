@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -128,12 +128,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x75 => single_op::long_neg,
         0x76 => single_op::float_neg,
         0x77 => single_op::double_neg,
-        0x78 => ishl,
-        0x79 => lshl,
-        0x7A => ishr,
-        0x7B => lshr,
-        0x7C => iushr,
-        0x7D => lushr,
+        0x78 => shift::int_left,
+        0x79 => shift::long_left,
+        0x7A => shift::int_right,
+        0x7B => shift::long_right,
+        0x7C => shift::int_right_unsigned,
+        0x7D => shift::long_right_unsigned,
         0x7E => |t| int_binary_op(t, |i1, i2| i1 & i2),
         0x7F => |t| long_binary_op(t, |l1, l2| l1 & l2),
         0x80 => |t| int_binary_op(t, |i1, i2| i1 | i2),
@@ -287,82 +287,6 @@ fn long_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i64, i64) -> i64 {
     let value1 = current.op_stack.pop_long();
 
     let result = op(value1, value2);
-
-    current.op_stack.push_long(result);
-}
-
-fn ishl(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let s = (0x1F & value2) as u32;
-
-    let (result, _) = value1.overflowing_shl(s);
-
-    current.op_stack.push_int(result);
-}
-
-fn lshl(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_long();
-
-    let s = (0x1F & value2) as u32;
-
-    let (result, _) = value1.overflowing_shl(s);
-
-    current.op_stack.push_long(result);
-}
-
-fn ishr(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let s = (0x1F & value2) as u32;
-
-    let (result, _) = value1.overflowing_shr(s);
-
-    current.op_stack.push_int(result);
-}
-
-fn lshr(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_long();
-
-    let s = (0x1F & value2) as u32;
-
-    let (result, _) = value1.overflowing_shr(s);
-
-    current.op_stack.push_long(result);
-}
-
-fn iushr(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let s = (0x1F & value2) as u32;
-    let uns_value1 = u32::from_be_bytes(value1.to_be_bytes());
-
-    let (result, _) = uns_value1.overflowing_shr(s);
-    let result = i32::from_be_bytes(result.to_be_bytes());
-
-    current.op_stack.push_int(result);
-}
-
-fn lushr(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_long();
-
-    let s = (0x1F & value2) as u32;
-    let uns_value1 = u64::from_be_bytes(value1.to_be_bytes());
-
-    let (result, _) = uns_value1.overflowing_shr(s);
-    let result = i64::from_be_bytes(result.to_be_bytes());
 
     current.op_stack.push_long(result);
 }
