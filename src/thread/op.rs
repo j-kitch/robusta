@@ -103,6 +103,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x5C => dup::dup2,
         0x5D => dup::dup2_x1,
         0x5E => dup::dup2_x2,
+        0x5F => dup::swap,
         0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),
         0x61 => |t| long_binary_op(t, |l1, l2| l1.overflowing_add(l2).0),
         0x62 => |t| float_binary_op(t, |f1, f2| f1 + f2),

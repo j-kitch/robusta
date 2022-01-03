@@ -53,3 +53,12 @@ pub fn dup2_x2(thread: &mut Thread) {
     current.op_stack.push_long(value2);
     current.op_stack.push_long(value1);
 }
+
+pub fn swap(thread: &mut Thread) {
+    let current = thread.frames.current_mut();
+    let value1 = current.op_stack.pop_int();
+    let value2 = current.op_stack.pop_int();
+
+    current.op_stack.push_int(value1);
+    current.op_stack.push_int(value2);
+}
