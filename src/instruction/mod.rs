@@ -4,3 +4,4 @@ pub mod push_const;
 pub mod push;
 pub mod load_const;
 pub mod load;
+pub mod store;

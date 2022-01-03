@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, load, load_const, push, push_const};
+use crate::instruction::{array_load, array_store, load, load_const, push, push_const, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -63,29 +63,31 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x33 => array_load::byte,
         0x34 => array_load::char,
         0x35 => array_load::short,
-        0x38 => fstore,
-        0x39 => dstore,
-        0x3A => astore,
-        0x3B => |t| istore_n(t, 0),
-        0x3C => |t| istore_n(t, 1),
-        0x3D => |t| istore_n(t, 2),
-        0x3E => |t| istore_n(t, 3),
-        0x3F => |t| lstore_n(t, 0),
-        0x40 => |t| lstore_n(t, 1),
-        0x41 => |t| lstore_n(t, 2),
-        0x42 => |t| lstore_n(t, 3),
-        0x43 => |t| fstore_n(t, 0),
-        0x44 => |t| fstore_n(t, 1),
-        0x45 => |t| fstore_n(t, 2),
-        0x46 => |t| fstore_n(t, 3),
-        0x47 => |t| dstore_n(t, 0),
-        0x48 => |t| dstore_n(t, 1),
-        0x49 => |t| dstore_n(t, 2),
-        0x4A => |t| dstore_n(t, 3),
-        0x4B => |t| astore_n(t, 0),
-        0x4C => |t| astore_n(t, 1),
-        0x4D => |t| astore_n(t, 2),
-        0x4E => |t| astore_n(t, 3),
+        0x36 => store::int,
+        0x37 => store::long,
+        0x38 => store::float,
+        0x39 => store::double,
+        0x3A => store::reference,
+        0x3B => store::int_0,
+        0x3C => store::int_1,
+        0x3D => store::int_2,
+        0x3E => store::int_3,
+        0x3F => store::long_0,
+        0x40 => store::long_1,
+        0x41 => store::long_2,
+        0x42 => store::long_3,
+        0x43 => store::float_0,
+        0x44 => store::float_1,
+        0x45 => store::float_2,
+        0x46 => store::float_3,
+        0x47 => store::double_0,
+        0x48 => store::double_1,
+        0x49 => store::double_2,
+        0x4A => store::double_3,
+        0x4B => store::reference_0,
+        0x4C => store::reference_1,
+        0x4D => store::reference_2,
+        0x4E => store::reference_3,
         0x4F => array_store::int,
         0x50 => array_store::long,
         0x51 => array_store::float,
@@ -188,55 +190,6 @@ fn dup2(thread: &mut Thread) {
     let eight_byte_op = current.op_stack.pop_long();
     current.op_stack.push_long(eight_byte_op);
     current.op_stack.push_long(eight_byte_op);
-}
-
-fn astore(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let local_var_idx = current.read_u8() as u16;
-    let reference = current.op_stack.pop_ref();
-    current.local_vars.store_ref(local_var_idx, reference);
-}
-
-fn astore_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let reference = current.op_stack.pop_ref();
-    current.local_vars.store_ref(n, reference);
-}
-
-fn dstore_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let double = current.op_stack.pop_double();
-    current.local_vars.store_double(n, double);
-}
-
-fn dstore(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8() as u16;
-    dstore_n(thread, idx)
-}
-
-fn fstore_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let float = current.op_stack.pop_float();
-    current.local_vars.store_float(n, float);
-}
-
-fn fstore(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8() as u16;
-    fstore_n(thread, idx)
-}
-
-fn istore_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let int = current.op_stack.pop_int();
-    current.local_vars.store_int(n, int);
-}
-
-fn lstore_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let long = current.op_stack.pop_long();
-    current.local_vars.store_long(n, long);
 }
 
 fn array_length(thread: &mut Thread) {
