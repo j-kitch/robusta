@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, store};
+use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -124,10 +124,10 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x71 => binary_op::long_rem,
         0x72 => binary_op::float_rem,
         0x73 => binary_op::double_rem,
-        0x74 => ineg,
-        0x75 => lneg,
-        0x76 => fneg,
-        0x77 => dneg,
+        0x74 => single_op::int_neg,
+        0x75 => single_op::long_neg,
+        0x76 => single_op::float_neg,
+        0x77 => single_op::double_neg,
         0x78 => ishl,
         0x79 => lshl,
         0x7A => ishr,
@@ -289,42 +289,6 @@ fn long_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i64, i64) -> i64 {
     let result = op(value1, value2);
 
     current.op_stack.push_long(result);
-}
-
-fn ineg(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value1 = current.op_stack.pop_int();
-
-    let result = -value1;
-
-    current.op_stack.push_int(result);
-}
-
-fn lneg(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value1 = current.op_stack.pop_long();
-
-    let result = -value1;
-
-    current.op_stack.push_long(result);
-}
-
-fn fneg(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value1 = current.op_stack.pop_float();
-
-    let result = -value1;
-
-    current.op_stack.push_float(result);
-}
-
-fn dneg(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value1 = current.op_stack.pop_double();
-
-    let result = -value1;
-
-    current.op_stack.push_double(result);
 }
 
 fn ishl(thread: &mut Thread) {

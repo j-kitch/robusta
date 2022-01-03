@@ -8,3 +8,4 @@ pub mod store;
 pub mod pop;
 pub mod dup;
 pub mod binary_op;
+pub mod single_op;
