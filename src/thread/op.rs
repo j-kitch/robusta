@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, load, load_const, push, push_const, store};
+use crate::instruction::{array_load, array_store, load, load_const, pop, push, push_const, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -95,6 +95,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x54 => array_store::byte,
         0x55 => array_store::char,
         0x56 => array_store::short,
+        0x57 => pop::category_1,
+        0x58 => pop::category_2,
         0x59 => dup,
         0x5C => dup2,
         0x60 => |t| int_binary_op(t, |i1, i2| i1.overflowing_add(i2).0),

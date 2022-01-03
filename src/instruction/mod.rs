@@ -5,3 +5,4 @@ pub mod push;
 pub mod load_const;
 pub mod load;
 pub mod store;
+pub mod pop;
