@@ -115,6 +115,10 @@ impl<'a> Reader<'a> {
                 let name_idx = self.read_u16();
                 Const::Class(Class { name_idx })
             }
+            8 => {
+                let utf8_idx = self.read_u16();
+                Const::String(String { utf8_idx })
+            }
             9 => {
                 let class_idx = self.read_u16();
                 let name_and_type_idx = self.read_u16();
@@ -157,7 +161,7 @@ impl<'a> Reader<'a> {
     fn read_attribute(&mut self, const_pool: &HashMap<u16, Const>) -> Attribute {
         let name_idx = self.read_u16();
         let name = const_pool.get(&name_idx).unwrap().expect_utf8();
-        let name = String::from_utf8(name.bytes.clone()).unwrap();
+        let name = std::string::String::from_utf8(name.bytes.clone()).unwrap();
 
         match name.as_ref() {
             "Code" => {
@@ -238,6 +242,11 @@ pub struct Double {
 }
 
 #[derive(Debug)]
+pub struct String {
+    pub utf8_idx: u16,
+}
+
+#[derive(Debug)]
 pub struct FieldRef {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
@@ -262,6 +271,7 @@ pub enum Const {
     Float(Float),
     Long(Long),
     Double(Double),
+    String(String),
     Class(Class),
     FieldRef(FieldRef),
     MethodRef(MethodRef),

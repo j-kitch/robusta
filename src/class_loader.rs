@@ -62,6 +62,10 @@ impl ClassLoader {
                 class_file::Const::Double(double) => {
                     class::Const::Double(class::Double { double: double.double })
                 }
+                class_file::Const::String(string) => {
+                    let class_file::Utf8 { bytes } = class_file.get_const(string.utf8_idx).expect_utf8();
+                    class::Const::String(class::String { string: String::from_utf8(bytes.clone()).unwrap() })
+                }
                 class_file::Const::FieldRef(field_ref) => {
                     let class = class_file.get_const(field_ref.class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();

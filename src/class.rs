@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
+
 use crate::descriptor::{Descriptor, MethodDescriptor};
 
 #[derive(Debug)]
@@ -8,19 +9,18 @@ pub struct Class {
     pub major_version: u16,
     pub const_pool: HashMap<u16, Const>,
     pub access_flags: u16,
-    pub this_class: String,
+    pub this_class: std::string::String,
     pub super_class: Option<Rc<Class>>,
-    pub interfaces: Vec<String>,
+    pub interfaces: Vec<std::string::String>,
     pub fields: Vec<Rc<Field>>,
     pub methods: Vec<Rc<Method>>,
 }
 
 pub struct Iter<'a> {
-    curr: Option<&'a Class>
+    curr: Option<&'a Class>,
 }
 
 impl Class {
-
     pub fn const_method(&self, idx: u16) -> &MethodRef {
         match self.const_pool.get(&idx).unwrap() {
             Const::Method(method_ref) => method_ref,
@@ -70,11 +70,12 @@ pub enum Const {
     Float(Float),
     Double(Double),
     Long(Long),
+    String(String),
 }
 
 #[derive(Debug)]
 pub struct ClassRef {
-    pub name: String,
+    pub name: std::string::String,
 }
 
 #[derive(Debug)]
@@ -98,28 +99,33 @@ pub struct Double {
 }
 
 #[derive(Debug)]
+pub struct String {
+    pub string: std::string::String,
+}
+
+#[derive(Debug)]
 pub struct FieldRef {
-    pub class: String,
-    pub name: String,
+    pub class: std::string::String,
+    pub name: std::string::String,
     pub descriptor: Descriptor,
 }
 
 #[derive(Clone, Debug)]
 pub struct MethodRef {
-    pub class: String,
-    pub name: String,
+    pub class: std::string::String,
+    pub name: std::string::String,
     pub descriptor: MethodDescriptor,
 }
 
 #[derive(Debug)]
 pub struct Field {
-    pub name: String,
+    pub name: std::string::String,
     pub descriptor: Descriptor,
 }
 
 #[derive(Debug)]
 pub struct Method {
-    pub name: String,
+    pub name: std::string::String,
     pub descriptor: MethodDescriptor,
     pub native: bool,
     pub max_stack: u16,
