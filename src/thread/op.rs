@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, binary_op, dup, load, load_const, pop, push, push_const, shift, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, convert, dup, load, load_const, pop, push, push_const, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -140,22 +140,22 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x81 => binary_op::long_or,
         0x82 => binary_op::int_xor,
         0x83 => binary_op::long_xor,
-        0x84 => iinc,
-        0x85 => i2l,
-        0x86 => i2f,
-        0x87 => i2d,
-        0x88 => l2i,
-        0x89 => l2f,
-        0x8A => l2d,
-        0x8B => f2i,
-        0x8C => f2l,
-        0x8D => f2d,
-        0x8E => d2i,
-        0x8F => d2l,
-        0x90 => d2f,
-        0x91 => i2b,
-        0x92 => i2c,
-        0x93 => i2s,
+        0x84 => single_op::int_inc,
+        0x85 => convert::int_to_long,
+        0x86 => convert::int_to_float,
+        0x87 => convert::int_to_double,
+        0x88 => convert::long_to_int,
+        0x89 => convert::long_to_float,
+        0x8A => convert::long_to_double,
+        0x8B => convert::float_to_int,
+        0x8C => convert::float_to_long,
+        0x8D => convert::float_to_double,
+        0x8E => convert::double_to_int,
+        0x8F => convert::double_to_long,
+        0x90 => convert::double_to_float,
+        0x91 => convert::int_to_byte,
+        0x92 => convert::int_to_char,
+        0x93 => convert::int_to_short,
         0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
         0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
         0xA1 => |t| if_icmp_cond(t, |i1, i2| i1 < i2),
@@ -254,15 +254,6 @@ fn invoke_static(thread: &mut Thread) {
     }
 }
 
-fn iinc(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8();
-    let inc = current.read_i8() as i32;
-    let int = current.local_vars.load_int(idx as u16);
-    let (result, _) = int.overflowing_add(inc);
-    current.local_vars.store_int(idx as u16, result)
-}
-
 fn goto(thread: &mut Thread) {
     let mut current = thread.frames.current_mut();
     let off = current.read_i16();
@@ -278,143 +269,6 @@ fn reserved(thread: &mut Thread) {
            &current.class.this_class,
            &current.method.name,
            current.method.descriptor.descriptor());
-}
-
-fn i2b(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value & 0xFF;
-
-    current.op_stack.push_int(result);
-}
-
-fn i2c(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value & 0xFF_FF;
-
-    current.op_stack.push_int(result);
-}
-
-fn i2d(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value as f64;
-
-    current.op_stack.push_double(result);
-}
-
-fn i2f(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value as f32;
-
-    current.op_stack.push_float(result);
-}
-
-fn i2l(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value as i64;
-
-    current.op_stack.push_long(result);
-}
-
-fn i2s(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_int();
-
-    let result = value & 0xFF_FF;
-
-    current.op_stack.push_int(result);
-}
-
-fn l2i(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_long();
-
-    let bytes: [u8; 8] = value.to_be_bytes();
-    let low_order_bytes: [u8; 4] = [bytes[4], bytes[5], bytes[6], bytes[7]];
-    let int = i32::from_be_bytes(low_order_bytes);
-
-    current.op_stack.push_int(int);
-}
-
-fn l2f(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_long();
-
-    let result = value as f32;
-
-    current.op_stack.push_float(result);
-}
-
-fn l2d(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_long();
-
-    let result = value as f64;
-
-    current.op_stack.push_double(result);
-}
-
-fn f2i(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_float();
-
-    let result = value as i32;
-
-    current.op_stack.push_int(result);
-}
-
-fn f2l(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_float();
-
-    let result = value as i64;
-
-    current.op_stack.push_long(result);
-}
-
-fn f2d(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_float();
-
-    let result = value as f64;
-
-    current.op_stack.push_double(result);
-}
-
-fn d2i(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_double();
-
-    let result = value as i32;
-
-    current.op_stack.push_int(result);
-}
-
-fn d2l(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_double();
-
-    let result = value as i64;
-
-    current.op_stack.push_long(result);
-}
-
-fn d2f(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let value = current.op_stack.pop_double();
-
-    let result = value as f32;
-
-    current.op_stack.push_float(result);
 }
 
 fn new_array(thread: &mut Thread) {
