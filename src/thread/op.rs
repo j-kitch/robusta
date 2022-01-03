@@ -134,12 +134,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x7B => shift::long_right,
         0x7C => shift::int_right_unsigned,
         0x7D => shift::long_right_unsigned,
-        0x7E => |t| int_binary_op(t, |i1, i2| i1 & i2),
-        0x7F => |t| long_binary_op(t, |l1, l2| l1 & l2),
-        0x80 => |t| int_binary_op(t, |i1, i2| i1 | i2),
-        0x81 => |t| long_binary_op(t, |l1, l2| l1 | l2),
-        0x82 => |t| int_binary_op(t, |i1, i2| i1 ^ i2),
-        0x83 => |t| long_binary_op(t, |l1, l2| l1 ^ l2),
+        0x7E => binary_op::int_and,
+        0x7F => binary_op::long_and,
+        0x80 => binary_op::int_or,
+        0x81 => binary_op::long_or,
+        0x82 => binary_op::int_xor,
+        0x83 => binary_op::long_xor,
         0x84 => iinc,
         0x85 => i2l,
         0x86 => i2f,
@@ -269,26 +269,6 @@ fn goto(thread: &mut Thread) {
     let start_pc = current.pc as i64 - 3;
     let result = start_pc + off as i64;
     current.pc = result as u32;
-}
-
-fn int_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i32, i32) -> i32 {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    let result = op(value1, value2);
-
-    current.op_stack.push_int(result);
-}
-
-fn long_binary_op<F>(thread: &mut Thread, op: F) where F: Fn(i64, i64) -> i64 {
-    let current = thread.frames.current_mut();
-    let value2 = current.op_stack.pop_long();
-    let value1 = current.op_stack.pop_long();
-
-    let result = op(value1, value2);
-
-    current.op_stack.push_long(result);
 }
 
 fn reserved(thread: &mut Thread) {

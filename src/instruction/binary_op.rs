@@ -81,6 +81,30 @@ pub fn double_rem(thread: &mut Thread) {
     binary_op(thread, |d1, d2| d1 % d2, OperandStack::pop_double, OperandStack::push_double)
 }
 
+pub fn int_and(thread: &mut Thread) {
+    binary_op(thread, |i1, i2| i1 & i2, OperandStack::pop_int, OperandStack::push_int)
+}
+
+pub fn int_or(thread: &mut Thread) {
+    binary_op(thread, |i1, i2| i1 | i2, OperandStack::pop_int, OperandStack::push_int)
+}
+
+pub fn int_xor(thread: &mut Thread) {
+    binary_op(thread, |i1, i2| i1 ^ i2, OperandStack::pop_int, OperandStack::push_int)
+}
+
+pub fn long_and(thread: &mut Thread) {
+    binary_op(thread, |l1, l2| l1 & l2, OperandStack::pop_long, OperandStack::push_long)
+}
+
+pub fn long_or(thread: &mut Thread) {
+    binary_op(thread, |l1, l2| l1 | l2, OperandStack::pop_long, OperandStack::push_long)
+}
+
+pub fn long_xor(thread: &mut Thread) {
+    binary_op(thread, |l1, l2| l1 ^ l2, OperandStack::pop_long, OperandStack::push_long)
+}
+
 fn binary_op<T, F, G, H>(thread: &mut Thread, op: F, pop: G, push: H)
     where T: Copy,
           F: Fn(T, T) -> T,
