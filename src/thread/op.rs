@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::descriptor::Descriptor;
 use crate::heap::Value;
-use crate::instruction::{array_load, array_store, binary_op, convert, dup, load, load_const, pop, push, push_const, shift, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, compare, convert, dup, load, load_const, pop, push, push_const, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -156,12 +156,25 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x91 => convert::int_to_byte,
         0x92 => convert::int_to_char,
         0x93 => convert::int_to_short,
-        0x9F => |t| if_icmp_cond(t, |i1, i2| i1 == i2),
-        0xA0 => |t| if_icmp_cond(t, |i1, i2| i1 != i2),
-        0xA1 => |t| if_icmp_cond(t, |i1, i2| i1 < i2),
-        0xA2 => |t| if_icmp_cond(t, |i1, i2| i1 >= i2),
-        0xA3 => |t| if_icmp_cond(t, |i1, i2| i1 > i2),
-        0xA4 => |t| if_icmp_cond(t, |i1, i2| i1 <= i2),
+        0x94 => compare::long,
+        0x95 => compare::float_l,
+        0x96 => compare::float_g,
+        0x97 => compare::double_l,
+        0x98 => compare::double_g,
+        0x99 => compare::if_eq,
+        0x9A => compare::if_ne,
+        0x9B => compare::if_lt,
+        0x9C => compare::if_ge,
+        0x9D => compare::if_gt,
+        0x9E => compare::if_le,
+        0x9F => compare::if_int_eq,
+        0xA0 => compare::if_int_ne,
+        0xA1 => compare::if_int_lt,
+        0xA2 => compare::if_int_ge,
+        0xA3 => compare::if_int_gt,
+        0xA4 => compare::if_int_le,
+        0xA5 => compare::if_ref_eq,
+        0xA6 => compare::if_ref_ne,
         0xA7 => goto,
         0xB1 => return_op,
         0xB8 => invoke_static,
@@ -196,20 +209,6 @@ fn array_length(thread: &mut Thread) {
     let array_len = array.len();
 
     current.op_stack.push_int(array_len);
-}
-
-fn if_icmp_cond<F>(thread: &mut Thread, pred: F) where F: Fn(i32, i32) -> bool {
-    let current = thread.frames.current_mut();
-    let pc_offset = current.read_i16();
-    let value2 = current.op_stack.pop_int();
-    let value1 = current.op_stack.pop_int();
-
-    if pred(value1, value2) {
-        let mut signed_pc: i64 = current.pc as i64;
-        signed_pc -= 3;
-        signed_pc += pc_offset as i64;
-        current.pc = signed_pc as u32;
-    }
 }
 
 fn invoke_static(thread: &mut Thread) {
