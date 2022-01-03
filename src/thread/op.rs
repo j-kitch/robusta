@@ -33,8 +33,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x15 => load::int,
         0x16 => load::long,
         0x17 => load::float,
-        0x18 => dload,
-        0x19 => aload,
+        0x18 => load::double,
+        0x19 => load::reference,
         0x1A => load::int_0,
         0x1B => load::int_1,
         0x1C => load::int_2,
@@ -47,14 +47,14 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x23 => load::float_1,
         0x24 => load::float_2,
         0x25 => load::float_3,
-        0x26 => |t| dload_n(t, 0),
-        0x27 => |t| dload_n(t, 1),
-        0x28 => |t| dload_n(t, 2),
-        0x29 => |t| dload_n(t, 3),
-        0x2A => |t| aload_n(t, 0),
-        0x2B => |t| aload_n(t, 1),
-        0x2C => |t| aload_n(t, 2),
-        0x2D => |t| aload_n(t, 3),
+        0x26 => load::double_0,
+        0x27 => load::double_1,
+        0x28 => load::double_2,
+        0x29 => load::double_3,
+        0x2A => load::reference_0,
+        0x2B => load::reference_1,
+        0x2C => load::reference_2,
+        0x2D => load::reference_3,
         0x2E => array_load::int,
         0x2F => array_load::long,
         0x30 => array_load::float,
@@ -190,36 +190,11 @@ fn dup2(thread: &mut Thread) {
     current.op_stack.push_long(eight_byte_op);
 }
 
-fn aload_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let reference = current.local_vars.load_ref(n);
-    current.op_stack.push_ref(reference);
-}
-
 fn astore(thread: &mut Thread) {
     let current = thread.frames.current_mut();
     let local_var_idx = current.read_u8() as u16;
     let reference = current.op_stack.pop_ref();
     current.local_vars.store_ref(local_var_idx, reference);
-}
-
-fn aload(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let local_var_idx = current.read_u8() as u16;
-    let reference = current.local_vars.load_ref(local_var_idx);
-    current.op_stack.push_ref(reference);
-}
-
-fn dload(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-    let idx = current.read_u8() as u16;
-    dload_n(thread, idx);
-}
-
-fn dload_n(thread: &mut Thread, n: u16) {
-    let current = thread.frames.current_mut();
-    let double = current.local_vars.load_double(n);
-    current.op_stack.push_double(double);
 }
 
 fn astore_n(thread: &mut Thread, n: u16) {

@@ -62,6 +62,46 @@ pub fn float_3(thread: &mut Thread) {
     load_index(thread, 3, LocalVars::load_float, OperandStack::push_float)
 }
 
+pub fn double(thread: &mut Thread) {
+    load(thread, LocalVars::load_double, OperandStack::push_double)
+}
+
+pub fn double_0(thread: &mut Thread) {
+    load_index(thread, 0, LocalVars::load_double, OperandStack::push_double)
+}
+
+pub fn double_1(thread: &mut Thread) {
+    load_index(thread, 1, LocalVars::load_double, OperandStack::push_double)
+}
+
+pub fn double_2(thread: &mut Thread) {
+    load_index(thread, 2, LocalVars::load_double, OperandStack::push_double)
+}
+
+pub fn double_3(thread: &mut Thread) {
+    load_index(thread, 3, LocalVars::load_double, OperandStack::push_double)
+}
+
+pub fn reference(thread: &mut Thread) {
+    load(thread, LocalVars::load_ref, OperandStack::push_ref)
+}
+
+pub fn reference_0(thread: &mut Thread) {
+    load_index(thread, 0, LocalVars::load_ref, OperandStack::push_ref)
+}
+
+pub fn reference_1(thread: &mut Thread) {
+    load_index(thread, 1, LocalVars::load_ref, OperandStack::push_ref)
+}
+
+pub fn reference_2(thread: &mut Thread) {
+    load_index(thread, 2, LocalVars::load_ref, OperandStack::push_ref)
+}
+
+pub fn reference_3(thread: &mut Thread) {
+    load_index(thread, 3, LocalVars::load_ref, OperandStack::push_ref)
+}
+
 fn load<T, F, G>(thread: &mut Thread, load_var: F, push_var: G)
     where T: Copy,
           F: Fn(&LocalVars, u16) -> T,
