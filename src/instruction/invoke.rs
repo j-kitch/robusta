@@ -24,10 +24,7 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
     };
 
     let class = runtime.class_loader.load(&method_const.class).unwrap();
-    let method = class.methods.iter()
-        .find(|m| m.name.eq(&method_const.name) && m.descriptor.eq(&method_const.descriptor))
-        .unwrap()
-        .clone();
+    let method = class.find_method(&method_const.name, &method_const.descriptor).unwrap();
 
     let mut args = vec![];
     for arg in method.descriptor.args.iter().rev() {
@@ -53,29 +50,9 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
             method,
         };
         let mut idx = 0;
-        for arg in args.iter() {
-            match arg {
-                Value::Int(i) => {
-                    frame.local_vars.store_int(idx, i.clone());
-                    idx += 1;
-                }
-                Value::Long(l) => {
-                    frame.local_vars.store_long(idx, l.clone());
-                    idx += 2;
-                }
-                Value::Float(f) => {
-                    frame.local_vars.store_float(idx, f.clone());
-                    idx += 1;
-                }
-                Value::Double(d) => {
-                    frame.local_vars.store_double(idx, d.clone());
-                    idx += 2;
-                }
-                Value::Ref(r) => {
-                    frame.local_vars.store_ref(idx, r.clone());
-                    idx += 1;
-                }
-            }
+        for arg in args {
+            frame.local_vars.store_value(idx, arg);
+            idx += arg.length() as u16;
         }
         thread.frames.push(frame);
     }

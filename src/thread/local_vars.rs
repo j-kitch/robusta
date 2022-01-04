@@ -1,3 +1,5 @@
+use crate::heap::Value;
+
 pub struct LocalVars {
     bytes: Vec<u8>,
 }
@@ -56,6 +58,16 @@ impl LocalVars {
     pub fn store_double(&mut self, idx: u16, value: f64) {
         let bytes = value.to_be_bytes();
         self.store_bytes(idx, &bytes);
+    }
+
+    pub fn store_value(&mut self, idx: u16, value: Value) {
+        match value {
+            Value::Ref(r) => self.store_ref(idx, r),
+            Value::Int(i) => self.store_int(idx, i),
+            Value::Long(l) => self.store_long(idx, l),
+            Value::Float(f) => self.store_float(idx, f),
+            Value::Double(d) => self.store_double(idx, d),
+        }
     }
 
     pub fn load_ref(&self, idx: u16) -> u32 {

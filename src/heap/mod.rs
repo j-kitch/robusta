@@ -176,6 +176,13 @@ impl Value {
             _ => panic!("err")
         }
     }
+
+    pub fn length(&self) -> usize {
+        match self {
+            Value::Long(_) | Value::Double(_) => 2,
+            _ => 1,
+        }
+    }
 }
 
 pub enum Array {
