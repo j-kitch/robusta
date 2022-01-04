@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::descriptor::Descriptor;
-use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, pop, push, push_const, shift, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, pop, push, push_const, returns, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -175,7 +175,12 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA5 => compare::if_ref_eq,
         0xA6 => compare::if_ref_ne,
         0xA7 => goto,
-        0xB1 => return_op,
+        0xAC => returns::int,
+        0xAD => returns::long,
+        0xAE => returns::float,
+        0xAF => returns::double,
+        0xB0 => returns::reference,
+        0xB1 => returns::none,
         0xB2 => class::get_static,
         0xB6 => invoke::invoke_virtual,
         0xB8 => invoke::invoke_static,
@@ -194,10 +199,6 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
 }
 
 fn nop(_: &mut Thread) {}
-
-fn return_op(thread: &mut Thread) {
-    thread.frames.pop();
-}
 
 fn array_length(thread: &mut Thread) {
     let runtime = thread.rt.as_ref().borrow();
