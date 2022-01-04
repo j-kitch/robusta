@@ -4,7 +4,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::class;
-use crate::class::Class;
+use crate::class::{Class, Field};
 use crate::class_file::{ClassFile, Reader};
 use crate::class_file;
 use crate::descriptor::{Descriptor, MethodDescriptor};
@@ -12,6 +12,7 @@ use crate::descriptor::{Descriptor, MethodDescriptor};
 // TODO: This is extremely brittle!
 const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
 const ACC_NATIVE: u16 = 0x0100;
+const ACC_STATIC: u16 = 0x0008;
 
 pub struct ClassLoader {
     loaded: HashMap<String, Rc<Class>>,
@@ -120,15 +121,26 @@ impl ClassLoader {
             String::from_utf8(interface_name.bytes.clone()).unwrap()
         }).collect();
 
-        let fields = class_file.fields.iter().map(|field| {
-            let name = class_file.get_const(field.name_idx).expect_utf8();
-            let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
-            Rc::new(class::Field {
-                name: String::from_utf8(name.bytes.clone()).unwrap(),
-                descriptor: Descriptor::parse(
-                    String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
-            })
-        }).collect();
+        let fields: Vec<Rc<Field>> = class_file.fields.iter()
+            .map(|field| {
+                let name = class_file.get_const(field.name_idx).expect_utf8();
+                let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
+                Rc::new(class::Field {
+                    name: String::from_utf8(name.bytes.clone()).unwrap(),
+                    descriptor: Descriptor::parse(
+                        String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
+                    access_flags: field.access_flags,
+                })
+            }).collect();
+
+        let static_fields = fields.iter()
+            .enumerate()
+            .filter(|(_, f)| f.access_flags & ACC_STATIC != 0)
+            .map(|(idx, f)| {
+                println!("Static field {} {}", &f.name, f.descriptor.descriptor());
+                let value = f.descriptor.zero_value();
+                (idx as u16, value)
+            }).collect();
 
         let methods = class_file.methods.iter().map(|method| {
             let name = class_file.get_const(method.name_idx).expect_utf8();
@@ -166,6 +178,7 @@ impl ClassLoader {
             super_class,
             interfaces,
             fields,
+            static_fields,
             methods,
         })
     }

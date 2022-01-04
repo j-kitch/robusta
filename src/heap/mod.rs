@@ -132,6 +132,7 @@ pub struct Field {
     pub value: Value,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum Value {
     Int(i32),
     Long(i64),

@@ -13,7 +13,7 @@ impl NativeMethods {
         NativeMethods {
             classes: vec![
                 NativeClass {
-                    name: String::from("Robusta"),
+                    name: String::from("java/io/PrintStream"),
                     methods: vec![
                         NativeMethod {
                             name: String::from("println"),
@@ -45,48 +45,48 @@ impl NativeMethods {
                             descriptor: MethodDescriptor::parse("(D)V"),
                             function: robusta_println_double,
                         },
-                        NativeMethod {
-                            name: String::from("parseBoolean"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)Z"),
-                            function: robusta_parse_boolean,
-                        },
-                        NativeMethod {
-                            name: String::from("parseByte"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)B"),
-                            function: robusta_parse_byte,
-                        },
-                        NativeMethod {
-                            name: String::from("parseChar"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)C"),
-                            function: robusta_parse_char,
-                        },
-                        NativeMethod {
-                            name: String::from("parseShort"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)S"),
-                            function: robusta_parse_short,
-                        },
+                    ],
+                },
+                NativeClass {
+                    name: String::from("java/lang/Integer"),
+                    methods: vec![
                         NativeMethod {
                             name: String::from("parseInt"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)I"),
                             function: robusta_parse_int,
                         },
+                    ],
+                },
+                NativeClass {
+                    name: String::from("java/lang/Long"),
+                    methods: vec![
                         NativeMethod {
                             name: String::from("parseLong"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)J"),
                             function: robusta_parse_long,
                         },
+                    ],
+                },
+                NativeClass {
+                    name: String::from("java/lang/Float"),
+                    methods: vec![
                         NativeMethod {
                             name: String::from("parseFloat"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)F"),
                             function: robusta_parse_float,
                         },
+                    ],
+                },
+                NativeClass {
+                    name: String::from("java/lang/Double"),
+                    methods: vec![
                         NativeMethod {
                             name: String::from("parseDouble"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)D"),
                             function: robusta_parse_double,
                         },
                     ],
-                }
+                },
             ]
         }
     }
@@ -122,40 +122,6 @@ fn robusta_println_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Val
     println!("{}", string);
 
     None
-}
-
-fn robusta_parse_boolean(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let string_ref = args[0].reference();
-    let str_bool = to_utf8_string(runtime, string_ref);
-    let bool = bool::from_str(&str_bool).unwrap();
-
-    let i32_bool: i32 = if bool { 1 } else { 0 };
-
-    Some(Value::Int(i32_bool))
-}
-
-fn robusta_parse_byte(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let string_ref = args[0].reference();
-    let str_byte = to_utf8_string(runtime, string_ref);
-    let byte = i8::from_str(&str_byte).unwrap();
-
-    Some(Value::Int(byte as i32))
-}
-
-fn robusta_parse_char(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let string_ref = args[0].reference();
-    let str_char = to_utf8_string(runtime, string_ref);
-    let char = u16::from_str(&str_char).unwrap();
-
-    Some(Value::Int(char as i32))
-}
-
-fn robusta_parse_short(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let string_ref = args[0].reference();
-    let str_short = to_utf8_string(runtime, string_ref);
-    let short = i16::from_str(&str_short).unwrap();
-
-    Some(Value::Int(short as i32))
 }
 
 fn robusta_parse_int(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {

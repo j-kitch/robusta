@@ -12,3 +12,4 @@ pub mod single_op;
 pub mod shift;
 pub mod convert;
 pub mod compare;
+pub mod class;
