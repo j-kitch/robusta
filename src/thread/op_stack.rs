@@ -1,3 +1,4 @@
+use crate::descriptor::Descriptor;
 use crate::heap::Value;
 
 pub struct OperandStack {
@@ -77,5 +78,15 @@ impl OperandStack {
 
     pub fn pop_long(&mut self) -> i64 {
         i64::from_be_bytes(self.pop_dword())
+    }
+
+    pub fn pop_value(&mut self, desc: &Descriptor) -> Value {
+        match desc {
+            Descriptor::Long => Value::Long(self.pop_long()),
+            Descriptor::Float => Value::Float(self.pop_float()),
+            Descriptor::Double => Value::Double(self.pop_double()),
+            Descriptor::Object(_) | Descriptor::Array(_) => Value::Ref(self.pop_ref()),
+            _ => Value::Int(self.pop_int())
+        }
     }
 }

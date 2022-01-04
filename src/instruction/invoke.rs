@@ -1,13 +1,20 @@
 use std::ops::DerefMut;
 
 use crate::class::Const;
-use crate::descriptor::Descriptor;
 use crate::heap::Value;
 use crate::thread::{Frame, Thread};
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
 pub fn invoke_virtual(thread: &mut Thread) {
+    invoke(thread, true)
+}
+
+pub fn invoke_static(thread: &mut Thread) {
+    invoke(thread, false)
+}
+
+fn invoke(thread: &mut Thread, instance_ref: bool) {
     let mut runtime = thread.rt.borrow_mut();
     let current = thread.frames.current_mut();
     let idx = current.read_u16();
@@ -24,25 +31,11 @@ pub fn invoke_virtual(thread: &mut Thread) {
 
     let mut args = vec![];
     for arg in method.descriptor.args.iter().rev() {
-        match arg {
-            Descriptor::Boolean | Descriptor::Byte | Descriptor::Char | Descriptor::Short | Descriptor::Int => {
-                args.push(Value::Int(current.op_stack.pop_int()));
-            }
-            Descriptor::Long => {
-                args.push(Value::Long(current.op_stack.pop_long()));
-            }
-            Descriptor::Float => {
-                args.push(Value::Float(current.op_stack.pop_float()));
-            }
-            Descriptor::Double => {
-                args.push(Value::Double(current.op_stack.pop_double()));
-            }
-            Descriptor::Object(_) | Descriptor::Array(_) => {
-                args.push(Value::Ref(current.op_stack.pop_ref()));
-            }
-        }
+        args.push(current.op_stack.pop_value(arg));
     }
-    args.push( Value::Ref(current.op_stack.pop_ref()));
+    if instance_ref {
+        args.push(Value::Ref(current.op_stack.pop_ref()));
+    }
     args.reverse();
 
     if method.native {

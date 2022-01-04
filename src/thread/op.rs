@@ -1,7 +1,6 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use crate::descriptor::Descriptor;
-use crate::heap::Value;
 use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, pop, push, push_const, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
@@ -179,7 +178,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB1 => return_op,
         0xB2 => class::get_static,
         0xB6 => invoke::invoke_virtual,
-        0xB8 => invoke_static,
+        0xB8 => invoke::invoke_static,
         0xBC => new_array,
         0xBE => array_length,
         0xCA => reserved,
@@ -211,48 +210,6 @@ fn array_length(thread: &mut Thread) {
     let array_len = array.len();
 
     current.op_stack.push_int(array_len);
-}
-
-fn invoke_static(thread: &mut Thread) {
-    let current = thread.frames.current_mut();
-
-    let method_idx = current.read_u16();
-    let method_ref = current.class.const_method(method_idx);
-    let class = thread.rt.clone().borrow_mut().load_class(&method_ref.class);
-    let method = class.find_method(&method_ref.name, &method_ref.descriptor).unwrap();
-
-    let mut args = vec![];
-    for arg in method.descriptor.args.iter().rev() {
-        match arg {
-            Descriptor::Object(_) | Descriptor::Array(_) => {
-                args.push(Value::Ref(current.op_stack.pop_ref()));
-            }
-            Descriptor::Boolean | Descriptor::Byte | Descriptor::Char | Descriptor::Short | Descriptor::Int => {
-                args.push(Value::Int(current.op_stack.pop_int()));
-            }
-            Descriptor::Float => {
-                args.push(Value::Float(current.op_stack.pop_float()))
-            }
-            Descriptor::Long => {
-                args.push(Value::Long(current.op_stack.pop_long()))
-            }
-            Descriptor::Double => {
-                args.push(Value::Double(current.op_stack.pop_double()))
-            }
-        }
-    }
-    args.reverse();
-
-    if method.native {
-        let func = thread.rt.as_ref().borrow().native.find_method(&method_ref.class, &method_ref.name, &method_ref.descriptor);
-        let mut runtime = thread.rt.as_ref().borrow_mut();
-        let result = func(runtime.deref_mut(), args);
-        if method.descriptor.returns.is_some() {
-            current.op_stack.push(result.unwrap());
-        }
-    } else {
-        thread.create_frame(class.clone(), method, args);
-    }
 }
 
 fn goto(thread: &mut Thread) {
