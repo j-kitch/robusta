@@ -12,10 +12,8 @@ pub fn get_static(thread: &mut Thread) {
         Const::Field(field_ref) => field_ref,
         _ => panic!("err")
     };
+
     let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap();
-
-    println!("{}.{} {}", &field_const.class, &field_const.name, field_const.descriptor.descriptor());
-
     let value = class.get_static_field(&field_const.name, &field_const.descriptor).unwrap();
 
     current.op_stack.push(value)

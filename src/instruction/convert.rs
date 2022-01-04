@@ -2,15 +2,15 @@ use crate::thread::op_stack::OperandStack;
 use crate::thread::Thread;
 
 pub fn int_to_byte(thread: &mut Thread) {
-    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| i & 0xFF)
+    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| (i as i8) as i32)
 }
 
 pub fn int_to_short(thread: &mut Thread) {
-    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| i & 0xFF_FF)
+    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| (i as i16) as i32)
 }
 
 pub fn int_to_char(thread: &mut Thread) {
-    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| i & 0xFF_FF)
+    convert(thread, OperandStack::pop_int, OperandStack::push_int, |i| (i as u16) as i32)
 }
 
 pub fn int_to_long(thread: &mut Thread) {

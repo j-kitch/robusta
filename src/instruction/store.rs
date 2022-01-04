@@ -31,15 +31,15 @@ pub fn long_0(thread: &mut Thread) {
 }
 
 pub fn long_1(thread: &mut Thread) {
-    store_index(thread, 0, OperandStack::pop_long, LocalVars::store_long)
+    store_index(thread, 1, OperandStack::pop_long, LocalVars::store_long)
 }
 
 pub fn long_2(thread: &mut Thread) {
-    store_index(thread, 0, OperandStack::pop_long, LocalVars::store_long)
+    store_index(thread, 2, OperandStack::pop_long, LocalVars::store_long)
 }
 
 pub fn long_3(thread: &mut Thread) {
-    store_index(thread, 0, OperandStack::pop_long, LocalVars::store_long)
+    store_index(thread, 3, OperandStack::pop_long, LocalVars::store_long)
 }
 
 pub fn float(thread: &mut Thread) {

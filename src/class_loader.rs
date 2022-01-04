@@ -137,7 +137,6 @@ impl ClassLoader {
             .enumerate()
             .filter(|(_, f)| f.access_flags & ACC_STATIC != 0)
             .map(|(idx, f)| {
-                println!("Static field {} {}", &f.name, f.descriptor.descriptor());
                 let value = f.descriptor.zero_value();
                 (idx as u16, value)
             }).collect();

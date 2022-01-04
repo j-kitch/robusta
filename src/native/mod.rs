@@ -18,32 +18,42 @@ impl NativeMethods {
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)V"),
-                            function: robusta_println_string,
+                            function: print_stream_println_string,
                         },
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(Z)V"),
-                            function: robusta_println_boolean,
+                            function: print_stream_println_boolean,
+                        },
+                        NativeMethod {
+                            name: String::from("println"),
+                            descriptor: MethodDescriptor::parse("(B)V"),
+                            function: print_stream_println_byte,
+                        },
+                        NativeMethod {
+                            name: String::from("println"),
+                            descriptor: MethodDescriptor::parse("(C)V"),
+                            function: print_stream_println_char,
                         },
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(I)V"),
-                            function: robusta_println_int,
+                            function: print_stream_println_int,
                         },
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(J)V"),
-                            function: robusta_println_long,
+                            function: print_stream_println_long,
                         },
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(F)V"),
-                            function: robusta_println_float,
+                            function: print_stream_println_float,
                         },
                         NativeMethod {
                             name: String::from("println"),
                             descriptor: MethodDescriptor::parse("(D)V"),
-                            function: robusta_println_double,
+                            function: print_stream_println_double,
                         },
                     ],
                 },
@@ -53,7 +63,7 @@ impl NativeMethods {
                         NativeMethod {
                             name: String::from("parseInt"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)I"),
-                            function: robusta_parse_int,
+                            function: integer_parse_int,
                         },
                     ],
                 },
@@ -63,7 +73,7 @@ impl NativeMethods {
                         NativeMethod {
                             name: String::from("parseLong"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)J"),
-                            function: robusta_parse_long,
+                            function: long_parse_long,
                         },
                     ],
                 },
@@ -73,7 +83,7 @@ impl NativeMethods {
                         NativeMethod {
                             name: String::from("parseFloat"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)F"),
-                            function: robusta_parse_float,
+                            function: float_parse_float,
                         },
                     ],
                 },
@@ -83,7 +93,7 @@ impl NativeMethods {
                         NativeMethod {
                             name: String::from("parseDouble"),
                             descriptor: MethodDescriptor::parse("(Ljava/lang/String;)D"),
-                            function: robusta_parse_double,
+                            function: double_parse_double,
                         },
                     ],
                 },
@@ -115,8 +125,8 @@ struct NativeMethod {
 
 type NativeFunction = fn(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value>;
 
-fn robusta_println_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let string_ref = args[0].reference();
+fn print_stream_println_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let string_ref = args[1].reference();
     let string = to_utf8_string(runtime, string_ref);
 
     println!("{}", string);
@@ -124,7 +134,7 @@ fn robusta_println_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Val
     None
 }
 
-fn robusta_parse_int(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+fn integer_parse_int(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let string_ref = args[0].reference();
     let str_int = to_utf8_string(runtime, string_ref);
     let int = i32::from_str(&str_int).unwrap();
@@ -132,7 +142,7 @@ fn robusta_parse_int(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     Some(Value::Int(int))
 }
 
-fn robusta_parse_long(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+fn long_parse_long(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let string_ref = args[0].reference();
     let str_long = to_utf8_string(runtime, string_ref);
     let long = i64::from_str(&str_long).unwrap();
@@ -140,7 +150,7 @@ fn robusta_parse_long(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> 
     Some(Value::Long(long))
 }
 
-fn robusta_parse_float(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+fn float_parse_float(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let string_ref = args[0].reference();
     let str_float = to_utf8_string(runtime, string_ref);
     let float = f32::from_str(&str_float).unwrap();
@@ -148,7 +158,7 @@ fn robusta_parse_float(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value>
     Some(Value::Float(float))
 }
 
-fn robusta_parse_double(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+fn double_parse_double(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let string_ref = args[0].reference();
     let str_double = to_utf8_string(runtime, string_ref);
     let double = f64::from_str(&str_double).unwrap();
@@ -156,37 +166,68 @@ fn robusta_parse_double(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value
     Some(Value::Double(double))
 }
 
-fn robusta_println_boolean(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let bool = args[0].int() != 0;
+fn print_stream_println_boolean(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let bool = args[1].int() != 0;
     println!("{}", bool);
 
     None
 }
 
-fn robusta_println_int(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let int = args[0].int();
+fn print_stream_println_byte(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let int = args[1].int();
+    let bytes = int.to_be_bytes();
+    let byte = i8::from_be_bytes([bytes[3]]);
+    println!("{}", byte);
+
+    None
+}
+
+fn print_stream_println_char(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let int = args[1].int();
+    let bytes = int.to_be_bytes();
+    let char = u16::from_be_bytes([bytes[2], bytes[3]]);
+    let chars = vec![char];
+    let string = String::from_utf16(&chars).unwrap();
+
+    println!("{}", string);
+
+    None
+}
+
+fn print_stream_println_int(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let int = args[1].int();
     println!("{}", int);
 
     None
 }
 
-fn robusta_println_long(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let long = args[0].long();
+fn print_stream_println_long(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let long = args[1].long();
     println!("{}", long);
 
     None
 }
 
-fn robusta_println_float(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let float = args[0].float();
-    println!("{}", float);
+fn print_stream_println_float(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let double = args[1].float();
+
+    if double.fract() == 0.0 {
+        println!("{}.0", double);
+    } else {
+        println!("{}", double);
+    }
 
     None
 }
 
-fn robusta_println_double(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
-    let double = args[0].double();
-    println!("{}", double);
+fn print_stream_println_double(_: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let double = args[1].double();
+
+    if double.fract() == 0.0 {
+        println!("{}.0", double);
+    } else {
+        println!("{}", double);
+    }
 
     None
 }
