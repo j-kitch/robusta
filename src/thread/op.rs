@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use crate::class::Const;
 
 use crate::descriptor::Descriptor;
 use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, pop, push, push_const, returns, shift, single_op, store};
@@ -186,7 +187,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB8 => invoke::invoke_static,
         0xBC => new_array,
         0xBE => array_length,
-        0xCA => reserved,
+        0xCA => mark_clinit,
         0xFE => reserved,
         0xFF => reserved,
         _ => panic!("Unknown op at {}.{}{} PC {} {:#02x}",
@@ -247,8 +248,21 @@ fn new_array(thread: &mut Thread) {
         _ => panic!("err"),
     };
 
-    let mut runtime = thread.rt.borrow_mut();
+    let mut runtime = thread.rt.as_ref().borrow_mut();
     let array = runtime.heap.create_array(arr_type, count);
 
     current.op_stack.push_ref(array);
+}
+
+fn mark_clinit(thread: &mut Thread) {
+    let mut runtime = thread.rt.as_ref().borrow_mut();
+    let current = thread.frames.current_mut();
+    let index = current.read_u16();
+
+    let class_name = match current.class.const_pool.get(&index).unwrap() {
+        Const::Method(method) => &method.class,
+        _ => panic!("err"),
+    };
+
+    runtime.class_loader.init_parent(&class_name);
 }

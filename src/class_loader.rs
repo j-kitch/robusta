@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
@@ -16,11 +16,12 @@ const ACC_STATIC: u16 = 0x0008;
 
 pub struct ClassLoader {
     loaded: HashMap<String, Rc<Class>>,
+    init: HashSet<String>,
 }
 
 impl ClassLoader {
     pub fn new() -> Self {
-        ClassLoader { loaded: HashMap::new() }
+        ClassLoader { loaded: HashMap::new(), init: HashSet::new() }
     }
 
     pub fn load(&mut self, class: &str) -> Option<Rc<Class>> {
@@ -40,6 +41,21 @@ impl ClassLoader {
             self.loaded.insert(class.this_class.clone(), class);
         }
         self.loaded.get(class).map(|class| class.clone())
+    }
+
+    pub fn uninit_parents(&self, class: &str) -> Vec<String> {
+        let class = self.loaded.get(class).unwrap().clone();
+        let mut parents: Vec<String> = class.parent_iter()
+            .filter(|c| c.find_method("<clinit>", &MethodDescriptor::parse("()V")).is_some())
+            .map(|c| c.this_class.clone())
+            .filter(|c| !self.init.contains(c))
+            .collect();
+        parents.reverse();
+        parents
+    }
+
+    pub fn init_parent(&mut self, class: &str) {
+        self.init.insert(class.to_string());
     }
 
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {

@@ -53,7 +53,7 @@ impl Class {
             .map(|method| method.clone())
     }
 
-    fn parent_iter(&self) -> Iter {
+    pub fn parent_iter(&self) -> Iter {
         Iter { curr: Some(self) }
     }
 }

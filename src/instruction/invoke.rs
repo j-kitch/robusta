@@ -2,6 +2,7 @@ use std::ops::DerefMut;
 
 use crate::class::Const;
 use crate::heap::Value;
+use crate::shim;
 use crate::thread::{Frame, Thread};
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
@@ -24,6 +25,13 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
     };
 
     let class = runtime.class_loader.load(&method_const.class).unwrap();
+    let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
+    if !uninit_parents.is_empty() && method_const.name.ne("<clinit>") {
+        current.pc -= 3;
+        thread.frames.push(shim::init_parents_frame(&uninit_parents));
+        return;
+    }
+
     let method = class.find_method(&method_const.name, &method_const.descriptor).unwrap();
 
     let mut args = vec![];
