@@ -62,6 +62,33 @@ impl Heap {
         (key, object)
     }
 
+    pub fn create_array(&mut self, component: Descriptor, count: i32) -> u32 {
+        let mut key: u32 = rand::random();
+        while self.objects.contains_key(&key) {
+            key = rand::random();
+        }
+        let key = key;
+
+        let count = count as usize;
+
+        let array = match component {
+            Descriptor::Boolean => Array::Byte(vec![0; count]),
+            Descriptor::Byte => Array::Byte(vec![0; count]),
+            Descriptor::Char => Array::Char(vec![0; count]),
+            Descriptor::Short => Array::Short(vec![0; count]),
+            Descriptor::Int => Array::Int(vec![0; count]),
+            Descriptor::Long => Array::Long(vec![0; count]),
+            Descriptor::Float => Array::Float(vec![0.; count]),
+            Descriptor::Double => Array::Double(vec![0.; count]),
+            Descriptor::Object(_) => Array::Ref(vec![0; count]),
+            Descriptor::Array(_) => Array::Ref(vec![0; count]),
+        };
+
+        self.objects.insert(key, Rc::new(RefCell::new(Ref::Arr(array))));
+
+        key
+    }
+
     pub fn get(&self, key: u32) -> Rc<RefCell<Ref>> {
         self.objects.get(&key).unwrap().clone()
     }
@@ -86,6 +113,13 @@ impl Ref {
             _ => panic!("err")
         }
     }
+
+    pub fn arr_mut(&mut self) -> &mut Array {
+        match self {
+            Ref::Arr(arr) => arr,
+            _ => panic!("err")
+        }
+    }
 }
 
 pub struct Object {
@@ -98,7 +132,12 @@ pub struct Field {
     pub value: Value,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum Value {
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
     Ref(u32),
 }
 
@@ -106,18 +145,66 @@ impl Value {
     pub fn reference(&self) -> u32 {
         match self {
             Value::Ref(u32) => u32.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn int(&self) -> i32 {
+        match self {
+            Value::Int(i32) => i32.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn long(&self) -> i64 {
+        match self {
+            Value::Long(i64) => i64.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn float(&self) -> f32 {
+        match self {
+            Value::Float(f32) => f32.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double(&self) -> f64 {
+        match self {
+            Value::Double(f64) => f64.clone(),
+            _ => panic!("err")
+        }
+    }
+
+    pub fn length(&self) -> usize {
+        match self {
+            Value::Long(_) | Value::Double(_) => 2,
+            _ => 1,
         }
     }
 }
 
 pub enum Array {
-    Ref(Vec<u32>),
     Byte(Vec<i8>),
     Char(Vec<u16>),
+    Short(Vec<i16>),
+    Int(Vec<i32>),
+    Long(Vec<i64>),
+    Float(Vec<f32>),
+    Double(Vec<f64>),
+    Ref(Vec<u32>),
 }
 
 impl Array {
     pub fn reference(&self) -> &Vec<u32> {
+        match self {
+            Array::Ref(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn reference_mut(&mut self) -> &mut Vec<u32> {
         match self {
             Array::Ref(vec) => vec,
             _ => panic!("err")
@@ -131,9 +218,94 @@ impl Array {
         }
     }
 
+    pub fn byte_mut(&mut self) -> &mut Vec<i8> {
+        match self {
+            Array::Byte(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+
     pub fn char(&self) -> &Vec<u16> {
         match self {
             Array::Char(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn char_mut(&mut self) -> &mut Vec<u16> {
+        match self {
+            Array::Char(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn short(&self) -> &Vec<i16> {
+        match self {
+            Array::Short(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn short_mut(&mut self) -> &mut Vec<i16> {
+        match self {
+            Array::Short(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn int(&self) -> &Vec<i32> {
+        match self {
+            Array::Int(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn int_mut(&mut self) -> &mut Vec<i32> {
+        match self {
+            Array::Int(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn long(&self) -> &Vec<i64> {
+        match self {
+            Array::Long(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn long_mut(&mut self) -> &mut Vec<i64> {
+        match self {
+            Array::Long(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn float(&self) -> &Vec<f32> {
+        match self {
+            Array::Float(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn float_mut(&mut self) -> &mut Vec<f32> {
+        match self {
+            Array::Float(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double(&self) -> &Vec<f64> {
+        match self {
+            Array::Double(vec) => vec,
+            _ => panic!("err")
+        }
+    }
+
+    pub fn double_mut(&mut self) -> &mut Vec<f64> {
+        match self {
+            Array::Double(vec) => vec,
             _ => panic!("err")
         }
     }
@@ -142,9 +314,14 @@ impl Array {
 impl Array {
     pub fn len(&self) -> i32 {
         let len = match self {
-            Array::Ref(v) => v.len(),
-            Array::Byte(v) => v.len(),
-            Array::Char(v) => v.len(),
+            Array::Byte(arr) => arr.len(),
+            Array::Char(arr) => arr.len(),
+            Array::Short(arr) => arr.len(),
+            Array::Int(arr) => arr.len(),
+            Array::Long(arr) => arr.len(),
+            Array::Float(arr) => arr.len(),
+            Array::Double(arr) => arr.len(),
+            Array::Ref(arr) => arr.len(),
         };
         len as i32
     }

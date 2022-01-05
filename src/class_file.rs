@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
 pub struct Reader<'a> {
     file: &'a File,
+    u64_buf: [u8; 8],
     u32_buf: [u8; 4],
     u16_buf: [u8; 2],
     u8_buf: [u8; 1],
@@ -10,7 +12,7 @@ pub struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     pub fn new(file: &'a File) -> Self {
-        Reader { file, u32_buf: [0; 4], u16_buf: [0; 2], u8_buf: [0] }
+        Reader { file, u64_buf: [0; 8], u32_buf: [0; 4], u16_buf: [0; 2], u8_buf: [0] }
     }
 
     fn read_u8(&mut self) -> u8 {
@@ -28,6 +30,26 @@ impl<'a> Reader<'a> {
         u32::from_be_bytes(self.u32_buf)
     }
 
+    fn read_i32(&mut self) -> i32 {
+        self.file.read_exact(&mut self.u32_buf).unwrap();
+        i32::from_be_bytes(self.u32_buf)
+    }
+
+    fn read_f32(&mut self) -> f32 {
+        self.file.read_exact(&mut self.u32_buf).unwrap();
+        f32::from_be_bytes(self.u32_buf)
+    }
+
+    fn read_i64(&mut self) -> i64 {
+        self.file.read_exact(&mut self.u64_buf).unwrap();
+        i64::from_be_bytes(self.u64_buf)
+    }
+
+    fn read_f64(&mut self) -> f64 {
+        self.file.read_exact(&mut self.u64_buf).unwrap();
+        f64::from_be_bytes(self.u64_buf)
+    }
+
     fn read_bytes(&mut self, len: usize) -> Vec<u8> {
         let mut bytes = vec![0; len];
         self.file.read_exact(&mut bytes).unwrap();
@@ -39,18 +61,28 @@ impl<'a> Reader<'a> {
         let minor_version = self.read_u16();
         let major_version = self.read_u16();
         let const_pool_len = self.read_u16();
-        let const_pool: Vec<Const> = (1..const_pool_len).map(|_| self.read_const()).collect();
+        let mut const_pool = HashMap::new();
+        let mut const_pool_idx: u16 = 1;
+        while const_pool_idx < const_pool_len {
+            let con = self.read_const();
+            let size = match &con {
+                Const::Long(_) | Const::Double(_) => 2,
+                _ => 1,
+            };
+            const_pool.insert(const_pool_idx, con);
+            const_pool_idx += size;
+        }
         let access_flags = self.read_u16();
         let this_class = self.read_u16();
         let super_class = self.read_u16();
         let interfaces_len = self.read_u16();
         let interfaces = (0..interfaces_len).map(|_| self.read_u16()).collect();
         let fields_len = self.read_u16();
-        let fields = (0..fields_len).map(|_| self.read_field(&const_pool[..])).collect();
+        let fields = (0..fields_len).map(|_| self.read_field(&const_pool)).collect();
         let methods_len = self.read_u16();
-        let methods = (0..methods_len).map(|_| self.read_method(&const_pool[..])).collect();
+        let methods = (0..methods_len).map(|_| self.read_method(&const_pool)).collect();
         let attributes_len = self.read_u16();
-        let attributes = (0..attributes_len).map(|_| self.read_attribute(&const_pool[..])).collect();
+        let attributes = (0..attributes_len).map(|_| self.read_attribute(&const_pool)).collect();
         ClassFile { minor_version, major_version, const_pool, access_flags, this_class, super_class, interfaces, fields, methods, attributes }
     }
 
@@ -63,9 +95,29 @@ impl<'a> Reader<'a> {
                 let bytes = self.read_bytes(length as usize);
                 Const::Utf8(Utf8 { bytes })
             }
+            3 => {
+                let int = self.read_i32();
+                Const::Int(Integer { int })
+            }
+            4 => {
+                let float = self.read_f32();
+                Const::Float(Float { float })
+            }
+            5 => {
+                let long = self.read_i64();
+                Const::Long(Long { long })
+            }
+            6 => {
+                let double = self.read_f64();
+                Const::Double(Double { double })
+            }
             7 => {
                 let name_idx = self.read_u16();
                 Const::Class(Class { name_idx })
+            }
+            8 => {
+                let utf8_idx = self.read_u16();
+                Const::String(String { utf8_idx })
             }
             9 => {
                 let class_idx = self.read_u16();
@@ -88,7 +140,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    fn read_field(&mut self, const_pool: &[Const]) -> Field {
+    fn read_field(&mut self, const_pool: &HashMap<u16, Const>) -> Field {
         let access_flags = self.read_u16();
         let name_idx = self.read_u16();
         let descriptor_idx = self.read_u16();
@@ -97,7 +149,7 @@ impl<'a> Reader<'a> {
         Field { access_flags, name_idx, descriptor_idx, attributes }
     }
 
-    fn read_method(&mut self, const_pool: &[Const]) -> Method {
+    fn read_method(&mut self, const_pool: &HashMap<u16, Const>) -> Method {
         let access_flags = self.read_u16();
         let name_idx = self.read_u16();
         let descriptor_idx = self.read_u16();
@@ -106,10 +158,10 @@ impl<'a> Reader<'a> {
         Method { access_flags, name_idx, descriptor_idx, attributes }
     }
 
-    fn read_attribute(&mut self, const_pool: &[Const]) -> Attribute {
+    fn read_attribute(&mut self, const_pool: &HashMap<u16, Const>) -> Attribute {
         let name_idx = self.read_u16();
-        let name = const_pool.get((name_idx - 1) as usize).unwrap().expect_utf8();
-        let name = String::from_utf8(name.bytes.clone()).unwrap();
+        let name = const_pool.get(&name_idx).unwrap().expect_utf8();
+        let name = std::string::String::from_utf8(name.bytes.clone()).unwrap();
 
         match name.as_ref() {
             "Code" => {
@@ -143,7 +195,7 @@ impl<'a> Reader<'a> {
 pub struct ClassFile {
     pub minor_version: u16,
     pub major_version: u16,
-    pub const_pool: Vec<Const>,
+    pub const_pool: HashMap<u16, Const>,
     pub access_flags: u16,
     pub this_class: u16,
     pub super_class: u16,
@@ -155,7 +207,7 @@ pub struct ClassFile {
 
 impl ClassFile {
     pub fn get_const(&self, idx: u16) -> &Const {
-        self.const_pool.get((idx - 1) as usize).unwrap()
+        self.const_pool.get(&idx).unwrap()
     }
 }
 
@@ -167,6 +219,31 @@ pub struct Utf8 {
 #[derive(Debug)]
 pub struct Class {
     pub name_idx: u16,
+}
+
+#[derive(Debug)]
+pub struct Integer {
+    pub int: i32,
+}
+
+#[derive(Debug)]
+pub struct Float {
+    pub float: f32,
+}
+
+#[derive(Debug)]
+pub struct Long {
+    pub long: i64,
+}
+
+#[derive(Debug)]
+pub struct Double {
+    pub double: f64,
+}
+
+#[derive(Debug)]
+pub struct String {
+    pub utf8_idx: u16,
 }
 
 #[derive(Debug)]
@@ -190,6 +267,11 @@ pub struct NameAndType {
 #[derive(Debug)]
 pub enum Const {
     Utf8(Utf8),
+    Int(Integer),
+    Float(Float),
+    Long(Long),
+    Double(Double),
+    String(String),
     Class(Class),
     FieldRef(FieldRef),
     MethodRef(MethodRef),

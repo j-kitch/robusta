@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use crate::heap::Value;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Descriptor {
@@ -48,6 +49,16 @@ impl Descriptor {
         match self {
             Descriptor::Double | Descriptor::Long => 2,
             _ => 1,
+        }
+    }
+
+    pub fn zero_value(&self) -> Value {
+        match self {
+            Descriptor::Boolean | Descriptor::Byte | Descriptor::Short | Descriptor::Char | Descriptor::Int => Value::Int(0),
+            Descriptor::Long => Value::Long(0),
+            Descriptor::Float => Value::Float(0.0),
+            Descriptor::Double => Value::Double(0.0),
+            Descriptor::Object(_) | Descriptor::Array(_) => Value::Ref(0),
         }
     }
 }

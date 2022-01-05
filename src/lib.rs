@@ -6,3 +6,5 @@ pub mod heap;
 pub mod runtime;
 pub mod descriptor;
 pub mod native;
+pub mod instruction;
+pub mod shim;

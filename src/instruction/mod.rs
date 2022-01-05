@@ -1,0 +1,17 @@
+pub mod array_load;
+pub mod array_store;
+pub mod push_const;
+pub mod push;
+pub mod load_const;
+pub mod load;
+pub mod store;
+pub mod pop;
+pub mod dup;
+pub mod binary_op;
+pub mod single_op;
+pub mod shift;
+pub mod convert;
+pub mod compare;
+pub mod class;
+pub mod invoke;
+pub mod returns;

@@ -83,6 +83,22 @@ impl Thread {
                     frame.local_vars.store_ref(idx, val.clone());
                     idx += 1;
                 }
+                Value::Int(int) => {
+                    frame.local_vars.store_int(idx, int.clone());
+                    idx += 1;
+                }
+                Value::Long(long) => {
+                    frame.local_vars.store_long(idx, long.clone());
+                    idx += 2;
+                }
+                Value::Float(float) => {
+                    frame.local_vars.store_float(idx, float.clone());
+                    idx += 1;
+                }
+                Value::Double(double) => {
+                    frame.local_vars.store_double(idx, double.clone());
+                    idx += 2;
+                }
             }
         }
         self.frames.push(frame);
@@ -107,25 +123,27 @@ impl Thread {
 }
 
 impl Frame {
-    fn read_i8(&mut self) -> i8 {
+    pub fn read_i8(&mut self) -> i8 {
         let bytes = [self.read_u8(); 1];
         i8::from_be_bytes(bytes)
     }
 
-    fn read_u8(&mut self) -> u8 {
-        let u8 = self.method.code.get(self.pc as usize).unwrap().clone();
+    pub fn read_u8(&mut self) -> u8 {
+        let u8 = self.method.code.get(self.pc as usize)
+            .expect(format!("looking for more code in {}.{}{}", self.class.this_class.as_str(), self.method.name.as_str(), self.method.descriptor.descriptor()).as_str())
+            .clone();
         self.pc += 1;
         u8
     }
 
-    fn read_i16(&mut self) -> i16 {
+    pub fn read_i16(&mut self) -> i16 {
         let mut bytes = [0, 0];
         bytes[0] = self.read_u8();
         bytes[1] = self.read_u8();
         i16::from_be_bytes(bytes)
     }
 
-    fn read_u16(&mut self) -> u16 {
+    pub fn read_u16(&mut self) -> u16 {
         let mut bytes = [0, 0];
         bytes[0] = self.read_u8();
         bytes[1] = self.read_u8();

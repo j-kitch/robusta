@@ -1,25 +1,33 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
 
 use crate::class;
-use crate::class::Class;
+use crate::class::{Class, Field};
 use crate::class_file::{ClassFile, Reader};
 use crate::class_file;
 use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::heap::Value;
 
 // TODO: This is extremely brittle!
 const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
 const ACC_NATIVE: u16 = 0x0100;
+const ACC_STATIC: u16 = 0x0008;
 
 pub struct ClassLoader {
     loaded: HashMap<String, Rc<Class>>,
+    init: HashSet<String>,
+    static_fields: HashMap<String, HashMap<u16, Value>>,
 }
 
 impl ClassLoader {
     pub fn new() -> Self {
-        ClassLoader { loaded: HashMap::new() }
+        ClassLoader {
+            loaded: HashMap::new(),
+            init: HashSet::new(),
+            static_fields: HashMap::new(),
+        }
     }
 
     pub fn load(&mut self, class: &str) -> Option<Rc<Class>> {
@@ -41,14 +49,53 @@ impl ClassLoader {
         self.loaded.get(class).map(|class| class.clone())
     }
 
+    pub fn uninit_parents(&self, class: &str) -> Vec<String> {
+        let class = self.loaded.get(class).unwrap().clone();
+        let mut parents: Vec<String> = class.parent_iter()
+            .filter(|c| c.find_method("<clinit>", &MethodDescriptor::parse("()V")).is_some())
+            .map(|c| c.this_class.clone())
+            .filter(|c| !self.init.contains(c))
+            .collect();
+        parents.reverse();
+        parents
+    }
+
+    pub fn init_parent(&mut self, class: &str) {
+        self.init.insert(class.to_string());
+    }
+
+    pub fn get_static(&self, class: &str, idx: u16) -> Value {
+        self.static_fields.get(class).unwrap().get(&idx).unwrap().clone()
+    }
+
+    pub fn put_static(&mut self, class: &str, idx: u16, value: Value) {
+        self.static_fields.get_mut(class).unwrap().insert(idx, value);
+    }
+
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
         let mut const_pool = HashMap::new();
-        for (idx, con) in class_file.const_pool.iter().enumerate() {
+        for (idx, con) in class_file.const_pool.iter() {
             let con = match con {
                 class_file::Const::Class(class) => {
                     let class_file::Utf8 { bytes } = class_file.get_const(class.name_idx).expect_utf8();
                     let name = String::from_utf8(bytes.clone()).unwrap();
                     class::Const::Class(class::ClassRef { name })
+                }
+                class_file::Const::Int(int) => {
+                    class::Const::Int(class::Integer { int: int.int })
+                }
+                class_file::Const::Float(float) => {
+                    class::Const::Float(class::Float { float: float.float })
+                }
+                class_file::Const::Long(long) => {
+                    class::Const::Long(class::Long { long: long.long })
+                }
+                class_file::Const::Double(double) => {
+                    class::Const::Double(class::Double { double: double.double })
+                }
+                class_file::Const::String(string) => {
+                    let class_file::Utf8 { bytes } = class_file.get_const(string.utf8_idx).expect_utf8();
+                    class::Const::String(class::String { string: String::from_utf8(bytes.clone()).unwrap() })
                 }
                 class_file::Const::FieldRef(field_ref) => {
                     let class = class_file.get_const(field_ref.class_idx).expect_class();
@@ -82,8 +129,7 @@ impl ClassLoader {
                     continue;
                 }
             };
-            let key = (idx + 1) as u16;
-            const_pool.insert(key, con);
+            const_pool.insert(idx.clone(), con);
         }
 
         let this_class = class_file.get_const(class_file.this_class).expect_class();
@@ -105,15 +151,27 @@ impl ClassLoader {
             String::from_utf8(interface_name.bytes.clone()).unwrap()
         }).collect();
 
-        let fields = class_file.fields.iter().map(|field| {
-            let name = class_file.get_const(field.name_idx).expect_utf8();
-            let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
-            Rc::new(class::Field {
-                name: String::from_utf8(name.bytes.clone()).unwrap(),
-                descriptor: Descriptor::parse(
-                    String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
-            })
-        }).collect();
+        let fields: Vec<Rc<Field>> = class_file.fields.iter()
+            .map(|field| {
+                let name = class_file.get_const(field.name_idx).expect_utf8();
+                let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
+                Rc::new(class::Field {
+                    name: String::from_utf8(name.bytes.clone()).unwrap(),
+                    descriptor: Descriptor::parse(
+                        String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
+                    access_flags: field.access_flags,
+                })
+            }).collect();
+
+        let static_fields = fields.iter()
+            .enumerate()
+            .filter(|(_, f)| f.access_flags & ACC_STATIC != 0)
+            .map(|(idx, f)| {
+                let value = f.descriptor.zero_value();
+                (idx as u16, value)
+            }).collect();
+
+        self.static_fields.insert(this_class.clone(), static_fields);
 
         let methods = class_file.methods.iter().map(|method| {
             let name = class_file.get_const(method.name_idx).expect_utf8();
