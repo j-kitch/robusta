@@ -37,8 +37,7 @@ pub fn double(thread: &mut Thread) {
 fn array_load<F, G, T>(thread: &mut Thread, get_arr: F, push_value: G)
     where T: Copy,
           F: Fn(&Array) -> &Vec<T>,
-          G: Fn(&mut OperandStack, T)
-{
+          G: Fn(&mut OperandStack, T) {
     let runtime = thread.rt.as_ref().borrow();
     let current = thread.frames.current_mut();
     let index = current.op_stack.pop_int() as usize;

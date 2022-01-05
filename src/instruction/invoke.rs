@@ -31,7 +31,11 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
         args.push(current.op_stack.pop_value(arg));
     }
     if instance_ref {
-        args.push(Value::Ref(current.op_stack.pop_ref()));
+        let object_ref = current.op_stack.pop_ref();
+        if object_ref == 0 {
+            panic!("objectref is null");
+        }
+        args.push(Value::Ref(object_ref));
     }
     args.reverse();
 
