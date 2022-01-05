@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::descriptor::{Descriptor, MethodDescriptor};
-use crate::heap::Value;
 
 #[derive(Debug)]
 pub struct Class {
@@ -14,7 +13,6 @@ pub struct Class {
     pub super_class: Option<Rc<Class>>,
     pub interfaces: Vec<std::string::String>,
     pub fields: Vec<Rc<Field>>,
-    pub static_fields: HashMap<u16, Value>,
     pub methods: Vec<Rc<Method>>,
 }
 
@@ -37,13 +35,13 @@ impl Class {
             .for_each(f)
     }
 
-    pub fn get_static_field(&self, name: &str, descriptor: &Descriptor) -> Option<Value> {
+    pub fn get_static_field_idx(&self, name: &str, descriptor: &Descriptor) -> Option<u16> {
         let idx = self.fields.iter()
             .enumerate()
             .find(|(_, f)| f.name.eq(name) && f.descriptor.eq(descriptor))
             .map(|(idx, _)| idx as u16);
 
-        idx.and_then(|idx| self.static_fields.get(&idx).copied())
+        idx
     }
 
     pub fn find_method(&self, name: &str, descriptor: &MethodDescriptor) -> Option<Rc<Method>> {

@@ -7,6 +7,7 @@ use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
 pub fn init_parents_frame(parents: &[String]) -> Frame {
+    println!("init_parent_frame: {:?}", parents);
     let mut method = Method {
         name: "<invoke_clinit>".to_string(),
         descriptor: MethodDescriptor::parse("()V"),
@@ -17,14 +18,14 @@ pub fn init_parents_frame(parents: &[String]) -> Frame {
     };
 
     for (idx, _) in parents.iter().enumerate() {
-        method.code.push(0xB8);
+        method.code.push(0xCA);
 
         let idx = idx as u16 + 1;
         let idx_bytes = idx.to_be_bytes();
         method.code.push(idx_bytes[0]);
         method.code.push(idx_bytes[1]);
 
-        method.code.push(0xCA);
+        method.code.push(0xB8);
         method.code.push(idx_bytes[0]);
         method.code.push(idx_bytes[1]);
     }
@@ -40,7 +41,6 @@ pub fn init_parents_frame(parents: &[String]) -> Frame {
         super_class: None,
         interfaces: vec![],
         fields: vec![],
-        static_fields: HashMap::new(),
         methods: vec![method.clone()],
     };
 

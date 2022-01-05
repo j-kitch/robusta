@@ -183,6 +183,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB0 => returns::reference,
         0xB1 => returns::none,
         0xB2 => class::get_static,
+        0xB3 => class::put_static,
         0xB6 => invoke::invoke_virtual,
         0xB8 => invoke::invoke_static,
         0xBC => new_array,
@@ -263,6 +264,8 @@ fn mark_clinit(thread: &mut Thread) {
         Const::Method(method) => &method.class,
         _ => panic!("err"),
     };
+
+    println!("mark_clinit {}", class_name);
 
     runtime.class_loader.init_parent(&class_name);
 }

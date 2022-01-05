@@ -8,6 +8,7 @@ use crate::class::{Class, Field};
 use crate::class_file::{ClassFile, Reader};
 use crate::class_file;
 use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::heap::Value;
 
 // TODO: This is extremely brittle!
 const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
@@ -17,11 +18,16 @@ const ACC_STATIC: u16 = 0x0008;
 pub struct ClassLoader {
     loaded: HashMap<String, Rc<Class>>,
     init: HashSet<String>,
+    static_fields: HashMap<String, HashMap<u16, Value>>,
 }
 
 impl ClassLoader {
     pub fn new() -> Self {
-        ClassLoader { loaded: HashMap::new(), init: HashSet::new() }
+        ClassLoader {
+            loaded: HashMap::new(),
+            init: HashSet::new(),
+            static_fields: HashMap::new(),
+        }
     }
 
     pub fn load(&mut self, class: &str) -> Option<Rc<Class>> {
@@ -56,6 +62,14 @@ impl ClassLoader {
 
     pub fn init_parent(&mut self, class: &str) {
         self.init.insert(class.to_string());
+    }
+
+    pub fn get_static(&self, class: &str, idx: u16) -> Value {
+        self.static_fields.get(class).unwrap().get(&idx).unwrap().clone()
+    }
+
+    pub fn put_static(&mut self, class: &str, idx: u16, value: Value) {
+        self.static_fields.get_mut(class).unwrap().insert(idx, value);
     }
 
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
@@ -157,6 +171,8 @@ impl ClassLoader {
                 (idx as u16, value)
             }).collect();
 
+        self.static_fields.insert(this_class.clone(), static_fields);
+
         let methods = class_file.methods.iter().map(|method| {
             let name = class_file.get_const(method.name_idx).expect_utf8();
             let descriptor = class_file.get_const(method.descriptor_idx).expect_utf8();
@@ -193,7 +209,6 @@ impl ClassLoader {
             super_class,
             interfaces,
             fields,
-            static_fields,
             methods,
         })
     }
