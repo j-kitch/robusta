@@ -11,6 +11,10 @@ pub fn invoke_virtual(thread: &mut Thread) {
     invoke(thread, true)
 }
 
+pub fn invoke_special(thread: &mut Thread) {
+    invoke(thread, true)
+}
+
 pub fn invoke_static(thread: &mut Thread) {
     invoke(thread, false)
 }
@@ -48,7 +52,6 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
     args.reverse();
 
     if method.native {
-        println!("{}.{}{}", &method_const.class, &method_const.name, &method_const.descriptor.descriptor());
         let func = runtime.native.find_method(&class.this_class, &method.name, &method.descriptor);
         let result = func(runtime.deref_mut(), args);
         if method.descriptor.returns.is_some() {

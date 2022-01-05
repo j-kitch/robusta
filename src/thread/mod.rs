@@ -129,7 +129,9 @@ impl Frame {
     }
 
     pub fn read_u8(&mut self) -> u8 {
-        let u8 = self.method.code.get(self.pc as usize).unwrap().clone();
+        let u8 = self.method.code.get(self.pc as usize)
+            .expect(format!("looking for more code in {}.{}{}", self.class.this_class.as_str(), self.method.name.as_str(), self.method.descriptor.descriptor()).as_str())
+            .clone();
         self.pc += 1;
         u8
     }

@@ -7,7 +7,6 @@ use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
 pub fn init_parents_frame(parents: &[String]) -> Frame {
-    println!("init_parent_frame: {:?}", parents);
     let mut method = Method {
         name: "<invoke_clinit>".to_string(),
         descriptor: MethodDescriptor::parse("()V"),
@@ -29,6 +28,8 @@ pub fn init_parents_frame(parents: &[String]) -> Frame {
         method.code.push(idx_bytes[0]);
         method.code.push(idx_bytes[1]);
     }
+
+    method.code.push(0xB1);
 
     let method = Rc::new(method);
 
