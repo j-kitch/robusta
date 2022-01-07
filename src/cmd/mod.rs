@@ -22,7 +22,6 @@ impl Robusta {
 
     pub fn run(&mut self) -> Control {
         self.read_env();
-        println!("{:?}", self.configuration);
 
         let args: Vec<String> = args().skip(1).collect();
         let mut i = 0;
@@ -43,8 +42,6 @@ impl Robusta {
                 return result;
             }
         }
-
-        println!("{:?}", self.configuration);
 
         Control::Exit
     }
