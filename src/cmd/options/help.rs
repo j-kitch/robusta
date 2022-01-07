@@ -19,3 +19,7 @@ pub fn help(_: &mut Robusta, _: &[String], idx: usize) -> (Control, usize) {
     eprintln!("{}", HELP_MESSAGE);
     (Control::Exit, idx + 1)
 }
+
+pub fn print_help() {
+    eprintln!("{}", HELP_MESSAGE);
+}

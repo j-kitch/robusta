@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::cmd::{Control, Robusta};
 
-mod help;
+pub mod help;
 mod version;
 
 pub struct Options {
