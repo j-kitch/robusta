@@ -3,6 +3,10 @@ use crate::cmd::Control::Exit;
 use crate::cmd::options::help::print_help;
 
 use crate::cmd::options::Options;
+use crate::descriptor::MethodDescriptor;
+use crate::heap::Value;
+use crate::runtime::Runtime;
+use crate::thread::Thread;
 
 mod options;
 
@@ -64,6 +68,8 @@ impl Robusta {
             .map(Clone::clone)
             .collect();
 
+        self.run_main();
+
         Exit
     }
 
@@ -75,7 +81,20 @@ impl Robusta {
     }
 
     fn run_main(&mut self) {
+        let mut runtime = Runtime::new();
 
+        let main_args_refs: Vec<u32> = self.configuration.main_args.iter()
+            .map(|arg| runtime.insert_str_const(arg))
+            .collect();
+        let main_args_ref = runtime.insert_ref_array(main_args_refs);
+
+        let main_class = runtime.load_class(&self.configuration.main_class);
+        let main_method = main_class.find_method("main", &MethodDescriptor::parse("([Ljava/lang/String;)V")).unwrap();
+
+        let mut main_thread = Thread::new(runtime);
+        main_thread.create_frame(main_class, main_method, vec![Value::Ref(main_args_ref)]);
+
+        main_thread.run()
     }
 }
 
