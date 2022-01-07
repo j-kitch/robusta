@@ -1,12 +1,12 @@
-use std::env;
-use robusta::cmd::Robusta;
+use std::process::exit;
 
-use robusta::descriptor::MethodDescriptor;
-use robusta::heap::Value;
-use robusta::runtime::Runtime;
-use robusta::thread::Thread;
+use robusta::cmd::{Control, Robusta};
 
 fn main() {
     let mut robusta = Robusta::new();
-    robusta.run()
+    let result = robusta.run();
+    if let Control::Error { error } = result {
+        eprintln!("{}", error);
+        exit(1);
+    }
 }
