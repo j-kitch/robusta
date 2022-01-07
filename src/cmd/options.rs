@@ -15,6 +15,8 @@ impl Options {
 
         options.non_std.insert("-cp".to_string(), non_std_set_class_path);
         options.non_std.insert("-classpath".to_string(), non_std_set_class_path);
+        options.non_std.insert("-d32".to_string(), jvm_32_bit);
+        options.non_std.insert("-d64".to_string(), non_op);
 
         options.std.insert("--class-path".to_string(), std_set_class_path);
 
@@ -68,4 +70,14 @@ fn std_set_class_path(robusta: &mut Robusta, args: &[String], idx: usize) -> (Co
             error: format!("{} requires class path specification", args[0])
         }, idx + 1)
     }
+}
+
+fn non_op(_: &mut Robusta, _: &[String], idx: usize) -> (Control, usize) {
+    (Control::Continue, idx + 1)
+}
+
+fn jvm_32_bit(_: &mut Robusta, _: &[String], idx: usize) -> (Control, usize) {
+    (Control::Error {
+        error: "Error: This Java instance does not support a 32-bit JVM.\nPlease install the desired version.".to_string(),
+    }, idx + 1)
 }
