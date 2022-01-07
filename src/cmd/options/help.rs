@@ -16,6 +16,6 @@ where options include:
 ";
 
 pub fn help(_: &mut Robusta, _: &[String], idx: usize) -> (Control, usize) {
-    println!("{}", HELP_MESSAGE);
+    eprintln!("{}", HELP_MESSAGE);
     (Control::Exit, idx + 1)
 }

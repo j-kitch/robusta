@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::cmd::{Control, Robusta};
 
 mod help;
+mod version;
 
 pub struct Options {
     options: HashMap<String, OptionHandler>,
@@ -19,6 +20,8 @@ impl Options {
         options.options.insert("-d64".to_string(), non_op);
         options.options.insert("-?".to_string(), help::help);
         options.options.insert("-help".to_string(), help::help);
+        options.options.insert("-version".to_string(), version::version);
+        options.options.insert("-showversion".to_string(), version::show_version);
 
         options
     }
