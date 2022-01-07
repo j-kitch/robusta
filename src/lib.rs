@@ -8,3 +8,4 @@ pub mod descriptor;
 pub mod native;
 pub mod instruction;
 pub mod shim;
+pub mod cmd;
