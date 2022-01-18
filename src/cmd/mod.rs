@@ -81,7 +81,7 @@ impl Robusta {
     }
 
     fn run_main(&mut self) {
-        let mut runtime = Runtime::new();
+        let mut runtime = Runtime::new(&self.configuration);
 
         let main_args_refs: Vec<u32> = self.configuration.main_args.iter()
             .map(|arg| runtime.insert_str_const(arg))
@@ -99,10 +99,10 @@ impl Robusta {
 }
 
 #[derive(Debug)]
-struct Configuration {
-    class_path: String,
-    main_class: String,
-    main_args: Vec<String>,
+pub struct Configuration {
+    pub class_path: String,
+    pub main_class: String,
+    pub main_args: Vec<String>,
 }
 
 pub enum Control {

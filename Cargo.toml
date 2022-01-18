@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.4"
+zip = "0.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.2"

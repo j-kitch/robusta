@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::class::Class;
-use crate::class_loader::ClassLoader;
+use crate::cmd::Configuration;
 use crate::heap::{Heap, Ref, Value};
+use crate::loader::ClassLoader;
 use crate::native::NativeMethods;
 
 pub struct Runtime {
@@ -12,9 +13,9 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    pub fn new() -> Runtime {
+    pub fn new(configuration: &Configuration) -> Runtime {
         Runtime {
-            class_loader: ClassLoader::new(),
+            class_loader: ClassLoader::new(&configuration.class_path),
             heap: Heap::new(),
             native: NativeMethods::load(),
         }

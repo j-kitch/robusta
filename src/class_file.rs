@@ -1,17 +1,16 @@
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Read;
 
-pub struct Reader<'a> {
-    file: &'a File,
+pub struct Reader<'a, R: Read> {
+    file: &'a mut R,
     u64_buf: [u8; 8],
     u32_buf: [u8; 4],
     u16_buf: [u8; 2],
     u8_buf: [u8; 1],
 }
 
-impl<'a> Reader<'a> {
-    pub fn new(file: &'a File) -> Self {
+impl<'a, R: Read> Reader<'a, R> {
+    pub fn new(file: &'a mut R) -> Self {
         Reader { file, u64_buf: [0; 8], u32_buf: [0; 4], u16_buf: [0; 2], u8_buf: [0] }
     }
 
