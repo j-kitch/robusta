@@ -5,6 +5,7 @@ fn less_than() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("Branching 1 2".split_whitespace())
         .assert()
         .success()
@@ -18,6 +19,7 @@ fn equal() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("Branching 2 2".split_whitespace())
         .assert()
         .success()
@@ -31,6 +33,7 @@ fn greater_than() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("Branching 2 1".split_whitespace())
         .assert()
         .success()

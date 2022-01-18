@@ -5,7 +5,7 @@ fn primitive_arrays() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .current_dir("java")
+        .env("ROBUSTA_CLASSPATH", "java")
         .arg("PrimitiveArrays")
         .assert()
         .success()

@@ -5,6 +5,7 @@ fn d32_fails() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-d32 IDoNotExist".split_whitespace())
         .assert()
         .failure()
@@ -20,6 +21,7 @@ fn d64_silent() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-d64 PrintArgs a b".split_whitespace())
         .assert()
         .success()
@@ -33,6 +35,7 @@ fn help_question_mark() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-?".split_whitespace())
         .assert()
         .success()
@@ -46,6 +49,7 @@ fn help() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-help".split_whitespace())
         .assert()
         .success()
@@ -59,6 +63,7 @@ fn version() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-version IDoNotExist".split_whitespace())
         .assert()
         .success()
@@ -72,6 +77,7 @@ fn show_version() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
+        .env("ROBUSTA_CLASSPATH", "java")
         .args("-showversion PrintArgs a b".split_whitespace())
         .assert()
         .success()
