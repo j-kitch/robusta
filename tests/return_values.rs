@@ -5,7 +5,7 @@ fn return_values() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .arg("ReturnValues")
         .assert()
         .success()

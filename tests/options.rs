@@ -5,7 +5,7 @@ fn d32_fails() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-d32 IDoNotExist".split_whitespace())
         .assert()
         .failure()
@@ -21,7 +21,7 @@ fn d64_silent() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-d64 PrintArgs a b".split_whitespace())
         .assert()
         .success()
@@ -35,7 +35,7 @@ fn help_question_mark() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-?".split_whitespace())
         .assert()
         .success()
@@ -49,7 +49,7 @@ fn help() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-help".split_whitespace())
         .assert()
         .success()
@@ -63,7 +63,7 @@ fn version() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-version IDoNotExist".split_whitespace())
         .assert()
         .success()
@@ -77,7 +77,7 @@ fn show_version() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("-showversion PrintArgs a b".split_whitespace())
         .assert()
         .success()

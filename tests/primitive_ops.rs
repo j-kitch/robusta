@@ -76,7 +76,7 @@ fn negative_values() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .env("ROBUSTA_CLASSPATH", "java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("PrimitiveOps -200 -6534767 -23.456 -123.456789".split_whitespace())
         .assert()
         .success()
