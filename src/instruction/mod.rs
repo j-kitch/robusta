@@ -15,3 +15,4 @@ pub mod compare;
 pub mod class;
 pub mod invoke;
 pub mod returns;
+pub mod new;
