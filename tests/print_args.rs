@@ -5,7 +5,7 @@ fn empty_args() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .current_dir("java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .arg("PrintArgs")
         .assert()
         .success()
@@ -19,7 +19,7 @@ fn one_arg() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .current_dir("java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("PrintArgs hello".split_whitespace())
         .assert()
         .success()
@@ -33,7 +33,7 @@ fn multiple_args() {
     let mut command = Command::cargo_bin("robusta").unwrap();
 
     command
-        .current_dir("java")
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
         .args("PrintArgs hello world how are you".split_whitespace())
         .assert()
         .success()

@@ -1,48 +1,57 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
-
+use zip::ZipArchive;
 use crate::class;
-use crate::class::{Class, Field};
-use crate::class_file::{ClassFile, Reader};
 use crate::class_file;
+use crate::class::{Class, Field};
+
+use crate::class_file::{ClassFile, Reader};
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
 
-// TODO: This is extremely brittle!
-const CLASS_PATH: &str = "/Users/joshkitc/personal/robusta/java";
 const ACC_NATIVE: u16 = 0x0100;
 const ACC_STATIC: u16 = 0x0008;
 
 pub struct ClassLoader {
+    loaders: Vec<Box<dyn Loader>>,
     loaded: HashMap<String, Rc<Class>>,
     init: HashSet<String>,
     static_fields: HashMap<String, HashMap<u16, Value>>,
 }
 
 impl ClassLoader {
-    pub fn new() -> Self {
-        ClassLoader {
+    pub fn new(class_path: &str) -> Self {
+        let mut class_loader = ClassLoader {
+            loaders: vec![],
             loaded: HashMap::new(),
             init: HashSet::new(),
             static_fields: HashMap::new(),
+        };
+
+        for path in std::env::split_paths(class_path) {
+            if path.extension().map_or(false, |e| e.eq("jar")) {
+                let jar_file = File::open(path).unwrap();
+                let zip_arch = ZipArchive::new(jar_file).unwrap();
+                let loader = JarLoader { jar: zip_arch };
+                class_loader.loaders.push(Box::new(loader));
+            } else {
+                let loader = DirLoader { dir: path };
+                class_loader.loaders.push(Box::new(loader));
+            }
         }
+
+        class_loader
     }
 
     pub fn load(&mut self, class: &str) -> Option<Rc<Class>> {
         if !self.loaded.contains_key(class) {
-            let file_name = Path::new(CLASS_PATH)
-                .join(class)
-                .with_extension("class");
-
-            let file = File::open(file_name);
-            if file.is_err() {
-                return None;
-            }
-            let file = file.unwrap();
-            let mut reader = Reader::new(&file);
-            let class_file = reader.read_class_file();
+            let class_file = self.loaders.iter_mut()
+                .map(|loader| loader.load(class))
+                .find(|class| class.is_some())
+                .unwrap()
+                .unwrap();
             let class = self.class_from(&class_file);
             self.loaded.insert(class.this_class.clone(), class);
         }
@@ -211,5 +220,39 @@ impl ClassLoader {
             fields,
             methods,
         })
+    }
+}
+
+trait Loader {
+    fn load(&mut self, class_name: &str) -> Option<ClassFile>;
+}
+
+struct DirLoader {
+    dir: PathBuf,
+}
+
+impl Loader for DirLoader {
+    fn load(&mut self, class_name: &str) -> Option<ClassFile> {
+        let file_name = self.dir
+            .join(class_name)
+            .with_extension("class");
+
+        let file = File::open(file_name);
+
+        file.ok().map(|mut file| Reader::new(&mut file).read_class_file())
+    }
+}
+
+struct JarLoader {
+    jar: ZipArchive<File>,
+}
+
+impl Loader for JarLoader {
+    fn load(&mut self, class_name: &str) -> Option<ClassFile> {
+        let file_name = Path::new(class_name).with_extension("class");
+
+        let zip_file = self.jar.by_name(file_name.to_str().unwrap());
+
+        zip_file.ok().map(|mut zip_file| Reader::new(&mut zip_file).read_class_file())
     }
 }
