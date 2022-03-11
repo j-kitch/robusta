@@ -2,7 +2,7 @@ use std::ops::Deref;
 use crate::class::Const;
 
 use crate::descriptor::Descriptor;
-use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, new, pop, push, push_const, returns, shift, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, invoke, load, load_const, pop, push, push_const, returns, shift, single_op, store};
 use crate::thread::{Frame, Thread};
 
 type Op = fn(&mut Thread);
@@ -92,7 +92,6 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x50 => array_store::long,
         0x51 => array_store::float,
         0x52 => array_store::double,
-        0x53 => array_store::reference,
         0x54 => array_store::byte,
         0x55 => array_store::char,
         0x56 => array_store::short,
@@ -190,7 +189,6 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB8 => invoke::invoke_static,
         0xBB => class::new,
         0xBC => new_array,
-        0xBD => new::ref_array,
         0xBE => array_length,
         0xCA => mark_clinit,
         0xFE => reserved,

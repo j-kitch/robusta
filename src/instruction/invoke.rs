@@ -36,8 +36,7 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
         return;
     }
 
-    let method = class.find_method(&method_const.name, &method_const.descriptor)
-        .expect(format!("I expected to find {}.{}{}", &method_const.class, &method_const.name, &method_const.descriptor.descriptor()).as_str());
+    let method = class.find_method(&method_const.name, &method_const.descriptor).unwrap();
 
     let mut args = vec![];
     for arg in method.descriptor.args.iter().rev() {
