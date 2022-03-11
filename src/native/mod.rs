@@ -4,7 +4,10 @@ use std::str::FromStr;
 
 use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Value};
+use crate::native::hash_code::HashCodePlugin;
 use crate::runtime::Runtime;
+
+mod hash_code;
 
 pub trait NativePlugin {
     fn supports(&self, class: &str, name: &str, desc: &MethodDescriptor) -> bool;
@@ -19,7 +22,9 @@ pub struct NativeMethods {
 impl NativeMethods {
     pub fn load() -> Self {
         NativeMethods {
-            plugins: vec![],
+            plugins: vec![
+                Rc::new(RefCell::new(HashCodePlugin::new())),
+            ],
             classes: vec![
                 NativeClass {
                     name: String::from("java/io/PrintStream"),
@@ -115,8 +120,8 @@ impl NativeMethods {
                             function: arraycopy,
                         }
                     ],
-                }
-            ]
+                },
+            ],
         }
     }
 
@@ -308,7 +313,7 @@ fn arraycopy(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
             for i in 0..length as usize {
                 dest[dest_i + i] = src[src_i + i];
             }
-        },
+        }
         _ => panic!("arraycopy not supporting this type")
     }
 
