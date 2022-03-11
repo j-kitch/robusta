@@ -1,8 +1,8 @@
 # TODO
 
-- Handle CLI properly
+- ~~Handle CLI properly~~
 - Separate build into separate packages?
-- Build Java files automatically, and properly
+- ~~Build Java files automatically, and properly~~
 - Proper java library, java test library, java native library?
 - Java Native interface API and dynamic loading?
 - Multi-threading!
