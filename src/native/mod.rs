@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -5,13 +6,20 @@ use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Value};
 use crate::runtime::Runtime;
 
+pub trait NativePlugin {
+    fn supports(&self, class: &str, name: &str, desc: &MethodDescriptor) -> bool;
+    fn invoke(&mut self, runtime: &mut Runtime, args: Vec<Value>) -> Option<Value>;
+}
+
 pub struct NativeMethods {
+    plugins: Vec<Rc<RefCell<dyn NativePlugin>>>,
     classes: Vec<NativeClass>,
 }
 
 impl NativeMethods {
     pub fn load() -> Self {
         NativeMethods {
+            plugins: vec![],
             classes: vec![
                 NativeClass {
                     name: String::from("java/io/PrintStream"),
@@ -113,6 +121,21 @@ impl NativeMethods {
     }
 
     pub fn find_method(&self, class: &str, name: &str, descriptor: &MethodDescriptor) -> Rc<dyn Fn(&mut Runtime, Vec<Value>) -> Option<Value>> {
+        let plugin = self.plugins.iter()
+            .find(|p| {
+                let p = p.as_ref().borrow();
+                p.supports(class, name, descriptor)
+            });
+
+        if plugin.is_some() {
+            let plugin = plugin.unwrap().clone();
+            return Rc::new(move |rt, args| {
+                let plugin = plugin.clone();
+                let mut plugin = plugin.as_ref().borrow_mut();
+                return plugin.invoke(rt, args);
+            });
+        }
+
         let f = self.classes.iter()
             .find(|c| c.name.eq(class))
             .expect(format!("Could not find class {}", class).as_str())
