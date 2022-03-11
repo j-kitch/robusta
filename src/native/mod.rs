@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::descriptor::MethodDescriptor;
@@ -111,14 +112,16 @@ impl NativeMethods {
         }
     }
 
-    pub fn find_method(&self, class: &str, name: &str, descriptor: &MethodDescriptor) -> NativeFunction {
-        self.classes.iter()
+    pub fn find_method(&self, class: &str, name: &str, descriptor: &MethodDescriptor) -> Rc<dyn Fn(&mut Runtime, Vec<Value>) -> Option<Value>> {
+        let f = self.classes.iter()
             .find(|c| c.name.eq(class))
             .expect(format!("Could not find class {}", class).as_str())
             .methods.iter()
             .find(|m| m.name.eq(name) && m.descriptor.eq(descriptor))
             .expect(format!("Could not find method {}.{}{}", class, name, descriptor.descriptor()).as_str())
-            .function
+            .function;
+
+        Rc::new(f)
     }
 }
 
