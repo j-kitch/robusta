@@ -194,6 +194,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xBD => new::ref_arr,
         0xBE => array_length,
         0xCA => mark_clinit,
+        0xC6 => compare::if_null,
+        0xC7 => compare::if_non_null,
         0xFE => reserved,
         0xFF => reserved,
         _ => panic!("Unknown op at {}.{}{} PC {} {:#02x}",

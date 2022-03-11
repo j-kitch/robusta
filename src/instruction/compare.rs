@@ -145,6 +145,10 @@ pub fn if_ref_ne(thread: &mut Thread) {
     if_reference_cond(thread, |r1, r2| r1 != r2)
 }
 
+pub fn if_non_null(thread: &mut Thread) { if_reference_single(thread, |r| r != 0) }
+
+pub fn if_null(thread: &mut Thread) { if_reference_single(thread, |r| r == 0) }
+
 fn if_cond<F>(thread: &mut Thread, comp: F) where F: Fn(i32) -> bool {
     let current = thread.frames.current_mut();
     let offset = current.read_i16();
@@ -177,6 +181,18 @@ fn if_reference_cond<F>(thread: &mut Thread, comp: F) where F: Fn(u32, u32) -> b
     let value1 = current.op_stack.pop_ref();
 
     if comp(value1, value2) {
+        let mut pc = current.pc as i64 - 3;
+        pc += offset as i64;
+        current.pc = pc as u32;
+    }
+}
+
+fn if_reference_single<F>(thread: &mut Thread, comp: F) where F: Fn(u32) -> bool {
+    let current = thread.frames.current_mut();
+    let offset = current.read_i16();
+    let value = current.op_stack.pop_ref();
+
+    if comp(value) {
         let mut pc = current.pc as i64 - 3;
         pc += offset as i64;
         current.pc = pc as u32;
