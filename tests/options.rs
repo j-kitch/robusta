@@ -85,3 +85,17 @@ fn show_version() {
         .stderr(predicates::str::starts_with("robusta version \""))
         .stdout("a\nb\n");
 }
+
+#[test]
+fn unrecognized_option() {
+    let mut command = Command::cargo_bin("robusta").unwrap();
+
+    command
+        .env("ROBUSTA_CLASSPATH", "robusta-java-runtime/target/robusta-java-runtime.jar:robusta-java-test/target/robusta-java-test.jar")
+        .args("-iDoNotExist".split_whitespace())
+        .assert()
+        .failure()
+        .code(1)
+        .stderr("Unrecognized option: -iDoNotExist\n")
+        .stdout("");
+}
