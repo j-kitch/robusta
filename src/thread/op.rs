@@ -185,6 +185,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB1 => returns::none,
         0xB2 => class::get_static,
         0xB3 => class::put_static,
+        0xB4 => field::get,
         0xB5 => field::put,
         0xB6 => invoke::invoke_virtual,
         0xB7 => invoke::invoke_special,
