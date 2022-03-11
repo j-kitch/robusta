@@ -5,5 +5,6 @@ public class Classes {
         System.out.println(Integer.class.getName());
         System.out.println(Object.class.getName());
         System.out.println(Classes.class.getName());
+        System.out.println(new Object().getClass().getName());
     }
 }

@@ -4,10 +4,12 @@ use std::str::FromStr;
 
 use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Value};
+use crate::native::class::ClassPlugin;
 use crate::native::hash_code::HashCodePlugin;
 use crate::runtime::Runtime;
 
 mod hash_code;
+mod class;
 
 pub trait NativePlugin {
     fn supports(&self, class: &str, name: &str, desc: &MethodDescriptor) -> bool;
@@ -24,6 +26,7 @@ impl NativeMethods {
         NativeMethods {
             plugins: vec![
                 Rc::new(RefCell::new(HashCodePlugin::new())),
+                Rc::new(RefCell::new(ClassPlugin::new())),
             ],
             classes: vec![
                 NativeClass {

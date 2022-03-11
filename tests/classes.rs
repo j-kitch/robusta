@@ -10,6 +10,6 @@ fn classes() {
         .assert()
         .success()
         .code(0)
-        .stdout("java.lang.String\njava.lang.Integer\njava.lang.Object\nClasses\n")
+        .stdout("java.lang.String\njava.lang.Integer\njava.lang.Object\nClasses\njava.lang.Object\n")
         .stderr("");
 }
