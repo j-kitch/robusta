@@ -192,6 +192,7 @@ impl Value {
     }
 }
 
+#[derive(Debug)]
 pub enum Array {
     Byte(Vec<i8>),
     Char(Vec<u16>),

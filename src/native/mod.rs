@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::descriptor::MethodDescriptor;
-use crate::heap::Value;
+use crate::heap::{Array, Value};
 use crate::runtime::Runtime;
 
 pub struct NativeMethods {
@@ -97,6 +97,16 @@ impl NativeMethods {
                         },
                     ],
                 },
+                NativeClass {
+                    name: String::from("java/lang/System"),
+                    methods: vec![
+                        NativeMethod {
+                            name: String::from("arraycopy"),
+                            descriptor: MethodDescriptor::parse("(Ljava/lang/Object;ILjava/lang/Object;II)V"),
+                            function: arraycopy,
+                        }
+                    ],
+                }
             ]
         }
     }
@@ -104,10 +114,10 @@ impl NativeMethods {
     pub fn find_method(&self, class: &str, name: &str, descriptor: &MethodDescriptor) -> NativeFunction {
         self.classes.iter()
             .find(|c| c.name.eq(class))
-            .unwrap()
+            .expect(format!("Could not find class {}", class).as_str())
             .methods.iter()
             .find(|m| m.name.eq(name) && m.descriptor.eq(descriptor))
-            .unwrap()
+            .expect(format!("Could not find method {}.{}{}", class, name, descriptor.descriptor()).as_str())
             .function
     }
 }
@@ -247,4 +257,36 @@ fn to_utf8_string(runtime: &Runtime, string_ref: u32) -> String {
     let chars_array = chars_arr.arr().char();
 
     String::from_utf16(chars_array).unwrap()
+}
+
+fn arraycopy(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let src_ref = args[0].reference();
+    let src_pos = args[1].int();
+    let dest_ref = args[2].reference();
+    let dest_pos = args[3].int();
+    let length = args[4].int();
+
+    let src = runtime.heap.get(src_ref);
+    let src = src.as_ref().borrow();
+    let src = src.arr();
+
+    let dest = runtime.heap.get(dest_ref);
+    let mut dest = dest.as_ref().borrow_mut();
+    let dest = dest.arr_mut();
+
+    println!("arraycopy({:?}, {}, {:?}, {}, {}", &src, src_pos, &dest, dest_pos, length);
+
+    match src {
+        Array::Char(src) => {
+            let dest = dest.char_mut();
+            let src_i = src_pos as usize;
+            let dest_i = dest_pos as usize;
+            for i in 0..length as usize {
+                dest[dest_i + i] = src[src_i + i];
+            }
+        },
+        _ => panic!("arraycopy not supporting this type")
+    }
+
+    None
 }

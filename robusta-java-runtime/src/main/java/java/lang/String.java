@@ -14,7 +14,7 @@ public class String {
         this.chars = Arrays.copyOf(chars, chars.length);
     }
 
-    public void getChars(int srcBegin, int srcEnd, char dst[], int dstBegin) {
+    public void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin) {
         if (srcBegin < 0) {
             throw new StringIndexOutOfBoundsException(srcBegin);
         }
