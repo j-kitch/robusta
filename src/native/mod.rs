@@ -274,8 +274,6 @@ fn arraycopy(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let mut dest = dest.as_ref().borrow_mut();
     let dest = dest.arr_mut();
 
-    println!("arraycopy({:?}, {}, {:?}, {}, {}", &src, src_pos, &dest, dest_pos, length);
-
     match src {
         Array::Char(src) => {
             let dest = dest.char_mut();

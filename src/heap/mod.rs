@@ -48,14 +48,9 @@ impl Heap {
         }
         let key = key;
 
-        let mut fields = vec![];
-        class.for_each_field(|field| {
-            let value = match &field.descriptor {
-                Descriptor::Object(_) | Descriptor::Array(_) => Value::Ref(0),
-                _ => panic!("Not implemented value of type {}", &field.descriptor)
-            };
-            fields.push(Field { field, value });
-        });
+        let fields = class.fields.iter()
+            .map(|f| Field { field: f.clone(), value: f.descriptor.zero_value() })
+            .collect();
 
         let object = Rc::from(RefCell::from(Obj(Object { class, fields })));
         self.objects.insert(key, object.clone());

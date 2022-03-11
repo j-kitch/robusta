@@ -13,13 +13,12 @@ public class StringBuilder {
     }
 
     public StringBuilder append(String string) {
-        System.out.println("Appending");
-        System.out.println(string);
         if (string == null)
             return appendNull();
         int len = string.length();
         ensureCapacityInternal(count + len);
         string.getChars(0, len, chars, count);
+        count += len;
         return this;
     }
 
@@ -28,7 +27,7 @@ public class StringBuilder {
     }
 
     public String toString() {
-        return new String(chars);
+        return new String(Arrays.copyOf(chars, count));
     }
 
     private void ensureCapacityInternal(int length) {
