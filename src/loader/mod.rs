@@ -50,8 +50,8 @@ impl ClassLoader {
             let class_file = self.loaders.iter_mut()
                 .map(|loader| loader.load(class))
                 .find(|class| class.is_some())
-                .unwrap()
-                .unwrap();
+                .expect(format!("Could not find class {}", class).as_str())
+                .expect(format!("Could not find class {}", class).as_str());
             let class = self.class_from(&class_file);
             self.loaded.insert(class.this_class.clone(), class);
         }

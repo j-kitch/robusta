@@ -92,6 +92,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0x50 => array_store::long,
         0x51 => array_store::float,
         0x52 => array_store::double,
+        0x53 => array_store::reference,
         0x54 => array_store::byte,
         0x55 => array_store::char,
         0x56 => array_store::short,
