@@ -16,3 +16,4 @@ pub mod class;
 pub mod invoke;
 pub mod returns;
 pub mod new;
+pub mod field;

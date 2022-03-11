@@ -107,6 +107,13 @@ impl Ref {
         }
     }
 
+    pub fn obj_mut(&mut self) -> &mut Object {
+        match self {
+            Ref::Obj(obj) => obj,
+            _ => panic!("err")
+        }
+    }
+
     pub fn arr(&self) -> &Array {
         match self {
             Ref::Arr(arr) => arr,
