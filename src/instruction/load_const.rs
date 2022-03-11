@@ -1,4 +1,4 @@
-use crate::class;
+use crate::{class, shim};
 use crate::thread::Thread;
 
 pub fn category_1(thread: &mut Thread) {
@@ -17,7 +17,18 @@ pub fn category_1(thread: &mut Thread) {
             let reference = runtime.insert_str_const(&s.string);
             current.op_stack.push_ref(reference);
         }
-        _ => panic!("err")
+        class::Const::Class(c) => {
+            let class = runtime.class_loader.load(&c.name).unwrap();
+            let uninit_parents = runtime.class_loader.uninit_parents(&c.name);
+            if !uninit_parents.is_empty() {
+                current.pc -= 2;
+                thread.frames.push(shim::init_parents_frame(&uninit_parents));
+                return;
+            }
+            let class_inst = runtime.create_class_object(class);
+            current.op_stack.push_ref(class_inst);
+        }
+        x => panic!("{:?} I do not handle this yet :(", x)
     }
 }
 

@@ -9,11 +9,12 @@ use crate::heap::Ref::Obj;
 
 pub struct Heap {
     objects: HashMap<u32, Rc<RefCell<Ref>>>,
+    class_objects: HashMap<String, u32>,
 }
 
 impl Heap {
     pub fn new() -> Self {
-        Heap { objects: HashMap::new() }
+        Heap { objects: HashMap::new(), class_objects: HashMap::new() }
     }
 
     pub fn insert_ref_array(&mut self, refs: Vec<u32>) -> u32 {
@@ -38,6 +39,15 @@ impl Heap {
         self.objects.insert(key, Rc::from(RefCell::from(Ref::Arr(Array::Char(chars)))));
 
         key
+    }
+
+    pub fn mark_as_class(&mut self, class: Rc<Class>, obj: u32) {
+        self.class_objects.insert(class.this_class.clone(), obj);
+    }
+
+    pub fn find_class_inst(&self, class: Rc<Class>) -> Option<u32> {
+        self.class_objects.get(class.this_class.as_str())
+            .map(|o| o.clone())
     }
 
     pub fn create(&mut self, class: Rc<Class>) -> (u32, Rc<RefCell<Ref>>) {
