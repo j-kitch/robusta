@@ -194,6 +194,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xBC => new_array,
         0xBD => new::ref_arr,
         0xBE => array_length,
+        0xC0 => class::check_cast,
         0xC1 => class::instance_of,
         0xCA => mark_clinit,
         0xC6 => compare::if_null,

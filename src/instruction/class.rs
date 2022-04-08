@@ -1,9 +1,9 @@
 use std::borrow::BorrowMut;
 use std::ops::Deref;
+
 use crate::class::Const;
 use crate::heap::Ref;
 use crate::shim;
-
 use crate::thread::Thread;
 
 pub fn new(thread: &mut Thread) {
@@ -76,8 +76,10 @@ pub fn put_static(thread: &mut Thread) {
     runtime.class_loader.put_static(&field_const.class, value_idx.unwrap(), value)
 }
 
-pub fn instance_of(thread: &mut Thread) {
-    let mut runtime = thread.rt.as_ref().borrow_mut();
+pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instance: G, do_if_not: H)
+    where F: Fn(&mut Thread),
+          G: Fn(&mut Thread, u32),
+          H: Fn(&mut Thread, u32) {
     let current = thread.frames.current_mut();
     let type_idx = current.read_u16();
     let type_const = match current.class.const_pool.get(&type_idx).unwrap() {
@@ -87,9 +89,14 @@ pub fn instance_of(thread: &mut Thread) {
     let object_ref = current.op_stack.pop_ref();
 
     if object_ref == 0 {
-        current.op_stack.push_int(0);
-    } else {
+        return do_if_null(thread);
+    }
+
+    let mut is_instance = false;
+
+    {
         // TODO: Standardise this!
+        let mut runtime = thread.rt.as_ref().borrow_mut();
         let class = runtime.class_loader.borrow_mut().load(&type_const.name).unwrap();
         let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
         if !uninit_parents.is_empty() {
@@ -101,7 +108,7 @@ pub fn instance_of(thread: &mut Thread) {
 
         let obj = runtime.load_object(object_ref);
         let obj = obj.as_ref().borrow();
-        let is_instance = match obj.deref() {
+        is_instance = match obj.deref() {
             Ref::Obj(obj) => {
                 // TODO: Assuming T is class, not interface
                 let s = obj.class.clone();
@@ -112,8 +119,45 @@ pub fn instance_of(thread: &mut Thread) {
                 panic!("Not implemented is_instance for arrays yet!");
             }
         };
-
-        let result = if is_instance { 1 } else { 0 };
-        current.op_stack.push_int(result)
     }
+
+    if is_instance {
+        return do_if_instance(thread, object_ref);
+    } else {
+        return do_if_not(thread, object_ref);
+    }
+}
+
+pub fn check_cast(thread: &mut Thread) {
+    do_if_instance(
+        thread,
+        |t| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_ref(0);
+        },
+        |t, obj_ref| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_ref(obj_ref);
+        },
+        |_, _| {
+            // TODO: Exceptions!
+            panic!("ClassCastException")
+        })
+}
+
+pub fn instance_of(thread: &mut Thread) {
+    do_if_instance(
+        thread,
+        |t| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(0);
+        },
+        |t, _| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(1);
+        },
+        |t, _| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(0);
+        })
 }
