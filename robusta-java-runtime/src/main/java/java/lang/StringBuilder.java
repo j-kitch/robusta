@@ -22,6 +22,10 @@ public class StringBuilder {
         return this;
     }
 
+    public StringBuilder append(boolean b) {
+        return append(Boolean.toString(b));
+    }
+
     public StringBuilder appendNull() {
         return append("null");
     }

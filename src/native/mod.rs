@@ -176,7 +176,7 @@ fn to_utf8_string(runtime: &Runtime, string_ref: u32) -> String {
     let string_obj = string_obj.obj();
 
     let chars = string_obj.fields.iter()
-        .find(|f| f.field.as_ref().name.eq("chars"))
+        .find(|f| f.field.as_ref().name.eq("value"))
         .unwrap();
     let chars = chars.value.reference();
 

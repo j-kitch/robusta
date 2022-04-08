@@ -82,7 +82,7 @@ impl Runtime {
         };
 
         let mut chars_field = str_obj.fields.iter_mut()
-            .find(|f| f.field.name.eq("chars"))
+            .find(|f| f.field.name.eq("value"))
             .unwrap();
 
         chars_field.value = Value::Ref(chars_ref);
