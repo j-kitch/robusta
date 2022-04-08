@@ -6,10 +6,12 @@ use crate::descriptor::MethodDescriptor;
 use crate::heap::{Array, Value};
 use crate::native::class::ClassPlugin;
 use crate::native::hash_code::HashCodePlugin;
+use crate::native::static_plugin::Static;
 use crate::runtime::Runtime;
 
 mod hash_code;
 mod class;
+mod static_plugin;
 
 pub trait NativePlugin {
     fn supports(&self, class: &str, name: &str, desc: &MethodDescriptor) -> bool;
@@ -18,7 +20,6 @@ pub trait NativePlugin {
 
 pub struct NativeMethods {
     plugins: Vec<Rc<RefCell<dyn NativePlugin>>>,
-    classes: Vec<NativeClass>,
 }
 
 impl NativeMethods {
@@ -27,103 +28,19 @@ impl NativeMethods {
             plugins: vec![
                 Rc::new(RefCell::new(HashCodePlugin::new())),
                 Rc::new(RefCell::new(ClassPlugin::new())),
-            ],
-            classes: vec![
-                NativeClass {
-                    name: String::from("java/io/PrintStream"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)V"),
-                            function: print_stream_println_string,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(Z)V"),
-                            function: print_stream_println_boolean,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(B)V"),
-                            function: print_stream_println_byte,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(C)V"),
-                            function: print_stream_println_char,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(I)V"),
-                            function: print_stream_println_int,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(J)V"),
-                            function: print_stream_println_long,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(F)V"),
-                            function: print_stream_println_float,
-                        },
-                        NativeMethod {
-                            name: String::from("println"),
-                            descriptor: MethodDescriptor::parse("(D)V"),
-                            function: print_stream_println_double,
-                        },
-                    ],
-                },
-                NativeClass {
-                    name: String::from("java/lang/Integer"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("parseInt"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)I"),
-                            function: integer_parse_int,
-                        },
-                    ],
-                },
-                NativeClass {
-                    name: String::from("java/lang/Long"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("parseLong"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)J"),
-                            function: long_parse_long,
-                        },
-                    ],
-                },
-                NativeClass {
-                    name: String::from("java/lang/Float"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("parseFloat"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)F"),
-                            function: float_parse_float,
-                        },
-                    ],
-                },
-                NativeClass {
-                    name: String::from("java/lang/Double"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("parseDouble"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/String;)D"),
-                            function: double_parse_double,
-                        },
-                    ],
-                },
-                NativeClass {
-                    name: String::from("java/lang/System"),
-                    methods: vec![
-                        NativeMethod {
-                            name: String::from("arraycopy"),
-                            descriptor: MethodDescriptor::parse("(Ljava/lang/Object;ILjava/lang/Object;II)V"),
-                            function: arraycopy,
-                        }
-                    ],
-                },
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(Ljava/lang/String;)V"), print_stream_println_string))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(Z)V"), print_stream_println_boolean))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(B)V"), print_stream_println_byte))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(C)V"), print_stream_println_char))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(I)V"), print_stream_println_int))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(J)V"), print_stream_println_long))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(F)V"), print_stream_println_float))),
+                Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(D)V"), print_stream_println_double))),
+                Rc::new(RefCell::new(Static::new("java/lang/Integer", "parseInt", MethodDescriptor::parse("(Ljava/lang/String;)I"), integer_parse_int))),
+                Rc::new(RefCell::new(Static::new("java/lang/Long", "parseLong", MethodDescriptor::parse("(Ljava/lang/String;)J"), long_parse_long))),
+                Rc::new(RefCell::new(Static::new("java/lang/Float", "parseFloat", MethodDescriptor::parse("(Ljava/lang/String;)F"), float_parse_float))),
+                Rc::new(RefCell::new(Static::new("java/lang/Double", "parseDouble", MethodDescriptor::parse("(Ljava/lang/String;)D"), double_parse_double))),
+                Rc::new(RefCell::new(Static::new("java/lang/System", "arraycopy", MethodDescriptor::parse("(Ljava/lang/Object;ILjava/lang/Object;II)V"), arraycopy))),
             ],
         }
     }
@@ -135,39 +52,16 @@ impl NativeMethods {
                 p.supports(class, name, descriptor)
             });
 
-        if plugin.is_some() {
-            let plugin = plugin.unwrap().clone();
-            return Rc::new(move |rt, args| {
-                let plugin = plugin.clone();
-                let mut plugin = plugin.as_ref().borrow_mut();
-                return plugin.invoke(rt, args);
-            });
-        }
+        let plugin = plugin.expect(format!("Could not find native method {}.{}{}", class, name, descriptor.descriptor()).as_str()).clone();
 
-        let f = self.classes.iter()
-            .find(|c| c.name.eq(class))
-            .expect(format!("Could not find class {}", class).as_str())
-            .methods.iter()
-            .find(|m| m.name.eq(name) && m.descriptor.eq(descriptor))
-            .expect(format!("Could not find method {}.{}{}", class, name, descriptor.descriptor()).as_str())
-            .function;
 
-        Rc::new(f)
+        Rc::new(move |rt, args| {
+            let plugin = plugin.clone();
+            let mut plugin = plugin.as_ref().borrow_mut();
+            return plugin.invoke(rt, args);
+        })
     }
 }
-
-struct NativeClass {
-    name: String,
-    methods: Vec<NativeMethod>,
-}
-
-struct NativeMethod {
-    name: String,
-    descriptor: MethodDescriptor,
-    function: NativeFunction,
-}
-
-type NativeFunction = fn(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value>;
 
 fn print_stream_println_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     let string_ref = args[1].reference();
