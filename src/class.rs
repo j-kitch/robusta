@@ -54,6 +54,10 @@ impl Class {
     pub fn parent_iter(&self) -> Iter {
         Iter { curr: Some(self) }
     }
+
+    pub fn is_sub_class_of(&self, other: &Class) -> bool {
+        self.parent_iter().any(|c| c.this_class.eq(&other.this_class))
+    }
 }
 
 impl<'a> Iterator for Iter<'a> {
