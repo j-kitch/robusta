@@ -10,6 +10,10 @@ public class String {
         value = new char[0];
     }
 
+    public String(String string) {
+        this.value = string.value;
+    }
+
     public String(char[] value) {
         this.value = Arrays.copyOf(value, value.length);
     }
