@@ -26,6 +26,10 @@ public class StringBuilder {
         return append(Boolean.toString(b));
     }
 
+    public StringBuilder append(int i) {
+        return append(Integer.toString(i));
+    }
+
     public StringBuilder appendNull() {
         return append("null");
     }

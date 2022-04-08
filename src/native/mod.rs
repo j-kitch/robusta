@@ -37,6 +37,7 @@ impl NativeMethods {
                 Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(F)V"), print_stream_println_float))),
                 Rc::new(RefCell::new(Static::new("java/io/PrintStream", "println", MethodDescriptor::parse("(D)V"), print_stream_println_double))),
                 Rc::new(RefCell::new(Static::new("java/lang/Integer", "parseInt", MethodDescriptor::parse("(Ljava/lang/String;)I"), integer_parse_int))),
+                Rc::new(RefCell::new(Static::new("java/lang/Integer", "toString", MethodDescriptor::parse("(I)Ljava/lang/String;"), primitive_to_string))),
                 Rc::new(RefCell::new(Static::new("java/lang/Long", "parseLong", MethodDescriptor::parse("(Ljava/lang/String;)J"), long_parse_long))),
                 Rc::new(RefCell::new(Static::new("java/lang/Float", "parseFloat", MethodDescriptor::parse("(Ljava/lang/String;)F"), float_parse_float))),
                 Rc::new(RefCell::new(Static::new("java/lang/Double", "parseDouble", MethodDescriptor::parse("(Ljava/lang/String;)D"), double_parse_double))),
@@ -215,4 +216,18 @@ fn arraycopy(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
     }
 
     None
+}
+
+fn primitive_to_string(runtime: &mut Runtime, args: Vec<Value>) -> Option<Value> {
+    let str = match args[0] {
+        Value::Int(i) => i.to_string(),
+        Value::Long(l) => l.to_string(),
+        Value::Float(f) => f.to_string(),
+        Value::Double(d) => d.to_string(),
+        _ => panic!("not supported type")
+    };
+
+    let str_ref = runtime.insert_str_const(&str);
+
+    Some(Value::Ref(str_ref))
 }
