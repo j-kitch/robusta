@@ -4,11 +4,11 @@ import java.util.Arrays;
 
 public class StringBuilder {
 
-    private char[] chars;
+    private char[] value;
     private int count;
 
     public StringBuilder() {
-        chars = new char[0];
+        value = new char[0];
         count = 0;
     }
 
@@ -17,7 +17,7 @@ public class StringBuilder {
             return appendNull();
         int len = string.length();
         ensureCapacityInternal(count + len);
-        string.getChars(0, len, chars, count);
+        string.getChars(0, len, value, count);
         count += len;
         return this;
     }
@@ -27,12 +27,12 @@ public class StringBuilder {
     }
 
     public String toString() {
-        return new String(Arrays.copyOf(chars, count));
+        return new String(Arrays.copyOf(value, count));
     }
 
     private void ensureCapacityInternal(int length) {
-        if (chars.length < length) {
-            chars = Arrays.copyOf(chars, length);
+        if (value.length < length) {
+            value = Arrays.copyOf(value, length);
         }
     }
 }

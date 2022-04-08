@@ -32,7 +32,8 @@ impl ClassLoader {
 
         for path in std::env::split_paths(class_path) {
             if path.extension().map_or(false, |e| e.eq("jar")) {
-                let jar_file = File::open(path).unwrap();
+                let jar_file = File::open(path.clone())
+                    .expect(format!("Failed to open file {:?}", path.as_os_str()).as_str());
                 let zip_arch = ZipArchive::new(jar_file).unwrap();
                 let loader = JarLoader { jar: zip_arch };
                 class_loader.loaders.push(Box::new(loader));
