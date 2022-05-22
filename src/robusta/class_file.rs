@@ -18,6 +18,7 @@ pub struct Version {
 #[derive(Debug, PartialEq)]
 pub enum Const {
     Integer { int: i32 },
+    Float { float: f32 },
     Class { name_idx: u16 },
     String { string_idx: u16 },
     Field { class_idx: u16, descriptor_idx: u16 },
@@ -54,6 +55,7 @@ impl<R: io::BufRead> Reader<R> {
         let tag = self.read_u8()?;
         match tag {
             3 => Ok(Const::Integer { int: self.read_i32()? }),
+            4 => Ok(Const::Float { float: self.read_f32()? }),
             7 => Ok(Const::Class { name_idx: self.read_u16()? }),
             8 => Ok(Const::String { string_idx: self.read_u16()? }),
             9 => Ok(Const::Field {
@@ -107,6 +109,11 @@ impl<R: io::BufRead> Reader<R> {
         Ok(i32::from_be_bytes(self.u32_buffer))
     }
 
+    fn read_f32(&mut self) -> Result<f32, Error> {
+        self.reader.read_exact(&mut self.u32_buffer[..])?;
+        Ok(f32::from_be_bytes(self.u32_buffer))
+    }
+
     fn read_u64(&mut self) -> Result<u64, Error> {
         self.reader.read_exact(&mut self.u64_buffer[..])?;
         Ok(u64::from_be_bytes(self.u64_buffer))
@@ -116,6 +123,36 @@ impl<R: io::BufRead> Reader<R> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn read_f32_infinity() {
+        let bytes = vec![0x7F, 0x80, 0x00, 0x00];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let f = reader.read_f32().unwrap();
+
+        assert_eq!(f, f32::INFINITY);
+    }
+
+    #[test]
+    fn read_f32_neg_infinity() {
+        let bytes = vec![0xFF, 0x80, 0x00, 0x00];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let f = reader.read_f32().unwrap();
+
+        assert_eq!(f, -f32::INFINITY);
+    }
+
+    #[test]
+    fn read_f32_nan() {
+        let bytes = vec![0x7F, 0x80, 0, 1];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let f = reader.read_f32().unwrap();
+
+        assert!(f.is_nan());
+    }
 
     #[test]
     fn read_version() {
@@ -146,6 +183,16 @@ mod test {
         let con = reader.read_const().unwrap();
 
         assert_eq!(Const::Integer { int: 0x10_2030 }, con);
+    }
+
+    #[test]
+    fn read_const_float() {
+        let bytes = vec![4, 10, 20, 30, 40];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Float { float: 0.0000000000000000000000000000000071316126 }, con);
     }
 
     #[test]
