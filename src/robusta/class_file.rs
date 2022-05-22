@@ -7,6 +7,7 @@ const MAGIC_CODE: u32 = 0xCAFE_BABE;
 
 pub struct ClassFile {
     pub version: Version,
+    pub const_pool: Vec<Const>,
 }
 
 pub struct Version {
@@ -14,8 +15,9 @@ pub struct Version {
     pub major: u16,
 }
 
-struct ReadError {
-    message: String
+#[derive(Debug, PartialEq)]
+pub enum Const {
+    Class { name_idx: u16 }
 }
 
 pub struct Reader<R: io::BufRead> {
@@ -43,15 +45,27 @@ impl<R: io::BufRead> Reader<R> {
         Ok(Version { major, minor })
     }
 
+    pub fn read_const(&mut self) -> Result<Const, Error> {
+        let tag = self.read_u8()?;
+        match tag {
+            7 => Ok(Const::Class { name_idx: self.read_u16()? }),
+            _ => Err(Error::new(Other, format!("Unknown Constant Pool tag {}", tag)))
+        }
+    }
+
     pub fn read_class_file(&mut self) -> Result<ClassFile, Error> {
         let magic = self.read_u32()?;
         if magic != MAGIC_CODE {
-            return Err(Error::new(Other, format!("Expected Magic Code 0xCAFEBABE, received {:#08X}", magic)))
+            return Err(Error::new(Other, format!("Expected Magic Code 0xCAFEBABE, received {:#08X}", magic)));
         }
 
         let version = self.read_version()?;
-
-        Ok(ClassFile { version })
+        let const_pool_count = self.read_u16()? as usize;
+        let mut const_pool = Vec::with_capacity(const_pool_count - 1);
+        for _ in 1..const_pool_count {
+            const_pool.push(self.read_const()?);
+        }
+        Ok(ClassFile { version, const_pool })
     }
 
     fn read_u8(&mut self) -> Result<u8, Error> {
@@ -81,13 +95,33 @@ mod test {
 
     #[test]
     fn read_version() {
-        let bytes: Vec<u8> = vec![0, 10, 0, 20];
+        let bytes = vec![0, 10, 0, 20];
         let mut reader = Reader::new(&bytes[..]);
 
         let version = reader.read_version().unwrap();
 
         assert_eq!(version.minor, 10);
         assert_eq!(version.major, 20);
+    }
+
+    #[test]
+    fn read_const_unknown_tag() {
+        let bytes = vec![122];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const();
+
+        assert!(con.is_err());
+    }
+
+    #[test]
+    fn read_const_class() {
+        let bytes = vec![7, 0, 2];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Class { name_idx: 2 }, con);
     }
 
     #[test]
@@ -101,13 +135,26 @@ mod test {
     }
 
     #[test]
-    fn read_class_file() {
-        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50];
+    fn read_class_file_minimal() {
+        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 1];
         let mut reader = Reader::new(&bytes[..]);
 
         let class_file = reader.read_class_file().unwrap();
 
         assert_eq!(class_file.version.minor, 40);
         assert_eq!(class_file.version.major, 50);
+        assert!(class_file.const_pool.is_empty());
+    }
+
+    #[test]
+    fn read_class_file_maximal() {
+        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 2, 7, 0, 10];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let class_file = reader.read_class_file().unwrap();
+
+        assert_eq!(class_file.version.minor, 40);
+        assert_eq!(class_file.version.major, 50);
+        assert_eq!(vec![Const::Class { name_idx: 10 }], class_file.const_pool);
     }
 }
