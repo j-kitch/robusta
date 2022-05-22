@@ -12,6 +12,9 @@ pub struct ClassFile {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
+    pub fields: Vec<Field>,
+    pub methods: Vec<Method>,
+    pub attributes: Vec<Attribute>,
 }
 
 pub struct Version {
@@ -35,6 +38,24 @@ pub enum Const {
     MethodHandle { reference_kind: u8, reference_idx: u16 },
     MethodType { descriptor_idx: u16 },
     InvokeDynamic { bootstrap_idx: u16, name_and_type_idx: u16 },
+}
+
+pub struct Field {
+    pub access_flags: u16,
+    pub name_idx: u16,
+    pub descriptor_idx: u16,
+    pub attributes: Vec<Attribute>,
+}
+
+pub struct Method {
+    pub access_flags: u16,
+    pub name_idx: u16,
+    pub descriptor_idx: u16,
+    pub attributes: Vec<Attribute>,
+}
+
+pub enum Attribute {
+    Other { name: String, info: Vec<u8> }
 }
 
 pub struct Reader<R: io::BufRead> {
@@ -107,6 +128,46 @@ impl<R: io::BufRead> Reader<R> {
         }
     }
 
+    pub fn read_field(&mut self, const_pool: &[Const]) -> Result<Field, Error> {
+        let access_flags = self.read_u16()?;
+        let name_idx = self.read_u16()?;
+        let descriptor_idx = self.read_u16()?;
+        let attributes_count = self.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attributes_count);
+        for _ in 0..attributes_count {
+            attributes.push(self.read_attribute(const_pool)?);
+        }
+
+        Ok(Field { access_flags, name_idx, descriptor_idx, attributes })
+    }
+
+    pub fn read_method(&mut self, const_pool: &[Const]) -> Result<Method, Error> {
+        let access_flags = self.read_u16()?;
+        let name_idx = self.read_u16()?;
+        let descriptor_idx = self.read_u16()?;
+        let attributes_count = self.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attributes_count);
+        for _ in 0..attributes_count {
+            attributes.push(self.read_attribute(const_pool)?);
+        }
+
+        Ok(Method { access_flags, name_idx, descriptor_idx, attributes })
+    }
+
+    pub fn read_attribute(&mut self, const_pool: &[Const]) -> Result<Attribute, Error> {
+        let name_idx = self.read_u16()? as usize;
+        let name_const = &const_pool[name_idx - 1];
+        let name = if let Const::Utf8 { utf8 } = name_const {
+            utf8.clone()
+        } else {
+            panic!("Unexpected type")
+        };
+
+        let length = self.read_u32()? as usize;
+        let info = self.read_exact(length)?;
+        Ok(Attribute::Other { name, info })
+    }
+
     pub fn read_class_file(&mut self) -> Result<ClassFile, Error> {
         let magic = self.read_u32()?;
         if magic != MAGIC_CODE {
@@ -129,6 +190,24 @@ impl<R: io::BufRead> Reader<R> {
             interfaces.push(self.read_u16()?);
         }
 
+        let fields_count = self.read_u16()? as usize;
+        let mut fields = Vec::with_capacity(fields_count);
+        for _ in 0..fields_count {
+            fields.push(self.read_field(&const_pool[..])?);
+        }
+
+        let methods_count = self.read_u16()? as usize;
+        let mut methods = Vec::with_capacity(methods_count);
+        for _ in 0..fields_count {
+            methods.push(self.read_method(&const_pool[..])?);
+        }
+
+        let attributes_count = self.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attributes_count);
+        for _ in 0..fields_count {
+            attributes.push(self.read_attribute(&const_pool[..])?);
+        }
+
         Ok(ClassFile {
             version,
             const_pool,
@@ -136,6 +215,9 @@ impl<R: io::BufRead> Reader<R> {
             this_class,
             super_class,
             interfaces,
+            fields,
+            methods,
+            attributes,
         })
     }
 
