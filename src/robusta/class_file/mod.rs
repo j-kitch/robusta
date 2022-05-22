@@ -6,6 +6,7 @@ use attribute::Attribute;
 use crate::robusta::class_file::attribute::Unknown;
 
 mod attribute;
+mod testing;
 
 const MAGIC_CODE: u32 = 0xCAFE_BABE;
 
@@ -173,6 +174,10 @@ impl<R: io::BufRead> Reader<R> {
         match name.as_str() {
             "ConstantValue" => Ok(Attribute::ConstantValue(self.read_constant_value()?)),
             "Code" => Ok(Attribute::Code(self.read_code(const_pool)?)),
+            "LineNumberTable" => Ok(Attribute::LineNumberTable(self.read_line_number_table()?)),
+            "LocalVariableTable" => Ok(Attribute::LocalVariableTable(self.read_local_variable_table()?)),
+            "LocalVariableTypeTable" => Ok(Attribute::LocalVariableTypeTable(self.read_local_variable_type_table()?)),
+            "MethodParameters" => Ok(Attribute::MethodParameters(self.read_method_parameters()?)),
             name => panic!("Unknown attribute {:?}", name)
         }
     }
