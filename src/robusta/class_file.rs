@@ -17,6 +17,7 @@ pub struct Version {
 
 #[derive(Debug, PartialEq)]
 pub enum Const {
+    Integer { int: i32 },
     Class { name_idx: u16 },
     String { string_idx: u16 },
     Field { class_idx: u16, descriptor_idx: u16 },
@@ -52,6 +53,7 @@ impl<R: io::BufRead> Reader<R> {
     pub fn read_const(&mut self) -> Result<Const, Error> {
         let tag = self.read_u8()?;
         match tag {
+            3 => Ok(Const::Integer { int: self.read_i32()? }),
             7 => Ok(Const::Class { name_idx: self.read_u16()? }),
             8 => Ok(Const::String { string_idx: self.read_u16()? }),
             9 => Ok(Const::Field {
@@ -100,6 +102,11 @@ impl<R: io::BufRead> Reader<R> {
         Ok(u32::from_be_bytes(self.u32_buffer))
     }
 
+    fn read_i32(&mut self) -> Result<i32, Error> {
+        self.reader.read_exact(&mut self.u32_buffer[..])?;
+        Ok(i32::from_be_bytes(self.u32_buffer))
+    }
+
     fn read_u64(&mut self) -> Result<u64, Error> {
         self.reader.read_exact(&mut self.u64_buffer[..])?;
         Ok(u64::from_be_bytes(self.u64_buffer))
@@ -129,6 +136,16 @@ mod test {
         let con = reader.read_const();
 
         assert!(con.is_err());
+    }
+
+    #[test]
+    fn read_const_integer() {
+        let bytes = vec![3, 0, 0x10, 0x20, 0x30];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Integer { int: 0x10_2030 }, con);
     }
 
     #[test]
