@@ -3,6 +3,7 @@ use io::Error;
 use std::io;
 use std::io::ErrorKind;
 use attribute::Attribute;
+use crate::robusta::class_file::attribute::Unknown;
 
 mod attribute;
 
@@ -169,9 +170,11 @@ impl<R: io::BufRead> Reader<R> {
             panic!("Unexpected type")
         };
 
-        let length = self.read_u32()? as usize;
-        let info = self.read_exact(length)?;
-        Ok(Attribute::Other { name, info })
+        match name.as_str() {
+            "ConstantValue" => Ok(Attribute::ConstantValue(self.read_constant_value()?)),
+            "Code" => Ok(Attribute::Code(self.read_code(const_pool)?)),
+            name => panic!("Unknown attribute {:?}", name)
+        }
     }
 
     pub fn read_class_file(&mut self) -> Result<ClassFile, Error> {

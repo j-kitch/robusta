@@ -1,30 +1,38 @@
 use std::io;
 use std::io::Error;
+
 use crate::robusta::class_file::Const;
 
 use super::Reader;
 
 pub enum Attribute {
-    Other { name: String, info: Vec<u8> }
+    ConstantValue(ConstantValue),
+    Code(Code),
+    Unknown(Unknown),
 }
 
 pub struct ConstantValue {
-    idx: u16,
+    pub idx: u16,
 }
 
 pub struct Code {
-    max_stack: u16,
-    max_locals: u16,
-    code: Vec<u8>,
-    exception_table: Vec<Handler>,
-    attributes: Vec<Attribute>,
+    pub max_stack: u16,
+    pub max_locals: u16,
+    pub code: Vec<u8>,
+    pub exception_table: Vec<Handler>,
+    pub attributes: Vec<Attribute>,
+}
+
+pub struct Unknown {
+    pub name: String,
+    pub info: Vec<u8>,
 }
 
 pub struct Handler {
-    start_pc: u16,
-    end_pc: u16,
-    handler_pc: u16,
-    catch_type: u16,
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: u16,
 }
 
 impl<R: io::BufRead> Reader<R> {
