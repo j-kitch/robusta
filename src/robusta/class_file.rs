@@ -28,6 +28,9 @@ pub enum Const {
     Method { class_idx: u16, name_and_type_idx: u16 },
     InterfaceMethod { class_idx: u16, name_and_type_idx: u16 },
     NameAndType { name_idx: u16, descriptor_idx: u16 },
+    MethodHandle { reference_kind: u8, reference_idx: u16 },
+    MethodType { descriptor_idx: u16 },
+    InvokeDynamic { bootstrap_idx: u16, name_and_type_idx: u16 },
 }
 
 pub struct Reader<R: io::BufRead> {
@@ -84,6 +87,17 @@ impl<R: io::BufRead> Reader<R> {
             12 => Ok(Const::NameAndType {
                 name_idx: self.read_u16()?,
                 descriptor_idx: self.read_u16()?,
+            }),
+            15 => Ok(Const::MethodHandle {
+                reference_kind: self.read_u8()?,
+                reference_idx: self.read_u16()?,
+            }),
+            16 => Ok(Const::MethodType {
+                descriptor_idx: self.read_u16()?,
+            }),
+            18 => Ok(Const::InvokeDynamic {
+                bootstrap_idx: self.read_u16()?,
+                name_and_type_idx: self.read_u16()?,
             }),
             _ => Err(Error::new(Other, format!("Unknown Constant Pool tag {}", tag)))
         }
@@ -319,6 +333,36 @@ mod test {
         let con = reader.read_const().unwrap();
 
         assert_eq!(Const::NameAndType { name_idx: 1, descriptor_idx: 2 }, con);
+    }
+
+    #[test]
+    fn read_const_method_handle() {
+        let bytes = vec![15, 1, 0, 2];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::MethodHandle { reference_kind: 1, reference_idx: 2 }, con);
+    }
+
+    #[test]
+    fn read_const_method_type() {
+        let bytes = vec![16, 0, 2];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::MethodType { descriptor_idx: 2 }, con);
+    }
+
+    #[test]
+    fn read_const_invoke_dynamic() {
+        let bytes = vec![18, 0, 1, 0, 2];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::InvokeDynamic { bootstrap_idx: 1, name_and_type_idx: 2 }, con);
     }
 
     #[test]
