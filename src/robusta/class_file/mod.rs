@@ -178,6 +178,13 @@ impl<R: io::BufRead> Reader<R> {
             "LocalVariableTable" => Ok(Attribute::LocalVariableTable(self.read_local_variable_table()?)),
             "LocalVariableTypeTable" => Ok(Attribute::LocalVariableTypeTable(self.read_local_variable_type_table()?)),
             "MethodParameters" => Ok(Attribute::MethodParameters(self.read_method_parameters()?)),
+            "Signature" => Ok(Attribute::Signature(self.read_signature()?)),
+            "RuntimeVisibleAnnotations" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "RuntimeVisibleParameterAnnotations" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "StackMapTable" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "SourceFile" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "InnerClasses" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "BootstrapMethods" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
             name => panic!("Unknown attribute {:?}", name)
         }
     }
@@ -212,13 +219,13 @@ impl<R: io::BufRead> Reader<R> {
 
         let methods_count = self.read_u16()? as usize;
         let mut methods = Vec::with_capacity(methods_count);
-        for _ in 0..fields_count {
+        for _ in 0..methods_count {
             methods.push(self.read_method(&const_pool[..])?);
         }
 
         let attributes_count = self.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attributes_count);
-        for _ in 0..fields_count {
+        for _ in 0..attributes_count {
             attributes.push(self.read_attribute(&const_pool[..])?);
         }
 

@@ -12,6 +12,7 @@ pub enum Attribute {
     LocalVariableTable(LocalVariableTable),
     LocalVariableTypeTable(LocalVariableTypeTable),
     MethodParameters(MethodParameterTable),
+    Signature(Signature),
     Unknown(Unknown),
 }
 
@@ -81,7 +82,17 @@ pub struct MethodParameter {
     access_flags: u16,
 }
 
+pub struct Signature {
+    signature_idx: u16,
+}
+
 impl<R: io::BufRead> Reader<R> {
+    pub fn read_unknown(&mut self, name: &str) -> Result<Unknown, Error> {
+        let length = self.read_u32()? as usize;
+        let info = self.read_exact(length)?;
+        Ok(Unknown { name: name.to_string(), info })
+    }
+
     pub fn read_constant_value(&mut self) -> Result<ConstantValue, Error> {
         let length = self.read_u32()?;
         self.expect(length == 2)?;
@@ -177,5 +188,10 @@ impl<R: io::BufRead> Reader<R> {
             })
         }
         Ok(MethodParameterTable { table })
+    }
+
+    pub fn read_signature(&mut self) -> Result<Signature, Error> {
+        self.read_u32()?;
+        Ok(Signature { signature_idx: self.read_u16()? })
     }
 }
