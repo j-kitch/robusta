@@ -8,6 +8,10 @@ const MAGIC_CODE: u32 = 0xCAFE_BABE;
 pub struct ClassFile {
     pub version: Version,
     pub const_pool: Vec<Const>,
+    pub access_flags: u16,
+    pub this_class: u16,
+    pub super_class: u16,
+    pub interfaces: Vec<u16>,
 }
 
 pub struct Version {
@@ -115,7 +119,24 @@ impl<R: io::BufRead> Reader<R> {
         for _ in 1..const_pool_count {
             const_pool.push(self.read_const()?);
         }
-        Ok(ClassFile { version, const_pool })
+        let access_flags = self.read_u16()?;
+        let this_class = self.read_u16()?;
+        let super_class = self.read_u16()?;
+
+        let interfaces_count = self.read_u16()? as usize;
+        let mut interfaces = Vec::with_capacity(interfaces_count);
+        for _ in 0..interfaces_count {
+            interfaces.push(self.read_u16()?);
+        }
+
+        Ok(ClassFile {
+            version,
+            const_pool,
+            access_flags,
+            this_class,
+            super_class,
+            interfaces,
+        })
     }
 
     fn read_u8(&mut self) -> Result<u8, Error> {
@@ -377,7 +398,7 @@ mod test {
 
     #[test]
     fn read_class_file_minimal() {
-        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 1];
+        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 1, 0, 1, 0, 2, 0, 3, 0, 0];
         let mut reader = Reader::new(&bytes[..]);
 
         let class_file = reader.read_class_file().unwrap();
@@ -385,11 +406,15 @@ mod test {
         assert_eq!(class_file.version.minor, 40);
         assert_eq!(class_file.version.major, 50);
         assert!(class_file.const_pool.is_empty());
+        assert_eq!(class_file.access_flags, 1);
+        assert_eq!(class_file.this_class, 2);
+        assert_eq!(class_file.super_class, 3);
+        assert!(class_file.interfaces.is_empty());
     }
 
     #[test]
     fn read_class_file_maximal() {
-        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 2, 7, 0, 10];
+        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 2, 7, 0, 10, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0, 2, 0xAA, 0xAB, 0xBA, 0xBB];
         let mut reader = Reader::new(&bytes[..]);
 
         let class_file = reader.read_class_file().unwrap();
@@ -397,5 +422,9 @@ mod test {
         assert_eq!(class_file.version.minor, 40);
         assert_eq!(class_file.version.major, 50);
         assert_eq!(vec![Const::Class { name_idx: 10 }], class_file.const_pool);
+        assert_eq!(class_file.access_flags, 0xF0F1);
+        assert_eq!(class_file.this_class, 0xF2F3);
+        assert_eq!(class_file.super_class, 0xF4F5);
+        assert_eq!(class_file.interfaces, vec![0xAAAB, 0xBABB]);
     }
 }
