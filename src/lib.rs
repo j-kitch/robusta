@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod class_file;
 pub mod class;
 pub mod thread;
@@ -9,3 +11,6 @@ pub mod instruction;
 pub mod shim;
 pub mod cmd;
 pub mod loader;
+
+// Rewrite
+pub mod robusta;
