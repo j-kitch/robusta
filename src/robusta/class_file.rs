@@ -17,15 +17,17 @@ pub struct Version {
 
 #[derive(Debug, PartialEq)]
 pub enum Const {
+    Utf8 { utf8: String },
     Integer { int: i32 },
     Float { float: f32 },
     Long { long: i64 },
     Double { double: f64 },
     Class { name_idx: u16 },
     String { string_idx: u16 },
-    Field { class_idx: u16, descriptor_idx: u16 },
-    Method { class_idx: u16, descriptor_idx: u16 },
-    InterfaceMethod { class_idx: u16, descriptor_idx: u16 },
+    Field { class_idx: u16, name_and_type_idx: u16 },
+    Method { class_idx: u16, name_and_type_idx: u16 },
+    InterfaceMethod { class_idx: u16, name_and_type_idx: u16 },
+    NameAndType { name_idx: u16, descriptor_idx: u16 },
 }
 
 pub struct Reader<R: io::BufRead> {
@@ -56,6 +58,11 @@ impl<R: io::BufRead> Reader<R> {
     pub fn read_const(&mut self) -> Result<Const, Error> {
         let tag = self.read_u8()?;
         match tag {
+            1 => {
+                let length = self.read_u16()? as usize;
+                let utf8 = self.read_utf8(length)?;
+                Ok(Const::Utf8 { utf8 })
+            }
             3 => Ok(Const::Integer { int: self.read_i32()? }),
             4 => Ok(Const::Float { float: self.read_f32()? }),
             5 => Ok(Const::Long { long: self.read_i64()? }),
@@ -64,14 +71,18 @@ impl<R: io::BufRead> Reader<R> {
             8 => Ok(Const::String { string_idx: self.read_u16()? }),
             9 => Ok(Const::Field {
                 class_idx: self.read_u16()?,
-                descriptor_idx: self.read_u16()?,
+                name_and_type_idx: self.read_u16()?,
             }),
             10 => Ok(Const::Method {
                 class_idx: self.read_u16()?,
-                descriptor_idx: self.read_u16()?,
+                name_and_type_idx: self.read_u16()?,
             }),
             11 => Ok(Const::InterfaceMethod {
                 class_idx: self.read_u16()?,
+                name_and_type_idx: self.read_u16()?,
+            }),
+            12 => Ok(Const::NameAndType {
+                name_idx: self.read_u16()?,
                 descriptor_idx: self.read_u16()?,
             }),
             _ => Err(Error::new(Other, format!("Unknown Constant Pool tag {}", tag)))
@@ -132,6 +143,17 @@ impl<R: io::BufRead> Reader<R> {
         self.reader.read_exact(&mut self.u64_buffer[..])?;
         Ok(f64::from_be_bytes(self.u64_buffer))
     }
+
+    fn read_exact(&mut self, length: usize) -> Result<Vec<u8>, Error> {
+        let mut bytes = vec![0; length];
+        self.reader.read_exact(&mut bytes)?;
+        Ok(bytes)
+    }
+
+    fn read_utf8(&mut self, length: usize) -> Result<String, Error> {
+        let bytes = self.read_exact(length)?;
+        String::from_utf8(bytes).map_err(|e| Error::new(Other, e))
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +209,16 @@ mod test {
         let con = reader.read_const();
 
         assert!(con.is_err());
+    }
+
+    #[test]
+    fn read_const_utf8() {
+        let bytes = vec![1, 0, 3, 'a' as u8, 'b' as u8, 'c' as u8];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Utf8 { utf8: "abc".to_string() }, con);
     }
 
     #[test]
@@ -256,7 +288,7 @@ mod test {
 
         let con = reader.read_const().unwrap();
 
-        assert_eq!(Const::Field { class_idx: 1, descriptor_idx: 2 }, con);
+        assert_eq!(Const::Field { class_idx: 1, name_and_type_idx: 2 }, con);
     }
 
     #[test]
@@ -266,7 +298,7 @@ mod test {
 
         let con = reader.read_const().unwrap();
 
-        assert_eq!(Const::Method { class_idx: 1, descriptor_idx: 2 }, con);
+        assert_eq!(Const::Method { class_idx: 1, name_and_type_idx: 2 }, con);
     }
 
     #[test]
@@ -276,7 +308,17 @@ mod test {
 
         let con = reader.read_const().unwrap();
 
-        assert_eq!(Const::InterfaceMethod { class_idx: 1, descriptor_idx: 2 }, con);
+        assert_eq!(Const::InterfaceMethod { class_idx: 1, name_and_type_idx: 2 }, con);
+    }
+
+    #[test]
+    fn read_const_name_and_type() {
+        let bytes = vec![12, 0, 1, 0, 2];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::NameAndType { name_idx: 1, descriptor_idx: 2 }, con);
     }
 
     #[test]
