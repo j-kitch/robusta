@@ -2,6 +2,9 @@ use ErrorKind::Other;
 use io::Error;
 use std::io;
 use std::io::ErrorKind;
+use attribute::Attribute;
+
+mod attribute;
 
 const MAGIC_CODE: u32 = 0xCAFE_BABE;
 
@@ -54,10 +57,6 @@ pub struct Method {
     pub attributes: Vec<Attribute>,
 }
 
-pub enum Attribute {
-    Other { name: String, info: Vec<u8> }
-}
-
 pub struct Reader<R: io::BufRead> {
     reader: R,
     u8_buffer: [u8; 1],
@@ -75,6 +74,13 @@ impl<R: io::BufRead> Reader<R> {
             u32_buffer: [0; 4],
             u64_buffer: [0; 8],
         }
+    }
+
+    pub fn expect(&mut self, expr: bool) -> Result<(), Error> {
+        if !expr {
+            return Err(Error::new(Other, "error"));
+        }
+        Ok(())
     }
 
     pub fn read_version(&mut self) -> Result<Version, Error> {
