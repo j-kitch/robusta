@@ -19,6 +19,8 @@ pub struct Version {
 pub enum Const {
     Integer { int: i32 },
     Float { float: f32 },
+    Long { long: i64 },
+    Double { double: f64 },
     Class { name_idx: u16 },
     String { string_idx: u16 },
     Field { class_idx: u16, descriptor_idx: u16 },
@@ -56,6 +58,8 @@ impl<R: io::BufRead> Reader<R> {
         match tag {
             3 => Ok(Const::Integer { int: self.read_i32()? }),
             4 => Ok(Const::Float { float: self.read_f32()? }),
+            5 => Ok(Const::Long { long: self.read_i64()? }),
+            6 => Ok(Const::Double { double: self.read_f64()? }),
             7 => Ok(Const::Class { name_idx: self.read_u16()? }),
             8 => Ok(Const::String { string_idx: self.read_u16()? }),
             9 => Ok(Const::Field {
@@ -117,6 +121,16 @@ impl<R: io::BufRead> Reader<R> {
     fn read_u64(&mut self) -> Result<u64, Error> {
         self.reader.read_exact(&mut self.u64_buffer[..])?;
         Ok(u64::from_be_bytes(self.u64_buffer))
+    }
+
+    fn read_i64(&mut self) -> Result<i64, Error> {
+        self.reader.read_exact(&mut self.u64_buffer[..])?;
+        Ok(i64::from_be_bytes(self.u64_buffer))
+    }
+
+    fn read_f64(&mut self) -> Result<f64, Error> {
+        self.reader.read_exact(&mut self.u64_buffer[..])?;
+        Ok(f64::from_be_bytes(self.u64_buffer))
     }
 }
 
@@ -193,6 +207,26 @@ mod test {
         let con = reader.read_const().unwrap();
 
         assert_eq!(Const::Float { float: 0.0000000000000000000000000000000071316126 }, con);
+    }
+
+    #[test]
+    fn read_const_long() {
+        let bytes = vec![5, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Long { long: 72623859790382856 }, con);
+    }
+
+    #[test]
+    fn read_const_double() {
+        let bytes = vec![6, 64, 36, 117, 194, 143, 92, 40, 246];
+        let mut reader = Reader::new(&bytes[..]);
+
+        let con = reader.read_const().unwrap();
+
+        assert_eq!(Const::Double { double: 10.23 }, con);
     }
 
     #[test]
