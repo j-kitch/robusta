@@ -179,7 +179,7 @@ impl<R: io::BufRead> Reader<R> {
             "LocalVariableTypeTable" => Ok(Attribute::LocalVariableTypeTable(self.read_local_variable_type_table()?)),
             "MethodParameters" => Ok(Attribute::MethodParameters(self.read_method_parameters()?)),
             "Signature" => Ok(Attribute::Signature(self.read_signature()?)),
-            "RuntimeVisibleAnnotations" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
+            "RuntimeVisibleAnnotations" => Ok(Attribute::RuntimeVisibleAnnotations(self.read_runtime_visible_annotations()?)),
             "RuntimeVisibleParameterAnnotations" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
             "StackMapTable" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),
             "SourceFile" => Ok(Attribute::Unknown(self.read_unknown(name.as_str())?)),

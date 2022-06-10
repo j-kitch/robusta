@@ -13,6 +13,7 @@ pub enum Attribute {
     LocalVariableTypeTable(LocalVariableTypeTable),
     MethodParameters(MethodParameterTable),
     Signature(Signature),
+    RuntimeVisibleAnnotations(RuntimeVisibleAnnotations),
     Unknown(Unknown),
 }
 
