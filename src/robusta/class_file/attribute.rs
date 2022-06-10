@@ -13,7 +13,10 @@ pub enum Attribute {
     LocalVariableTypeTable(LocalVariableTypeTable),
     MethodParameters(MethodParameterTable),
     Signature(Signature),
-    RuntimeVisibleAnnotations(RuntimeVisibleAnnotations),
+    RuntimeVisibleAnnotations(RuntimeAnnotations),
+    RuntimeInvisibleAnnotations(RuntimeAnnotations),
+    RuntimeVisibleParameterAnnotations(RuntimeParameterAnnotations),
+    RuntimeInvisibleParameterAnnotations(RuntimeParameterAnnotations),
     Unknown(Unknown),
 }
 
@@ -87,8 +90,12 @@ pub struct Signature {
     signature_idx: u16,
 }
 
-pub struct RuntimeVisibleAnnotations {
+pub struct RuntimeAnnotations {
     annotations: Vec<Annotation>
+}
+
+pub struct RuntimeParameterAnnotations {
+    parameters: Vec<Vec<Annotation>>
 }
 
 pub struct Annotation {
@@ -218,14 +225,29 @@ impl<R: io::BufRead> Reader<R> {
         Ok(Signature { signature_idx: self.read_u16()? })
     }
 
-    pub fn read_runtime_visible_annotations(&mut self) -> Result<RuntimeVisibleAnnotations, Error> {
+    pub fn read_runtime_annotations(&mut self) -> Result<RuntimeAnnotations, Error> {
         self.read_u32()?;
         let num_annotations = self.read_u16()? as usize;
         let mut annotations = Vec::with_capacity(num_annotations);
         for _ in 0..num_annotations {
             annotations.push(self.read_annotation()?);
         }
-        Ok(RuntimeVisibleAnnotations { annotations })
+        Ok(RuntimeAnnotations { annotations })
+    }
+
+    pub fn read_runtime_parameter_annotations(&mut self) -> Result<RuntimeParameterAnnotations, Error> {
+        self.read_u32()?;
+        let num_params = self.read_u8()? as usize;
+        let mut parameters = Vec::with_capacity(num_params);
+        for _ in 0..num_params {
+            let num_annotations = self.read_u16()? as usize;
+            let mut annotations = Vec::with_capacity(num_annotations);
+            for _ in 0..num_annotations {
+                annotations.push(self.read_annotation()?);
+            }
+            parameters.push(annotations);
+        }
+        Ok(RuntimeParameterAnnotations { parameters })
     }
 
     pub fn read_annotation(&mut self) -> Result<Annotation, Error> {
