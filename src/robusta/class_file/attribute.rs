@@ -86,6 +86,28 @@ pub struct Signature {
     signature_idx: u16,
 }
 
+pub struct RuntimeVisibleAnnotations {
+    annotations: Vec<Annotation>
+}
+
+pub struct Annotation {
+    type_idx: u16,
+    value_pairs: Vec<ElementValuePair>,
+}
+
+pub struct ElementValuePair {
+    name_idx: u16,
+    value: ElementValue,
+}
+
+pub enum ElementValue {
+    ConstValue { idx: u16 },
+    EnumConstValue { type_name_idx: u16, const_name_idx: u16 },
+    ClassInfo { idx: u16 },
+    Annotation { annotation: Annotation },
+    ArrayValue { values: Vec<ElementValue> },
+}
+
 impl<R: io::BufRead> Reader<R> {
     pub fn read_unknown(&mut self, name: &str) -> Result<Unknown, Error> {
         let length = self.read_u32()? as usize;
@@ -193,5 +215,57 @@ impl<R: io::BufRead> Reader<R> {
     pub fn read_signature(&mut self) -> Result<Signature, Error> {
         self.read_u32()?;
         Ok(Signature { signature_idx: self.read_u16()? })
+    }
+
+    pub fn read_runtime_visible_annotations(&mut self) -> Result<RuntimeVisibleAnnotations, Error> {
+        self.read_u32()?;
+        let num_annotations = self.read_u16()? as usize;
+        let mut annotations = Vec::with_capacity(num_annotations);
+        for _ in 0..num_annotations {
+            annotations.push(self.read_annotation()?);
+        }
+        Ok(RuntimeVisibleAnnotations { annotations })
+    }
+
+    pub fn read_annotation(&mut self) -> Result<Annotation, Error> {
+        let type_idx = self.read_u16()?;
+        let num_pairs = self.read_u16()? as usize;
+        let mut value_pairs = Vec::with_capacity(num_pairs);
+        for _ in 0..num_pairs {
+            value_pairs.push(self.read_element_value_pair()?);
+        }
+        Ok(Annotation { type_idx, value_pairs })
+    }
+
+    pub fn read_element_value_pair(&mut self) -> Result<ElementValuePair, Error> {
+        let name_idx = self.read_u16()?;
+        let value = self.read_element_value()?;
+        Ok(ElementValuePair { name_idx, value })
+    }
+
+    pub fn read_element_value(&mut self) -> Result<ElementValue, Error> {
+        let tag = self.read_u8()? as char;
+        match tag {
+            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z' | 's' => {
+                let idx = self.read_u16()?;
+                Ok(ElementValue::ConstValue { idx })
+            }
+            'e' => {
+                let type_name_idx = self.read_u16()?;
+                let const_name_idx = self.read_u16()?;
+                Ok(ElementValue::EnumConstValue { type_name_idx, const_name_idx })
+            }
+            'c' => Ok(ElementValue::ClassInfo { idx: self.read_u16()? }),
+            '@' => Ok(ElementValue::Annotation { annotation: self.read_annotation()? }),
+            '[' => {
+                let num_values = self.read_u16()? as usize;
+                let mut values = Vec::with_capacity(num_values);
+                for _ in 0..num_values {
+                    values.push(self.read_element_value()?);
+                }
+                Ok(ElementValue::ArrayValue { values })
+            }
+            _ => panic!("unknown element value tag {}", tag)
+        }
     }
 }
