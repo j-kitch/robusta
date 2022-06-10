@@ -508,36 +508,4 @@ mod test {
 
         assert!(class_file.is_err());
     }
-
-    #[test]
-    fn read_class_file_minimal() {
-        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 1, 0, 1, 0, 2, 0, 3, 0, 0];
-        let mut reader = Reader::new(&bytes[..]);
-
-        let class_file = reader.read_class_file().unwrap();
-
-        assert_eq!(class_file.version.minor, 40);
-        assert_eq!(class_file.version.major, 50);
-        assert!(class_file.const_pool.is_empty());
-        assert_eq!(class_file.access_flags, 1);
-        assert_eq!(class_file.this_class, 2);
-        assert_eq!(class_file.super_class, 3);
-        assert!(class_file.interfaces.is_empty());
-    }
-
-    #[test]
-    fn read_class_file_maximal() {
-        let bytes = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 40, 0, 50, 0, 2, 7, 0, 10, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0, 2, 0xAA, 0xAB, 0xBA, 0xBB];
-        let mut reader = Reader::new(&bytes[..]);
-
-        let class_file = reader.read_class_file().unwrap();
-
-        assert_eq!(class_file.version.minor, 40);
-        assert_eq!(class_file.version.major, 50);
-        assert_eq!(vec![Const::Class { name_idx: 10 }], class_file.const_pool);
-        assert_eq!(class_file.access_flags, 0xF0F1);
-        assert_eq!(class_file.this_class, 0xF2F3);
-        assert_eq!(class_file.super_class, 0xF4F5);
-        assert_eq!(class_file.interfaces, vec![0xAAAB, 0xBABB]);
-    }
 }
