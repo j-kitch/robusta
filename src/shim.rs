@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::class::{Class, Const, Method, MethodRef};
 use crate::descriptor::MethodDescriptor;
+use crate::robusta::class_file::Version;
 use crate::thread::Frame;
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
@@ -34,8 +35,7 @@ pub fn init_parents_frame(parents: &[String]) -> Frame {
     let method = Rc::new(method);
 
     let mut class = Class {
-        minor_version: 0,
-        major_version: 0,
+        version: Version { minor: 0, major: 0 },
         const_pool: HashMap::new(),
         access_flags: 0,
         this_class: "<shim>".to_string(),

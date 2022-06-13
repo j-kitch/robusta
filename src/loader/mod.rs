@@ -1,15 +1,17 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::io::{BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use zip::ZipArchive;
-use crate::class;
-use crate::class_file;
-use crate::class::{Class, Field};
 
-use crate::class_file::{ClassFile, Reader};
+use zip::ZipArchive;
+
+use crate::class;
+use crate::class::{Class, Field};
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
+use crate::robusta::class_file::{attribute, const_pool};
+use crate::robusta::class_file::{ClassFile, Reader};
 
 const ACC_NATIVE: u16 = 0x0100;
 const ACC_STATIC: u16 = 0x0008;
@@ -84,54 +86,54 @@ impl ClassLoader {
 
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
         let mut const_pool = HashMap::new();
-        for (idx, con) in class_file.const_pool.iter() {
+        for (idx, con) in class_file.const_pool.iter().enumerate() {
+            let idx = (idx + 1) as u16;
             let con = match con {
-                class_file::Const::Class(class) => {
-                    let class_file::Utf8 { bytes } = class_file.get_const(class.name_idx).expect_utf8();
-                    let name = String::from_utf8(bytes.clone()).unwrap();
-                    class::Const::Class(class::ClassRef { name })
+                const_pool::Const::Class(const_pool::Class { name_idx }) => {
+                    let name = class_file.get_const(*name_idx).expect_utf8();
+                    class::Const::Class(class::ClassRef { name: name.utf8.clone() })
                 }
-                class_file::Const::Int(int) => {
-                    class::Const::Int(class::Integer { int: int.int })
+                const_pool::Const::Integer(const_pool::Integer { int }) => {
+                    class::Const::Int(class::Integer { int: *int })
                 }
-                class_file::Const::Float(float) => {
-                    class::Const::Float(class::Float { float: float.float })
+                const_pool::Const::Float(const_pool::Float { float }) => {
+                    class::Const::Float(class::Float { float: *float })
                 }
-                class_file::Const::Long(long) => {
-                    class::Const::Long(class::Long { long: long.long })
+                const_pool::Const::Long(const_pool::Long { long }) => {
+                    class::Const::Long(class::Long { long: *long })
                 }
-                class_file::Const::Double(double) => {
-                    class::Const::Double(class::Double { double: double.double })
+                const_pool::Const::Double(const_pool::Double { double }) => {
+                    class::Const::Double(class::Double { double: *double })
                 }
-                class_file::Const::String(string) => {
-                    let class_file::Utf8 { bytes } = class_file.get_const(string.utf8_idx).expect_utf8();
-                    class::Const::String(class::String { string: String::from_utf8(bytes.clone()).unwrap() })
+                const_pool::Const::String(const_pool::String { string_idx }) => {
+                    let string = class_file.get_const(*string_idx).expect_utf8();
+                    class::Const::String(class::String { string: string.utf8.to_string() })
                 }
-                class_file::Const::FieldRef(field_ref) => {
-                    let class = class_file.get_const(field_ref.class_idx).expect_class();
+                const_pool::Const::Field(const_pool::Field { class_idx, name_and_type_idx }) => {
+                    let class = class_file.get_const(*class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();
 
-                    let name_and_type = class_file.get_const(field_ref.name_and_type_idx).expect_name_and_type();
+                    let name_and_type = class_file.get_const(*name_and_type_idx).expect_name_and_type();
                     let name = class_file.get_const(name_and_type.name_idx).expect_utf8();
                     let descriptor = class_file.get_const(name_and_type.descriptor_idx).expect_utf8();
 
-                    let class_name = String::from_utf8(class_name.bytes.clone()).unwrap();
-                    let name = String::from_utf8(name.bytes.clone()).unwrap();
-                    let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
+                    let class_name = class_name.utf8.clone();
+                    let name = name.utf8.clone();
+                    let descriptor = descriptor.utf8.clone();
 
                     class::Const::Field(class::FieldRef { class: class_name, name, descriptor: Descriptor::parse(&descriptor) })
                 }
-                class_file::Const::MethodRef(method_ref) => {
-                    let class = class_file.get_const(method_ref.class_idx).expect_class();
+                const_pool::Const::Method(const_pool::Method { class_idx, name_and_type_idx }) => {
+                    let class = class_file.get_const(*class_idx).expect_class();
                     let class_name = class_file.get_const(class.name_idx).expect_utf8();
 
-                    let name_and_type = class_file.get_const(method_ref.name_and_type_idx).expect_name_and_type();
+                    let name_and_type = class_file.get_const(*name_and_type_idx).expect_name_and_type();
                     let name = class_file.get_const(name_and_type.name_idx).expect_utf8();
                     let descriptor = class_file.get_const(name_and_type.descriptor_idx).expect_utf8();
 
-                    let class_name = String::from_utf8(class_name.bytes.clone()).unwrap();
-                    let name = String::from_utf8(name.bytes.clone()).unwrap();
-                    let descriptor = String::from_utf8(descriptor.bytes.clone()).unwrap();
+                    let class_name = class_name.utf8.clone();
+                    let name = name.utf8.clone();
+                    let descriptor = descriptor.utf8.clone();
 
                     class::Const::Method(class::MethodRef { class: class_name, name, descriptor: MethodDescriptor::parse(&descriptor) })
                 }
@@ -144,21 +146,21 @@ impl ClassLoader {
 
         let this_class = class_file.get_const(class_file.this_class).expect_class();
         let this_class_name = class_file.get_const(this_class.name_idx).expect_utf8();
-        let this_class = String::from_utf8(this_class_name.bytes.clone()).unwrap();
+        let this_class = this_class_name.utf8.clone();
 
         let super_class = Some(class_file.super_class)
             .filter(|idx| *idx != 0)
             .map(|idx| {
                 let super_class = class_file.get_const(idx).expect_class();
                 let super_class_name = class_file.get_const(super_class.name_idx).expect_utf8();
-                let super_class_name = String::from_utf8(super_class_name.bytes.clone()).unwrap();
+                let super_class_name = super_class_name.utf8.clone();
                 self.load(&super_class_name).expect(&format!("Could not load class {}", &super_class_name))
             });
 
         let interfaces = class_file.interfaces.iter().map(|idx| {
             let interface = class_file.get_const(idx.clone()).expect_class();
             let interface_name = class_file.get_const(interface.name_idx).expect_utf8();
-            String::from_utf8(interface_name.bytes.clone()).unwrap()
+            interface_name.utf8.clone()
         }).collect();
 
         let fields: Vec<Rc<Field>> = class_file.fields.iter()
@@ -166,9 +168,8 @@ impl ClassLoader {
                 let name = class_file.get_const(field.name_idx).expect_utf8();
                 let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
                 Rc::new(class::Field {
-                    name: String::from_utf8(name.bytes.clone()).unwrap(),
-                    descriptor: Descriptor::parse(
-                        String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
+                    name: name.utf8.clone(),
+                    descriptor: Descriptor::parse(descriptor.utf8.as_str()),
                     access_flags: field.access_flags,
                 })
             }).collect();
@@ -192,7 +193,7 @@ impl ClassLoader {
             let code = if native { vec![] } else {
                 let code = method.attributes.iter()
                     .find_map(|attr| match attr {
-                        class_file::Attribute::Code(code) => Some(code),
+                        attribute::Attribute::Code(code) => Some(code),
                         _ => None
                     }).unwrap();
                 max_locals = code.max_locals;
@@ -200,9 +201,8 @@ impl ClassLoader {
                 code.code.clone()
             };
             Rc::new(class::Method {
-                name: String::from_utf8(name.bytes.clone()).unwrap(),
-                descriptor: MethodDescriptor::parse(
-                    String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()),
+                name: name.utf8.clone(),
+                descriptor: MethodDescriptor::parse(descriptor.utf8.as_str()),
                 native,
                 max_locals,
                 max_stack,
@@ -211,8 +211,7 @@ impl ClassLoader {
         }).collect();
 
         Rc::from(Class {
-            minor_version: class_file.minor_version,
-            major_version: class_file.major_version,
+            version: class_file.version.clone(),
             const_pool,
             access_flags: class_file.access_flags,
             this_class,
@@ -240,7 +239,7 @@ impl Loader for DirLoader {
 
         let file = File::open(file_name);
 
-        file.ok().map(|mut file| Reader::new(&mut file).read_class_file())
+        file.and_then(|mut file| Reader::new(BufReader::new(&mut file)).read_class_file()).ok()
     }
 }
 
@@ -254,6 +253,10 @@ impl Loader for JarLoader {
 
         let zip_file = self.jar.by_name(file_name.to_str().unwrap());
 
-        zip_file.ok().map(|mut zip_file| Reader::new(&mut zip_file).read_class_file())
+        zip_file.map_err(|e| std::io::Error::new(ErrorKind::Other, e))
+            .and_then(|mut zip_file| Reader::new(BufReader::new(
+                &mut zip_file
+            )).read_class_file())
+            .ok()
     }
 }

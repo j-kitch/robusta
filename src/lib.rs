@@ -1,6 +1,5 @@
 extern crate core;
 
-pub mod class_file;
 pub mod class;
 pub mod thread;
 pub mod heap;

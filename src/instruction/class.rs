@@ -92,7 +92,7 @@ pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instanc
         return do_if_null(thread);
     }
 
-    let mut is_instance = false;
+    let is_instance;
 
     {
         // TODO: Standardise this!

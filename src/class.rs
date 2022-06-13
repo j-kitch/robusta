@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::robusta::class_file::Version;
 
 #[derive(Debug)]
 pub struct Class {
-    pub minor_version: u16,
-    pub major_version: u16,
+    pub version: Version,
     pub const_pool: HashMap<u16, Const>,
     pub access_flags: u16,
     pub this_class: std::string::String,
