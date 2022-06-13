@@ -7,9 +7,10 @@ use std::rc::Rc;
 use zip::ZipArchive;
 
 use crate::class;
-use crate::class::{Class, Field};
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
+use crate::robusta::class::object;
+use crate::robusta::class::object::{Class, Field};
 use crate::robusta::class_file::{attribute, const_pool};
 use crate::robusta::class_file::{ClassFile, Reader};
 
@@ -91,23 +92,23 @@ impl ClassLoader {
             let con = match con {
                 const_pool::Const::Class(const_pool::Class { name_idx }) => {
                     let name = class_file.get_const(*name_idx).expect_utf8();
-                    class::Const::Class(class::ClassRef { name: name.utf8.clone() })
+                    object::Const::Class(object::ClassRef { name: name.utf8.clone() })
                 }
                 const_pool::Const::Integer(const_pool::Integer { int }) => {
-                    class::Const::Int(class::Integer { int: *int })
+                    object::Const::Int(object::Integer { int: *int })
                 }
                 const_pool::Const::Float(const_pool::Float { float }) => {
-                    class::Const::Float(class::Float { float: *float })
+                    object::Const::Float(object::Float { float: *float })
                 }
                 const_pool::Const::Long(const_pool::Long { long }) => {
-                    class::Const::Long(class::Long { long: *long })
+                    object::Const::Long(object::Long { long: *long })
                 }
                 const_pool::Const::Double(const_pool::Double { double }) => {
-                    class::Const::Double(class::Double { double: *double })
+                    object::Const::Double(object::Double { double: *double })
                 }
                 const_pool::Const::String(const_pool::String { string_idx }) => {
                     let string = class_file.get_const(*string_idx).expect_utf8();
-                    class::Const::String(class::String { string: string.utf8.to_string() })
+                    object::Const::String(object::String { string: string.utf8.to_string() })
                 }
                 const_pool::Const::Field(const_pool::Field { class_idx, name_and_type_idx }) => {
                     let class = class_file.get_const(*class_idx).expect_class();
@@ -121,7 +122,7 @@ impl ClassLoader {
                     let name = name.utf8.clone();
                     let descriptor = descriptor.utf8.clone();
 
-                    class::Const::Field(class::FieldRef { class: class_name, name, descriptor: Descriptor::parse(&descriptor) })
+                    object::Const::Field(object::FieldRef { class: class_name, name, descriptor: Descriptor::parse(&descriptor) })
                 }
                 const_pool::Const::Method(const_pool::Method { class_idx, name_and_type_idx }) => {
                     let class = class_file.get_const(*class_idx).expect_class();
@@ -135,7 +136,7 @@ impl ClassLoader {
                     let name = name.utf8.clone();
                     let descriptor = descriptor.utf8.clone();
 
-                    class::Const::Method(class::MethodRef { class: class_name, name, descriptor: MethodDescriptor::parse(&descriptor) })
+                    object::Const::Method(object::MethodRef { class: class_name, name, descriptor: MethodDescriptor::parse(&descriptor) })
                 }
                 _ => {
                     continue;
@@ -167,7 +168,7 @@ impl ClassLoader {
             .map(|field| {
                 let name = class_file.get_const(field.name_idx).expect_utf8();
                 let descriptor = class_file.get_const(field.descriptor_idx).expect_utf8();
-                Rc::new(class::Field {
+                Rc::new(object::Field {
                     name: name.utf8.clone(),
                     descriptor: Descriptor::parse(descriptor.utf8.as_str()),
                     access_flags: field.access_flags,
@@ -200,7 +201,7 @@ impl ClassLoader {
                 max_stack = code.max_stack;
                 code.code.clone()
             };
-            Rc::new(class::Method {
+            Rc::new(object::Method {
                 name: name.utf8.clone(),
                 descriptor: MethodDescriptor::parse(descriptor.utf8.as_str()),
                 native,

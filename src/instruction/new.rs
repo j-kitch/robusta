@@ -1,5 +1,5 @@
 use std::borrow::BorrowMut;
-use crate::class::Const;
+use crate::robusta::class::object::Const;
 use crate::descriptor::Descriptor;
 use crate::shim;
 use crate::thread::Thread;

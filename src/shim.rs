@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::class::{Class, Const, Method, MethodRef};
 use crate::descriptor::MethodDescriptor;
+use crate::robusta::class::object::{Class, Const, Method, MethodRef};
 use crate::robusta::class_file::Version;
 use crate::thread::Frame;
 use crate::thread::local_vars::LocalVars;

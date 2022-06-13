@@ -1,7 +1,8 @@
 use std::borrow::BorrowMut;
 use std::ops::Deref;
+use crate::descriptor::Descriptor;
 
-use crate::class::Const;
+use crate::robusta::class::object::Const;
 use crate::heap::Ref;
 use crate::shim;
 use crate::thread::Thread;
@@ -113,7 +114,7 @@ pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instanc
                 // TODO: Assuming T is class, not interface
                 let s = obj.class.clone();
                 let t = class;
-                s.is_sub_class_of(&t)
+                s.is_instance_of(&Descriptor::Object(t.this_class.clone()))
             }
             Ref::Arr(_) => {
                 panic!("Not implemented is_instance for arrays yet!");

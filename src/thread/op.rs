@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use crate::class::Const;
+use crate::robusta::class::object::Const;
 
 use crate::descriptor::Descriptor;
 use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, field, invoke, load, load_const, new, pop, push, push_const, returns, shift, single_op, store};

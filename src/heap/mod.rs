@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::class;
-use crate::class::Class;
+use crate::robusta::class::object::Class;
 use crate::descriptor::Descriptor;
 use crate::heap::Ref::Obj;
+use crate::robusta::class::object;
 
 pub struct Heap {
     objects: HashMap<u32, Rc<RefCell<Ref>>>,
@@ -140,7 +141,7 @@ pub struct Object {
 }
 
 pub struct Field {
-    pub field: Rc<class::Field>,
+    pub field: Rc<object::Field>,
     pub value: Value,
 }
 

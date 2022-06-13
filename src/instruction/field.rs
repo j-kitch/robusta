@@ -1,4 +1,4 @@
-use crate::class::Const;
+use crate::robusta::class::object::Const;
 use crate::thread::Thread;
 
 pub fn put(thread: &mut Thread) {

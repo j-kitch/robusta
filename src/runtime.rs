@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::class::Class;
+use crate::robusta::class::object::Class;
 use crate::cmd::Configuration;
 use crate::heap::{Heap, Ref, Value};
 use crate::loader::ClassLoader;

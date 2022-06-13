@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use crate::class::Const;
+use crate::robusta::class::object::Const;
 use crate::heap::Value;
 use crate::shim;
 use crate::thread::{Frame, Thread};
