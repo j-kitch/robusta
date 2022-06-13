@@ -6,7 +6,6 @@ use attribute::Attribute;
 use crate::robusta::class_file::attribute::Unknown;
 
 mod attribute;
-mod testing;
 
 const MAGIC_CODE: u32 = 0xCAFE_BABE;
 
