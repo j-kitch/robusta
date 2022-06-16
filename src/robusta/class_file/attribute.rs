@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io;
 use std::io::Error;
 
@@ -132,7 +133,7 @@ impl<R: io::BufRead> Reader<R> {
         Ok(ConstantValue { idx })
     }
 
-    pub fn read_code(&mut self, const_pool: &[Const]) -> Result<Code, Error> {
+    pub fn read_code(&mut self, const_pool: &HashMap<u16, Const>) -> Result<Code, Error> {
         let _ = self.read_u32()?;
         let max_stack = self.read_u16()?;
         let max_locals = self.read_u16()?;

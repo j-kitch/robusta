@@ -4,6 +4,7 @@ use crate::descriptor::Descriptor;
 
 use crate::robusta::class::object::Const;
 use crate::heap::Ref;
+use crate::robusta::class::Class;
 use crate::shim;
 use crate::thread::Thread;
 
@@ -16,7 +17,8 @@ pub fn new(thread: &mut Thread) {
         Const::Class(class) => &class.name,
         _ => panic!("err")
     };
-    let class = runtime.class_loader.borrow_mut().load(class_name).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(class_name).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -39,7 +41,8 @@ pub fn get_static(thread: &mut Thread) {
         _ => panic!("err")
     };
 
-    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -63,7 +66,8 @@ pub fn put_static(thread: &mut Thread) {
         _ => panic!("err")
     };
 
-    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -99,12 +103,14 @@ pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instanc
         // TODO: Standardise this!
         let mut runtime = thread.rt.as_ref().borrow_mut();
         let class = runtime.class_loader.borrow_mut().load(&type_const.name).unwrap();
-        let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
-        if !uninit_parents.is_empty() {
-            current.pc -= 3;
-            current.op_stack.push_ref(object_ref);
-            thread.frames.push(shim::init_parents_frame(&uninit_parents));
-            return;
+        if let Class::Object { file } = class.deref() {
+            let uninit_parents = runtime.class_loader.uninit_parents(&file.this_class);
+            if !uninit_parents.is_empty() {
+                current.pc -= 3;
+                current.op_stack.push_ref(object_ref);
+                thread.frames.push(shim::init_parents_frame(&uninit_parents));
+                return;
+            }
         }
 
         let obj = runtime.load_object(object_ref);
@@ -114,7 +120,7 @@ pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instanc
                 // TODO: Assuming T is class, not interface
                 let s = obj.class.clone();
                 let t = class;
-                s.is_instance_of(&Descriptor::Object(t.this_class.clone()))
+                s.is_instance_of(&Descriptor::parse(&t.descriptor()))
             }
             Ref::Arr(_) => {
                 panic!("Not implemented is_instance for arrays yet!");

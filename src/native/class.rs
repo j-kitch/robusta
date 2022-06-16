@@ -1,7 +1,9 @@
+use std::rc::Rc;
 use crate::descriptor::MethodDescriptor;
 use crate::heap::Value;
 use crate::heap::Value::Ref;
 use crate::native::NativePlugin;
+use crate::robusta::class::Class;
 use crate::runtime::Runtime;
 
 pub struct ClassPlugin {}
@@ -27,7 +29,7 @@ impl NativePlugin for ClassPlugin {
 
         let this_class = obj.class.clone();
 
-        let class_obj_ref = runtime.create_class_object(this_class);
+        let class_obj_ref = runtime.create_class_object(Rc::new(Class::Object { file: this_class }));
 
         Some(Ref(class_obj_ref))
     }

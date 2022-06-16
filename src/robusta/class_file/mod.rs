@@ -1,5 +1,6 @@
 use ErrorKind::Other;
 use io::Error;
+use std::collections::HashMap;
 use std::io;
 use std::io::ErrorKind;
 use attribute::Attribute;
@@ -13,7 +14,7 @@ const MAGIC_CODE: u32 = 0xCAFE_BABE;
 
 pub struct ClassFile {
     pub version: Version,
-    pub const_pool: Vec<Const>,
+    pub const_pool: HashMap<u16, Const>,
     pub access_flags: u16,
     pub this_class: u16,
     pub super_class: u16,
@@ -25,8 +26,7 @@ pub struct ClassFile {
 
 impl ClassFile {
     pub fn get_const(&self, idx: u16) -> &Const {
-        let idx = idx - 1;
-        self.const_pool.get(idx as usize).unwrap()
+        self.const_pool.get(&idx).unwrap()
     }
 }
 
@@ -127,7 +127,7 @@ impl<R: io::BufRead> Reader<R> {
         }
     }
 
-    pub fn read_field(&mut self, const_pool: &[Const]) -> Result<Field, Error> {
+    pub fn read_field(&mut self, const_pool: &HashMap<u16, Const>) -> Result<Field, Error> {
         let access_flags = self.read_u16()?;
         let name_idx = self.read_u16()?;
         let descriptor_idx = self.read_u16()?;
@@ -140,7 +140,7 @@ impl<R: io::BufRead> Reader<R> {
         Ok(Field { access_flags, name_idx, descriptor_idx, attributes })
     }
 
-    pub fn read_method(&mut self, const_pool: &[Const]) -> Result<Method, Error> {
+    pub fn read_method(&mut self, const_pool: &HashMap<u16, Const>) -> Result<Method, Error> {
         let access_flags = self.read_u16()?;
         let name_idx = self.read_u16()?;
         let descriptor_idx = self.read_u16()?;
@@ -153,9 +153,9 @@ impl<R: io::BufRead> Reader<R> {
         Ok(Method { access_flags, name_idx, descriptor_idx, attributes })
     }
 
-    pub fn read_attribute(&mut self, const_pool: &[Const]) -> Result<Attribute, Error> {
-        let name_idx = self.read_u16()? as usize;
-        let name_const = &const_pool[name_idx - 1];
+    pub fn read_attribute(&mut self, const_pool: &HashMap<u16, Const>) -> Result<Attribute, Error> {
+        let name_idx = self.read_u16()?;
+        let name_const = &const_pool[&name_idx];
         let name = if let Const::Utf8(Utf8 { utf8 }) = name_const {
             utf8.clone()
         } else {
@@ -197,10 +197,17 @@ impl<R: io::BufRead> Reader<R> {
         }
 
         let version = self.read_version()?;
-        let const_pool_count = self.read_u16()? as usize;
-        let mut const_pool = Vec::with_capacity(const_pool_count - 1);
-        for _ in 1..const_pool_count {
-            const_pool.push(self.read_const()?);
+        let const_pool_count = self.read_u16()?;
+        let mut const_pool = HashMap::with_capacity(const_pool_count as usize - 1);
+        let mut i = 1;
+        while i < const_pool_count {
+            let r#const = self.read_const()?;
+            let skip: u16 = match &r#const {
+                Const::Long(_) | Const::Double(_) => 2,
+                _ => 1
+            };
+            const_pool.insert(i, r#const);
+            i += skip;
         }
         let access_flags = self.read_u16()?;
         let this_class = self.read_u16()?;
@@ -215,19 +222,19 @@ impl<R: io::BufRead> Reader<R> {
         let fields_count = self.read_u16()? as usize;
         let mut fields = Vec::with_capacity(fields_count);
         for _ in 0..fields_count {
-            fields.push(self.read_field(&const_pool[..])?);
+            fields.push(self.read_field(&const_pool)?);
         }
 
         let methods_count = self.read_u16()? as usize;
         let mut methods = Vec::with_capacity(methods_count);
         for _ in 0..methods_count {
-            methods.push(self.read_method(&const_pool[..])?);
+            methods.push(self.read_method(&const_pool)?);
         }
 
         let attributes_count = self.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attributes_count);
         for _ in 0..attributes_count {
-            attributes.push(self.read_attribute(&const_pool[..])?);
+            attributes.push(self.read_attribute(&const_pool)?);
         }
 
         Ok(ClassFile {

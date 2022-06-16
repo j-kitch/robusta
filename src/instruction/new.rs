@@ -16,7 +16,7 @@ pub fn ref_arr(thread: &mut Thread) {
 
     // TODO: We need to standardise how we handle this scenario so we stop duplicating code!
     let class = runtime.class_loader.borrow_mut().load(class_name).unwrap();
-    let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
+    let uninit_parents = runtime.class_loader.uninit_parents(&class.name());
     if !uninit_parents.is_empty() {
         current.pc -= 3;
         thread.frames.push(shim::init_parents_frame(&uninit_parents));
@@ -25,7 +25,7 @@ pub fn ref_arr(thread: &mut Thread) {
 
     let arr_count = current.op_stack.pop_int();
 
-    let arr_ref = runtime.heap.borrow_mut().create_array(Descriptor::Object(class_name.to_string()), arr_count);
+    let arr_ref = runtime.heap.borrow_mut().create_array(Descriptor::parse(&class.descriptor()), arr_count);
 
     current.op_stack.push_ref(arr_ref);
 }

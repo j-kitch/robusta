@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, ErrorKind};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -9,8 +10,9 @@ use zip::ZipArchive;
 use crate::class;
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
+use crate::robusta::class::Class;
 use crate::robusta::class::object;
-use crate::robusta::class::object::{Class, Field};
+use crate::robusta::class::object::Field;
 use crate::robusta::class_file::{attribute, const_pool};
 use crate::robusta::class_file::{ClassFile, Reader};
 
@@ -49,28 +51,32 @@ impl ClassLoader {
         class_loader
     }
 
-    pub fn load(&mut self, class: &str) -> Option<Rc<Class>> {
-        if !self.loaded.contains_key(class) {
+    pub fn load(&mut self, class_name: &str) -> Option<Rc<Class>> {
+        if !self.loaded.contains_key(class_name) {
             let class_file = self.loaders.iter_mut()
-                .map(|loader| loader.load(class))
+                .map(|loader| loader.load(class_name))
                 .find(|class| class.is_some())
-                .expect(format!("Could not find class {}", class).as_str())
-                .expect(format!("Could not find class {}", class).as_str());
+                .expect(format!("Could not find class {}", class_name).as_str())
+                .expect(format!("Could not find class {}", class_name).as_str());
             let class = self.class_from(&class_file);
-            self.loaded.insert(class.this_class.clone(), class);
+            self.loaded.insert(class_name.to_string(), class);
         }
-        self.loaded.get(class).map(|class| class.clone())
+        self.loaded.get(class_name).map(|class| class.clone())
     }
 
     pub fn uninit_parents(&self, class: &str) -> Vec<String> {
         let class = self.loaded.get(class).unwrap().clone();
-        let mut parents: Vec<String> = class.parent_iter()
-            .filter(|c| c.find_method("<clinit>", &MethodDescriptor::parse("()V")).is_some())
-            .map(|c| c.this_class.clone())
-            .filter(|c| !self.init.contains(c))
-            .collect();
-        parents.reverse();
-        parents
+        if let Class::Object { file } = class.deref() {
+            let mut parents: Vec<String> = file.parent_iter()
+                .filter(|c| c.find_method("<clinit>", &MethodDescriptor::parse("()V")).is_some())
+                .map(|c| c.this_class.clone())
+                .filter(|c| !self.init.contains(c))
+                .collect();
+            parents.reverse();
+            parents
+        } else {
+            Vec::new()
+        }
     }
 
     pub fn init_parent(&mut self, class: &str) {
@@ -87,8 +93,7 @@ impl ClassLoader {
 
     fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
         let mut const_pool = HashMap::new();
-        for (idx, con) in class_file.const_pool.iter().enumerate() {
-            let idx = (idx + 1) as u16;
+        for (idx, con) in class_file.const_pool.iter() {
             let con = match con {
                 const_pool::Const::Class(const_pool::Class { name_idx }) => {
                     let name = class_file.get_const(*name_idx).expect_utf8();
@@ -156,6 +161,7 @@ impl ClassLoader {
                 let super_class_name = class_file.get_const(super_class.name_idx).expect_utf8();
                 let super_class_name = super_class_name.utf8.clone();
                 self.load(&super_class_name).expect(&format!("Could not load class {}", &super_class_name))
+                    .unwrap_object_class().clone()
             });
 
         let interfaces = class_file.interfaces.iter().map(|idx| {
@@ -211,7 +217,7 @@ impl ClassLoader {
             })
         }).collect();
 
-        Rc::from(Class {
+        Rc::from(Class::Object { file: Rc::new(object::Class {
             version: class_file.version.clone(),
             const_pool,
             access_flags: class_file.access_flags,
@@ -220,7 +226,7 @@ impl ClassLoader {
             interfaces,
             fields,
             methods,
-        })
+        }) })
     }
 }
 
@@ -253,11 +259,14 @@ impl Loader for JarLoader {
         let file_name = Path::new(class_name).with_extension("class");
 
         let zip_file = self.jar.by_name(file_name.to_str().unwrap());
+        if zip_file.is_err() {
+            return None;
+        }
 
-        zip_file.map_err(|e| std::io::Error::new(ErrorKind::Other, e))
+        Some(zip_file.map_err(|e| std::io::Error::new(ErrorKind::Other, e))
             .and_then(|mut zip_file| Reader::new(BufReader::new(
                 &mut zip_file
             )).read_class_file())
-            .ok()
+            .unwrap())
     }
 }

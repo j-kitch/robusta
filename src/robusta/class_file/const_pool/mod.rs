@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Const {
     Utf8(Utf8),
     Integer(Integer),
@@ -87,63 +88,77 @@ impl Const {
     }
 }
 
+#[derive(Debug)]
 pub struct Utf8 {
     pub utf8: std::string::String,
 }
 
+#[derive(Debug)]
 pub struct Integer {
     pub int: i32,
 }
 
+#[derive(Debug)]
 pub struct Float {
     pub float: f32,
 }
 
+#[derive(Debug)]
 pub struct Long {
     pub long: i64,
 }
 
+#[derive(Debug)]
 pub struct Double {
     pub double: f64,
 }
 
+#[derive(Debug)]
 pub struct Class {
     pub name_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct String {
     pub string_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct Field {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct Method {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct InterfaceMethod {
     pub class_idx: u16,
     pub name_and_type_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct NameAndType {
     pub name_idx: u16,
     pub descriptor_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct MethodHandle {
     pub reference_kind: u8,
     pub reference_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct MethodType {
     pub descriptor_idx: u16,
 }
 
+#[derive(Debug)]
 pub struct InvokeDynamic {
     pub bootstrap_idx: u16,
     pub name_and_type_idx: u16,

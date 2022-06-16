@@ -88,7 +88,8 @@ impl Robusta {
             .collect();
         let main_args_ref = runtime.insert_ref_array(main_args_refs);
 
-        let main_class = runtime.load_class(&self.configuration.main_class);
+        let main_class = runtime.load_class(&self.configuration.main_class)
+            .unwrap_object_class().clone();
         let main_method = main_class.find_method("main", &MethodDescriptor::parse("([Ljava/lang/String;)V")).unwrap();
 
         let mut main_thread = Thread::new(runtime);

@@ -3,10 +3,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::class;
-use crate::robusta::class::object::Class;
 use crate::descriptor::Descriptor;
 use crate::heap::Ref::Obj;
-use crate::robusta::class::object;
+use crate::robusta::class::{Class, object};
 
 pub struct Heap {
     objects: HashMap<u32, Rc<RefCell<Ref>>>,
@@ -43,16 +42,15 @@ impl Heap {
     }
 
     pub fn mark_as_class(&mut self, class: Rc<Class>, obj: u32) {
-        self.class_objects.insert(class.this_class.clone(), obj);
+        self.class_objects.insert(class.descriptor(), obj);
     }
 
     pub fn find_class_inst(&self, class: Rc<Class>) -> Option<u32> {
-        self.class_objects.get(class.this_class.as_str())
+        self.class_objects.get(&class.descriptor())
             .map(|o| o.clone())
     }
 
-    pub fn create(&mut self, class: Rc<Class>) -> (u32, Rc<RefCell<Ref>>) {
-        // TODO: Assuming not an array.
+    pub fn create(&mut self, class: Rc<object::Class>) -> (u32, Rc<RefCell<Ref>>) {
         let mut key: u32 = rand::random();
         while self.objects.contains_key(&key) {
             key = rand::random();
@@ -63,7 +61,7 @@ impl Heap {
             .map(|f| Field { field: f.clone(), value: f.descriptor.zero_value() })
             .collect();
 
-        let object = Rc::from(RefCell::from(Obj(Object { class, fields })));
+        let object = Rc::from(RefCell::from(Obj(Object { class: class.clone(), fields })));
         self.objects.insert(key, object.clone());
         (key, object)
     }
@@ -136,7 +134,7 @@ impl Ref {
 }
 
 pub struct Object {
-    pub class: Rc<Class>,
+    pub class: Rc<object::Class>,
     pub fields: Vec<Field>,
 }
 
