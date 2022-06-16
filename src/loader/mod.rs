@@ -52,15 +52,39 @@ impl ClassLoader {
 
     pub fn load(&mut self, class_name: &str) -> Option<Rc<Class>> {
         if !self.loaded.contains_key(class_name) {
-            let class_file = self.loaders.iter_mut()
-                .map(|loader| loader.load(class_name))
-                .find(|class| class.is_some())
-                .expect(format!("Could not find class {}", class_name).as_str())
-                .expect(format!("Could not find class {}", class_name).as_str());
-            let class = self.class_from(&class_file);
+            let class = if ClassLoader::is_array_name(class_name) {
+                let inner_name: String = class_name.chars().skip(1).collect();
+                let inner = self.load(&inner_name)?;
+                Rc::new(Class::Array { component: inner })
+            } else {
+                let class_name: String = if class_name.starts_with('L') && class_name.ends_with(';') {
+                    class_name.chars()
+                        .skip(1)
+                        .take_while(|c| ';'.ne(c))
+                        .collect()
+                } else {
+                    class_name.to_string()
+                };
+                let obj = self.load_object_class(&class_name)?;
+                Rc::new(Class::Object { file: obj })
+            };
             self.loaded.insert(class_name.to_string(), class);
         }
-        self.loaded.get(class_name).map(|class| class.clone())
+        self.loaded.get(class_name).map(|c| c.clone())
+    }
+
+    fn load_object_class(&mut self, class_name: &str) -> Option<Rc<object::Class>> {
+        let class_file = self.loaders.iter_mut()
+            .map(|loader| loader.load(class_name))
+            .find(|class| class.is_some())
+            .expect(format!("Could not find class {}", class_name).as_str())
+            .expect(format!("Could not find class {}", class_name).as_str());
+        let class = self.class_from(&class_file);
+        Some(class)
+    }
+
+    fn is_array_name(class_name: &str) -> bool {
+        class_name.starts_with('[')
     }
 
     pub fn uninit_parents(&self, class: &str) -> Vec<String> {
@@ -90,7 +114,7 @@ impl ClassLoader {
         self.static_fields.get_mut(class).unwrap().insert(idx, value);
     }
 
-    fn class_from(&mut self, class_file: &ClassFile) -> Rc<Class> {
+    fn class_from(&mut self, class_file: &ClassFile) -> Rc<object::Class> {
         let mut const_pool = HashMap::new();
         for (idx, con) in class_file.const_pool.iter() {
             let con = match con {
@@ -216,7 +240,7 @@ impl ClassLoader {
             })
         }).collect();
 
-        Rc::from(Class::Object { file: Rc::new(object::Class {
+        Rc::new(object::Class {
             version: class_file.version.clone(),
             const_pool,
             access_flags: class_file.access_flags,
@@ -225,7 +249,7 @@ impl ClassLoader {
             interfaces,
             fields,
             methods,
-        }) })
+        })
     }
 }
 

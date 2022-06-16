@@ -18,7 +18,7 @@ pub enum Primitive {
 
 pub enum Class {
     Primitive(Primitive),
-    Array { component: Box<Class> },
+    Array { component: Rc<Class> },
     Object { file: Rc<object::Class> },
 }
 
