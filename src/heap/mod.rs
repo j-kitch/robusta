@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::class;
 use crate::descriptor::Descriptor;
 use crate::heap::Ref::Obj;
 use crate::robusta::class::{Class, object};

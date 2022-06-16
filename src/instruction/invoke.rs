@@ -1,7 +1,7 @@
 use std::ops::DerefMut;
 
-use crate::robusta::class::object::Const;
 use crate::heap::Value;
+use crate::robusta::class::object::Const;
 use crate::shim;
 use crate::thread::{Frame, Thread};
 use crate::thread::local_vars::LocalVars;

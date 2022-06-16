@@ -1,6 +1,7 @@
 use std::borrow::BorrowMut;
-use crate::robusta::class::object::Const;
+
 use crate::descriptor::Descriptor;
+use crate::robusta::class::object::Const;
 use crate::shim;
 use crate::thread::Thread;
 

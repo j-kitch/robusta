@@ -7,7 +7,6 @@ use std::rc::Rc;
 
 use zip::ZipArchive;
 
-use crate::class;
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
 use crate::robusta::class::Class;

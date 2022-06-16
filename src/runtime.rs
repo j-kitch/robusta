@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::robusta::class::{Class, object};
+
 use crate::cmd::Configuration;
 use crate::heap::{Heap, Ref, Value};
 use crate::loader::ClassLoader;
 use crate::native::NativeMethods;
+use crate::robusta::class::{Class, object};
 
 pub struct Runtime {
     pub class_loader: ClassLoader,

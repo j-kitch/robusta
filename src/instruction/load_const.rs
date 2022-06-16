@@ -1,4 +1,4 @@
-use crate::{class, shim};
+use crate::shim;
 use crate::robusta::class::object;
 use crate::thread::Thread;
 

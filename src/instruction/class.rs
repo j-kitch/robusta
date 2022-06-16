@@ -1,10 +1,10 @@
 use std::borrow::BorrowMut;
 use std::ops::Deref;
-use crate::descriptor::Descriptor;
 
-use crate::robusta::class::object::Const;
+use crate::descriptor::Descriptor;
 use crate::heap::Ref;
 use crate::robusta::class::Class;
+use crate::robusta::class::object::Const;
 use crate::shim;
 use crate::thread::Thread;
 
