@@ -1,7 +1,7 @@
 use std::ops::DerefMut;
 
-use crate::class::Const;
 use crate::heap::Value;
+use crate::robusta::class::object::Const;
 use crate::shim;
 use crate::thread::{Frame, Thread};
 use crate::thread::local_vars::LocalVars;
@@ -28,7 +28,8 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
         _ => panic!("err"),
     };
 
-    let class = runtime.class_loader.load(&method_const.class).unwrap();
+    let class = runtime.class_loader.load(&method_const.class).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() && method_const.name.ne("<clinit>") {
         current.pc -= 3;
@@ -36,7 +37,8 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
         return;
     }
 
-    let method = class.find_method(&method_const.name, &method_const.descriptor).unwrap();
+    let method = class.find_method(&method_const.name, &method_const.descriptor)
+        .expect(format!("Could not find method {}.{}{}", &class.this_class, &method_const.name, method_const.descriptor.descriptor()).as_str());
 
     let mut args = vec![];
     for arg in method.descriptor.args.iter().rev() {

@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use crate::class::{Class, Method};
 use crate::heap::{Ref, Value};
+use crate::robusta::class::object::{Class, Method};
 use crate::runtime::Runtime;
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;

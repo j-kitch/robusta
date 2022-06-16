@@ -1,7 +1,11 @@
 use std::borrow::BorrowMut;
-use crate::class::Const;
-use crate::shim;
+use std::ops::Deref;
 
+use crate::descriptor::Descriptor;
+use crate::heap::Ref;
+use crate::robusta::class::Class;
+use crate::robusta::class::object::Const;
+use crate::shim;
 use crate::thread::Thread;
 
 pub fn new(thread: &mut Thread) {
@@ -13,7 +17,8 @@ pub fn new(thread: &mut Thread) {
         Const::Class(class) => &class.name,
         _ => panic!("err")
     };
-    let class = runtime.class_loader.borrow_mut().load(class_name).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(class_name).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -36,7 +41,8 @@ pub fn get_static(thread: &mut Thread) {
         _ => panic!("err")
     };
 
-    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -60,7 +66,8 @@ pub fn put_static(thread: &mut Thread) {
         _ => panic!("err")
     };
 
-    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap();
+    let class = runtime.class_loader.borrow_mut().load(&field_const.class).unwrap()
+        .unwrap_object_class().clone();
     let uninit_parents = runtime.class_loader.uninit_parents(&class.this_class);
     if !uninit_parents.is_empty() {
         current.pc -= 3;
@@ -72,4 +79,92 @@ pub fn put_static(thread: &mut Thread) {
     let value = current.op_stack.pop_value(&field_const.descriptor);
 
     runtime.class_loader.put_static(&field_const.class, value_idx.unwrap(), value)
+}
+
+pub fn do_if_instance<F, G, H>(thread: &mut Thread, do_if_null: F, do_if_instance: G, do_if_not: H)
+    where F: Fn(&mut Thread),
+          G: Fn(&mut Thread, u32),
+          H: Fn(&mut Thread, u32) {
+    let current = thread.frames.current_mut();
+    let type_idx = current.read_u16();
+    let type_const = match current.class.const_pool.get(&type_idx).unwrap() {
+        Const::Class(class_ref) => class_ref,
+        _ => panic!("Not implemented instace_of for this!")
+    };
+    let object_ref = current.op_stack.pop_ref();
+
+    if object_ref == 0 {
+        return do_if_null(thread);
+    }
+
+    let is_instance;
+
+    {
+        // TODO: Standardise this!
+        let mut runtime = thread.rt.as_ref().borrow_mut();
+        let class = runtime.class_loader.borrow_mut().load(&type_const.name).unwrap();
+        if let Class::Object { file } = class.deref() {
+            let uninit_parents = runtime.class_loader.uninit_parents(&file.this_class);
+            if !uninit_parents.is_empty() {
+                current.pc -= 3;
+                current.op_stack.push_ref(object_ref);
+                thread.frames.push(shim::init_parents_frame(&uninit_parents));
+                return;
+            }
+        }
+
+        let obj = runtime.load_object(object_ref);
+        let obj = obj.as_ref().borrow();
+        is_instance = match obj.deref() {
+            Ref::Obj(obj) => {
+                // TODO: Assuming T is class, not interface
+                let s = obj.class.clone();
+                let t = class;
+                s.is_instance_of(&Descriptor::parse(&t.descriptor()))
+            }
+            Ref::Arr(_) => {
+                panic!("Not implemented is_instance for arrays yet!");
+            }
+        };
+    }
+
+    if is_instance {
+        return do_if_instance(thread, object_ref);
+    } else {
+        return do_if_not(thread, object_ref);
+    }
+}
+
+pub fn check_cast(thread: &mut Thread) {
+    do_if_instance(
+        thread,
+        |t| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_ref(0);
+        },
+        |t, obj_ref| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_ref(obj_ref);
+        },
+        |_, _| {
+            // TODO: Exceptions!
+            panic!("ClassCastException")
+        })
+}
+
+pub fn instance_of(thread: &mut Thread) {
+    do_if_instance(
+        thread,
+        |t| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(0);
+        },
+        |t, _| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(1);
+        },
+        |t, _| {
+            let current = t.frames.current_mut();
+            current.op_stack.push_int(0);
+        })
 }

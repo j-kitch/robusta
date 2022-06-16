@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::class::Class;
+
 use crate::cmd::Configuration;
 use crate::heap::{Heap, Ref, Value};
 use crate::loader::ClassLoader;
 use crate::native::NativeMethods;
+use crate::robusta::class::{Class, object};
 
 pub struct Runtime {
     pub class_loader: ClassLoader,
@@ -25,7 +26,7 @@ impl Runtime {
         self.class_loader.load(class_name).unwrap()
     }
 
-    pub fn create_object(&mut self, class: Rc<Class>) -> (u32, Rc<RefCell<Ref>>) {
+    pub fn create_object(&mut self, class: Rc<object::Class>) -> (u32, Rc<RefCell<Ref>>) {
         self.heap.create(class)
     }
 
@@ -41,9 +42,38 @@ impl Runtime {
         self.heap.insert_ref_array(ref_arr)
     }
 
+    pub fn create_class_object(&mut self, class: Rc<Class>) -> u32 {
+        let existing_class_obj = self.heap.find_class_inst(class.clone());
+        if existing_class_obj.is_some() {
+            return existing_class_obj.unwrap();
+        }
+
+        let class_class = self.class_loader.load("java/lang/Class").unwrap()
+            .unwrap_object_class().clone();
+        let (class_obj_ref, class_obj) = self.heap.create(class_class.clone());
+
+        {
+            let mut class_obj = class_obj.as_ref().borrow_mut();
+            let class_obj = class_obj.obj_mut();
+
+            let name_str = class.name().replace("/", ".");
+            let name_str_ref = self.insert_str_const(name_str.as_str());
+            let name_field = class_obj.fields.iter_mut()
+                .find(|f| f.field.name.eq("name"))
+                .unwrap();
+            name_field.value = Value::Ref(name_str_ref);
+        }
+
+        self.heap.mark_as_class(class, class_obj_ref);
+
+        class_obj_ref
+    }
+
     pub fn insert_str_const(&mut self, string: &str) -> u32 {
         let string_class = self.load_class("java/lang/String");
-        let (str_ref, str_obj) = self.create_object(string_class.clone());
+        let (str_ref, str_obj) = self.create_object(
+            string_class.unwrap_object_class().clone()
+        );
 
         let chars: Vec<u16> = string.encode_utf16().collect();
         let chars_ref = self.insert_char_array(chars);
@@ -56,7 +86,7 @@ impl Runtime {
         };
 
         let mut chars_field = str_obj.fields.iter_mut()
-            .find(|f| f.field.name.eq("chars"))
+            .find(|f| f.field.name.eq("value"))
             .unwrap();
 
         chars_field.value = Value::Ref(chars_ref);

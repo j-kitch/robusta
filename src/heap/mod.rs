@@ -2,18 +2,18 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::class;
-use crate::class::Class;
 use crate::descriptor::Descriptor;
 use crate::heap::Ref::Obj;
+use crate::robusta::class::{Class, object};
 
 pub struct Heap {
     objects: HashMap<u32, Rc<RefCell<Ref>>>,
+    class_objects: HashMap<String, u32>,
 }
 
 impl Heap {
     pub fn new() -> Self {
-        Heap { objects: HashMap::new() }
+        Heap { objects: HashMap::new(), class_objects: HashMap::new() }
     }
 
     pub fn insert_ref_array(&mut self, refs: Vec<u32>) -> u32 {
@@ -40,24 +40,27 @@ impl Heap {
         key
     }
 
-    pub fn create(&mut self, class: Rc<Class>) -> (u32, Rc<RefCell<Ref>>) {
-        // TODO: Assuming not an array.
+    pub fn mark_as_class(&mut self, class: Rc<Class>, obj: u32) {
+        self.class_objects.insert(class.descriptor(), obj);
+    }
+
+    pub fn find_class_inst(&self, class: Rc<Class>) -> Option<u32> {
+        self.class_objects.get(&class.descriptor())
+            .map(|o| o.clone())
+    }
+
+    pub fn create(&mut self, class: Rc<object::Class>) -> (u32, Rc<RefCell<Ref>>) {
         let mut key: u32 = rand::random();
         while self.objects.contains_key(&key) {
             key = rand::random();
         }
         let key = key;
 
-        let mut fields = vec![];
-        class.for_each_field(|field| {
-            let value = match &field.descriptor {
-                Descriptor::Object(_) | Descriptor::Array(_) => Value::Ref(0),
-                _ => panic!("Not implemented value of type {}", &field.descriptor)
-            };
-            fields.push(Field { field, value });
-        });
+        let fields = class.fields.iter()
+            .map(|f| Field { field: f.clone(), value: f.descriptor.zero_value() })
+            .collect();
 
-        let object = Rc::from(RefCell::from(Obj(Object { class, fields })));
+        let object = Rc::from(RefCell::from(Obj(Object { class: class.clone(), fields })));
         self.objects.insert(key, object.clone());
         (key, object)
     }
@@ -107,6 +110,13 @@ impl Ref {
         }
     }
 
+    pub fn obj_mut(&mut self) -> &mut Object {
+        match self {
+            Ref::Obj(obj) => obj,
+            _ => panic!("err")
+        }
+    }
+
     pub fn arr(&self) -> &Array {
         match self {
             Ref::Arr(arr) => arr,
@@ -123,12 +133,12 @@ impl Ref {
 }
 
 pub struct Object {
-    pub class: Rc<Class>,
+    pub class: Rc<object::Class>,
     pub fields: Vec<Field>,
 }
 
 pub struct Field {
-    pub field: Rc<class::Field>,
+    pub field: Rc<object::Field>,
     pub value: Value,
 }
 
@@ -185,6 +195,7 @@ impl Value {
     }
 }
 
+#[derive(Debug)]
 pub enum Array {
     Byte(Vec<i8>),
     Char(Vec<u16>),

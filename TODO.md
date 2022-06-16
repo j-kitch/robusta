@@ -20,5 +20,5 @@
 - exception handling 
 - error handling
 - proper loading, linking, verification of class files 
-- native functions returning values
+- ~~native functions returning values~~
 - a better, more comprehensive integration test suite
