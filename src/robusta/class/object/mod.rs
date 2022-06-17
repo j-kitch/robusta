@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::robusta::class_file::const_pool::Kind;
 use crate::robusta::class_file::Version;
 
 #[derive(Debug)]
@@ -89,6 +90,7 @@ pub enum Const {
     Double(Double),
     Long(Long),
     String(String),
+    MethodHandle(MethodHandle),
 }
 
 #[derive(Debug)]
@@ -121,7 +123,7 @@ pub struct String {
     pub string: std::string::String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FieldRef {
     pub class: std::string::String,
     pub name: std::string::String,
@@ -157,4 +159,12 @@ pub struct Method {
     pub max_stack: u16,
     pub max_locals: u16,
     pub code: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub struct MethodHandle {
+    pub kind: Kind,
+    pub field: Option<Rc<FieldRef>>,
+    pub method: Option<Rc<MethodRef>>,
+    pub arguments: Vec<Const>,
 }

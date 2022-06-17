@@ -70,6 +70,10 @@ pub fn invoke_interface(thread: &mut Thread) {
     }
 }
 
+pub fn invoke_dynamic(thread: &mut Thread) {
+    panic!("not implemented")
+}
+
 pub fn invoke_virtual(thread: &mut Thread) {
     invoke(thread, true)
 }

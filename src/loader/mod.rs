@@ -11,9 +11,10 @@ use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
 use crate::robusta::class::Class;
 use crate::robusta::class::object;
-use crate::robusta::class::object::Field;
+use crate::robusta::class::object::{Const, Field, MethodHandle};
 use crate::robusta::class_file::{attribute, const_pool};
 use crate::robusta::class_file::{ClassFile, Reader};
+use crate::robusta::class_file::const_pool::Kind;
 
 const ACC_NATIVE: u16 = 0x0100;
 const ACC_STATIC: u16 = 0x0008;
@@ -183,6 +184,33 @@ impl ClassLoader {
                         name,
                         descriptor: MethodDescriptor::parse(&descriptor),
                     })
+                }
+                const_pool::Const::MethodHandle(const_pool::MethodHandle { reference_kind, reference_idx }) => {
+                    let mut method_handle = MethodHandle {
+                        kind: reference_kind.clone(),
+                        field: None,
+                        method: None,
+                        arguments: vec![]
+                    };
+
+                    match reference_kind {
+                        Kind::GetField | Kind::GetStatic | Kind::PutField | Kind::PutStatic => {
+                            let field = match const_pool.get(reference_idx).unwrap() {
+                                Const::Field(field) => field,
+                                _ => panic!("err")
+                            };
+                            method_handle.field = Some(Rc::new(field.clone()));
+                        }
+                        _ => {
+                            let method = match const_pool.get(reference_idx).unwrap() {
+                                Const::Method(method) => method,
+                                _ => panic!("err")
+                            };
+                            method_handle.method = Some(Rc::new(method.clone()));
+                        }
+                    }
+
+                    Const::MethodHandle(method_handle)
                 }
                 _ => {
                     continue;

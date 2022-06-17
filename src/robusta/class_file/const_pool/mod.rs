@@ -149,8 +149,21 @@ pub struct NameAndType {
 
 #[derive(Debug)]
 pub struct MethodHandle {
-    pub reference_kind: u8,
+    pub reference_kind: Kind,
     pub reference_idx: u16,
+}
+
+#[derive(Clone, Debug)]
+pub enum Kind {
+    GetField,
+    GetStatic,
+    PutField,
+    PutStatic,
+    InvokeVirtual,
+    InvokeStatic,
+    InvokeSpecial,
+    NewInvokeSpecial,
+    InvokeInterface
 }
 
 #[derive(Debug)]

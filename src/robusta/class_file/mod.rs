@@ -7,7 +7,7 @@ use std::io::ErrorKind;
 use attribute::Attribute;
 use const_pool::InterfaceMethod;
 
-use crate::robusta::class_file::const_pool::{Class, Const, Double, Float, Integer, InvokeDynamic, Long, MethodHandle, MethodType, NameAndType, Utf8};
+use crate::robusta::class_file::const_pool::{Class, Const, Double, Float, Integer, InvokeDynamic, Kind, Long, MethodHandle, MethodType, NameAndType, Utf8};
 
 pub mod attribute;
 pub mod const_pool;
@@ -115,7 +115,18 @@ impl<R: io::BufRead> Reader<R> {
                 descriptor_idx: self.read_u16()?,
             })),
             15 => Ok(Const::MethodHandle(MethodHandle {
-                reference_kind: self.read_u8()?,
+                reference_kind: match self.read_u8()? {
+                    1 => Kind::GetField,
+                    2 => Kind::GetStatic,
+                    3 => Kind::PutField,
+                    4 => Kind::PutStatic,
+                    5 => Kind::InvokeVirtual,
+                    6 => Kind::InvokeStatic,
+                    7 => Kind::InvokeSpecial,
+                    8 => Kind::NewInvokeSpecial,
+                    9 => Kind::InvokeInterface,
+                    x => panic!("error {}", x)
+                },
                 reference_idx: self.read_u16()?,
             })),
             16 => Ok(Const::MethodDescriptor(MethodType {
