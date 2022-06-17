@@ -3,6 +3,7 @@ use std::ops::Deref;
 use crate::descriptor::Descriptor;
 use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, field, invoke, jump, load, load_const, monitor, new, pop, push, push_const, returns, shift, single_op, store};
 use crate::instruction::throw::a_throw;
+use crate::instruction::wide::wide;
 use crate::robusta::class::object::Const;
 use crate::thread::{Frame, Thread};
 
@@ -206,6 +207,7 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xC1 => class::instance_of,
         0xC2 => monitor::enter,
         0xC3 => monitor::exit,
+        0xC4 => wide,
         0xCA => mark_clinit,
         0xC6 => compare::if_null,
         0xC7 => compare::if_non_null,
