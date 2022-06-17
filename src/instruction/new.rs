@@ -30,3 +30,26 @@ pub fn ref_arr(thread: &mut Thread) {
 
     current.op_stack.push_ref(arr_ref);
 }
+
+pub fn multi_a_new_array(thread: &mut Thread) {
+    let mut runtime = thread.rt.as_ref().borrow_mut();
+    let current = thread.frames.current_mut();
+    let index = current.read_u16();
+    let dimensions = current.read_u8();
+
+    let class = match current.class.const_pool.get(&index).unwrap() {
+        Const::Class(class) => class.name.clone(),
+        _ => panic!("err")
+    };
+
+    let counts: Vec<i32> = (1..dimensions)
+        .map(|_| current.op_stack.pop_int())
+        .collect();
+
+    let class = runtime.load_class(&class);
+    let descriptor = Descriptor::parse(class.as_ref().descriptor().as_str());
+
+    let arr_ref = runtime.heap.create_multi_ref_array(descriptor, counts);
+
+    current.op_stack.push_ref(arr_ref);
+}

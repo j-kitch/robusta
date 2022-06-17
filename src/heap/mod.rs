@@ -65,6 +65,46 @@ impl Heap {
         (key, object)
     }
 
+    pub fn create_multi_ref_array(&mut self, component: Descriptor, counts: Vec<i32>) -> u32 {
+        let count = counts[0];
+        if counts.len() == 1 {
+            return self.create_array(component, count);
+        }
+        let mut key: u32 = rand::random();
+        while self.objects.contains_key(&key) {
+            key = rand::random();
+        }
+        let key = key;
+
+        let inner_counts = counts.iter().skip(1).collect();
+
+        let mut ref_array: Vec<u32> = (0..count)
+            .map(|_| self.create_multi_ref_array(component, inner_counts))
+            .collect();
+
+        let array = Array::Ref(ref_array);
+
+        self.objects.insert(key, Rc::new(RefCell::new(Ref::Arr(array))));
+
+        key
+    }
+
+    pub fn create_ref_array(&mut self, count: i32) -> u32 {
+        let mut key: u32 = rand::random();
+        while self.objects.contains_key(&key) {
+            key = rand::random();
+        }
+        let key = key;
+
+        let count = count as usize;
+
+        let array = Array::Ref(vec![0; count]);
+
+        self.objects.insert(key, Rc::new(RefCell::new(Ref::Arr(array))));
+
+        key
+    }
+
     pub fn create_array(&mut self, component: Descriptor, count: i32) -> u32 {
         let mut key: u32 = rand::random();
         while self.objects.contains_key(&key) {
