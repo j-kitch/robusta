@@ -194,6 +194,8 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xB6 => invoke::invoke_virtual,
         0xB7 => invoke::invoke_special,
         0xB8 => invoke::invoke_static,
+        0xB9 => invoke::invoke_interface,
+        0xBA => invoke::invoke_dynamic,
         0xBB => class::new,
         0xBC => new_array,
         0xBD => new::ref_arr,

@@ -166,6 +166,24 @@ impl ClassLoader {
 
                     object::Const::Method(object::MethodRef { class: class_name, name, descriptor: MethodDescriptor::parse(&descriptor) })
                 }
+                const_pool::Const::InterfaceMethod(const_pool::InterfaceMethod { class_idx, name_and_type_idx }) => {
+                    let class = class_file.get_const(*class_idx).expect_class();
+                    let class_name = class_file.get_const(class.name_idx).expect_utf8();
+
+                    let name_and_type = class_file.get_const(*name_and_type_idx).expect_name_and_type();
+                    let name = class_file.get_const(name_and_type.name_idx).expect_utf8();
+                    let descriptor = class_file.get_const(name_and_type.descriptor_idx).expect_utf8();
+
+                    let class_name = class_name.utf8.clone();
+                    let name = name.utf8.clone();
+                    let descriptor = descriptor.utf8.clone();
+
+                    object::Const::InterfaceMethod(object::InterfaceMethodRef {
+                        class: class_name,
+                        name,
+                        descriptor: MethodDescriptor::parse(&descriptor),
+                    })
+                }
                 _ => {
                     continue;
                 }

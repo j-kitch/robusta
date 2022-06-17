@@ -82,6 +82,7 @@ impl<'a> Iterator for Iter<'a> {
 pub enum Const {
     Class(ClassRef),
     Method(MethodRef),
+    InterfaceMethod(InterfaceMethodRef),
     Field(FieldRef),
     Int(Integer),
     Float(Float),
@@ -129,6 +130,13 @@ pub struct FieldRef {
 
 #[derive(Clone, Debug)]
 pub struct MethodRef {
+    pub class: std::string::String,
+    pub name: std::string::String,
+    pub descriptor: MethodDescriptor,
+}
+
+#[derive(Clone, Debug)]
+pub struct InterfaceMethodRef {
     pub class: std::string::String,
     pub name: std::string::String,
     pub descriptor: MethodDescriptor,

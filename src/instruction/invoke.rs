@@ -7,6 +7,69 @@ use crate::thread::{Frame, Thread};
 use crate::thread::local_vars::LocalVars;
 use crate::thread::op_stack::OperandStack;
 
+pub fn invoke_interface(thread: &mut Thread) {
+    let mut runtime = thread.rt.borrow_mut();
+    let current = thread.frames.current_mut();
+    let idx = current.read_u16();
+    let method_const = match current.class.const_pool.get(&idx).unwrap() {
+        Const::InterfaceMethod(method) => method.clone(),
+        _ => panic!("err"),
+    };
+
+    let interface_class = runtime.class_loader.load(&method_const.class).unwrap()
+        .unwrap_object_class().clone();
+    let uninit_parents = runtime.class_loader.uninit_parents(&interface_class.this_class);
+    if !uninit_parents.is_empty() && method_const.name.ne("<clinit>") {
+        current.pc -= 3;
+        thread.frames.push(shim::init_parents_frame(&uninit_parents));
+        return;
+    }
+
+    let _ = current.read_u8();
+    let zero = current.read_u8();
+    if zero != 0 {
+        panic!("expected zero byte in instruction");
+    }
+
+    let mut args = vec![];
+    for arg in method_const.descriptor.args.iter().rev() {
+        args.push(current.op_stack.pop_value(arg));
+    }
+    let object_ref = current.op_stack.pop_ref();
+    if object_ref == 0 {
+        panic!("objectref is null");
+    }
+    args.push(Value::Ref(object_ref));
+    args.reverse();
+
+    let obj = runtime.load_object(object_ref);
+    let obj = obj.as_ref();
+    let obj = obj.borrow_mut();
+    let method = obj.obj().class.find_method(&method_const.name, &method_const.descriptor).unwrap();
+
+    if method.native {
+        let func = runtime.native.find_method(&interface_class.this_class, &method.name, &method.descriptor);
+        let result = func(runtime.deref_mut(), args);
+        if method.descriptor.returns.is_some() {
+            current.op_stack.push(result.unwrap());
+        }
+    } else {
+        let mut frame = Frame {
+            pc: 0,
+            class: interface_class,
+            local_vars: LocalVars::new(method.max_locals),
+            op_stack: OperandStack::new(method.max_stack),
+            method,
+        };
+        let mut idx = 0;
+        for arg in args {
+            frame.local_vars.store_value(idx, arg);
+            idx += arg.length() as u16;
+        }
+        thread.frames.push(frame);
+    }
+}
+
 pub fn invoke_virtual(thread: &mut Thread) {
     invoke(thread, true)
 }
