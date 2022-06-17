@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::descriptor::Descriptor;
-use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, field, invoke, load, load_const, new, pop, push, push_const, returns, shift, single_op, store};
+use crate::instruction::{array_load, array_store, binary_op, class, compare, convert, dup, field, invoke, jump, load, load_const, new, pop, push, push_const, returns, shift, single_op, store};
 use crate::robusta::class::object::Const;
 use crate::thread::{Frame, Thread};
 
@@ -177,6 +177,10 @@ pub fn get_op(frame: &mut Frame, code: u8) -> Op {
         0xA5 => compare::if_ref_eq,
         0xA6 => compare::if_ref_ne,
         0xA7 => goto,
+        0xA8 => jump::subroutine,
+        0xA9 => jump::ret,
+        0xAA => jump::table_switch,
+        0xAB => jump::lookup_switch,
         0xAC => returns::int,
         0xAD => returns::long,
         0xAE => returns::float,

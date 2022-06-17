@@ -34,6 +34,10 @@ impl OperandStack {
         self.push_bytes(&op.to_be_bytes())
     }
 
+    pub fn push_return_address(&mut self, return_address: u32) {
+        self.push_bytes(&return_address.to_be_bytes())
+    }
+
     pub fn push_int(&mut self, op: i32) {
         self.push_bytes(&op.to_be_bytes())
     }

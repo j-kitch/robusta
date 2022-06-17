@@ -149,4 +149,13 @@ impl Frame {
         bytes[1] = self.read_u8();
         u16::from_be_bytes(bytes)
     }
+
+    pub fn read_i32(&mut self) -> i32 {
+        let mut bytes = [0; 4];
+        bytes[0] = self.read_u8();
+        bytes[1] = self.read_u8();
+        bytes[2] = self.read_u8();
+        bytes[3] = self.read_u8();
+        i32::from_be_bytes(bytes)
+    }
 }

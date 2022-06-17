@@ -75,6 +75,10 @@ impl LocalVars {
         u32::from_be_bytes(word)
     }
 
+    pub fn load_return_address(&self, idx: u16) -> u32 {
+        self.load_ref(idx)
+    }
+
     pub fn load_int(&self, idx: u16) -> i32 {
         let word = self.load_word(idx);
         i32::from_be_bytes(word)
