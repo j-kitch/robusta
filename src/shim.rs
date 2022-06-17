@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::descriptor::MethodDescriptor;
-use crate::robusta::class::object::{Class, Const, Method, MethodRef};
+use crate::robusta::class::object::{Class, Code, Const, Method, MethodRef};
 use crate::robusta::class_file::Version;
 use crate::thread::Frame;
 use crate::thread::local_vars::LocalVars;
@@ -13,25 +13,28 @@ pub fn init_parents_frame(parents: &[String]) -> Frame {
         name: "<invoke_clinit>".to_string(),
         descriptor: MethodDescriptor::parse("()V"),
         native: false,
-        max_stack: 0,
-        max_locals: 0,
-        code: vec![]
+        code: Some(Code {
+            code: vec![],
+            max_stack: 0,
+            max_locals: 0,
+            exception_table: vec![]
+        })
     };
 
     for (idx, _) in parents.iter().enumerate() {
-        method.code.push(0xCA);
+        method.code.as_mut().unwrap().code.push(0xCA);
 
         let idx = idx as u16 + 1;
         let idx_bytes = idx.to_be_bytes();
-        method.code.push(idx_bytes[0]);
-        method.code.push(idx_bytes[1]);
+        method.code.as_mut().unwrap().code.push(idx_bytes[0]);
+        method.code.as_mut().unwrap().code.push(idx_bytes[1]);
 
-        method.code.push(0xB8);
-        method.code.push(idx_bytes[0]);
-        method.code.push(idx_bytes[1]);
+        method.code.as_mut().unwrap().code.push(0xB8);
+        method.code.as_mut().unwrap().code.push(idx_bytes[0]);
+        method.code.as_mut().unwrap().code.push(idx_bytes[1]);
     }
 
-    method.code.push(0xB1);
+    method.code.as_mut().unwrap().code.push(0xB1);
 
     let method = Rc::new(method);
 

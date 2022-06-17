@@ -11,7 +11,7 @@ use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::heap::Value;
 use crate::robusta::class::Class;
 use crate::robusta::class::object;
-use crate::robusta::class::object::{Const, Field, MethodHandle};
+use crate::robusta::class::object::{Code, Const, Field, Handler, MethodHandle};
 use crate::robusta::class_file::{attribute, const_pool};
 use crate::robusta::class_file::{ClassFile, Reader};
 use crate::robusta::class_file::const_pool::Kind;
@@ -209,7 +209,6 @@ impl ClassLoader {
                             method_handle.method = Some(Rc::new(method.clone()));
                         }
                     }
-
                     Const::MethodHandle(method_handle)
                 }
                 _ => {
@@ -264,25 +263,45 @@ impl ClassLoader {
             let name = class_file.get_const(method.name_idx).expect_utf8();
             let descriptor = class_file.get_const(method.descriptor_idx).expect_utf8();
             let native = (method.access_flags & ACC_NATIVE) != 0;
-            let mut max_locals = 0;
-            let mut max_stack = 0;
-            let code = if native { vec![] } else {
+            let code = if native { None } else {
                 let code = method.attributes.iter()
                     .find_map(|attr| match attr {
                         attribute::Attribute::Code(code) => Some(code),
-                        _ => None
+                        _ => panic!("error")
                     }).unwrap();
-                max_locals = code.max_locals;
-                max_stack = code.max_stack;
-                code.code.clone()
+                let max_locals = code.max_locals;
+                let max_stack = code.max_stack;
+                let exception_table = code.exception_table.iter()
+                    .map(|handler| {
+                        let catch_type = if handler.catch_type == 0 {
+                            None
+                        } else {
+                            let class = match const_pool.get(&handler.catch_type).unwrap() {
+                                Const::Class(class) => class.name.clone(),
+                                _ => panic!("err")
+                            };
+                            Some(self.load(class.as_str()).unwrap())
+                        };
+                        Handler {
+                            start_pc: handler.start_pc,
+                            end_pc: handler.end_pc,
+                            handler_pc: handler.handler_pc,
+                            catch_type
+                        }
+                    })
+                    .collect();
+                Some(Code {
+                    code: code.code.clone(),
+                    max_stack,
+                    max_locals,
+                    exception_table,
+                })
             };
             Rc::new(object::Method {
                 name: name.utf8.clone(),
                 descriptor: MethodDescriptor::parse(descriptor.utf8.as_str()),
                 native,
-                max_locals,
-                max_stack,
-                code,
+                code
             })
         }).collect();
 

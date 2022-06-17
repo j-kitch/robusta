@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::robusta::class;
 use crate::robusta::class_file::const_pool::Kind;
 use crate::robusta::class_file::Version;
 
@@ -156,9 +157,23 @@ pub struct Method {
     pub name: std::string::String,
     pub descriptor: MethodDescriptor,
     pub native: bool,
+    pub code: Option<Code>,
+}
+
+#[derive(Debug)]
+pub struct Code {
+    pub code: Vec<u8>,
     pub max_stack: u16,
     pub max_locals: u16,
-    pub code: Vec<u8>,
+    pub exception_table: Vec<Handler>,
+}
+
+#[derive(Debug)]
+pub struct Handler {
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: Option<Rc<class::Class>>,
 }
 
 #[derive(Debug)]

@@ -18,3 +18,5 @@ pub mod returns;
 pub mod new;
 pub mod field;
 pub mod jump;
+pub mod throw;
+pub mod monitor;

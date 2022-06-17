@@ -5,6 +5,7 @@ use crate::descriptor::Descriptor;
 
 pub mod object;
 
+#[derive(Debug)]
 pub enum Primitive {
     Boolean,
     Byte,
@@ -16,6 +17,7 @@ pub enum Primitive {
     Double,
 }
 
+#[derive(Debug)]
 pub enum Class {
     Primitive(Primitive),
     Array { component: Rc<Class> },

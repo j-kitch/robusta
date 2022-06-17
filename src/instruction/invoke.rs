@@ -57,8 +57,8 @@ pub fn invoke_interface(thread: &mut Thread) {
         let mut frame = Frame {
             pc: 0,
             class: interface_class,
-            local_vars: LocalVars::new(method.max_locals),
-            op_stack: OperandStack::new(method.max_stack),
+            local_vars: LocalVars::new(method.as_ref().code.as_ref().unwrap().max_locals),
+            op_stack: OperandStack::new(method.as_ref().code.as_ref().unwrap().max_stack),
             method,
         };
         let mut idx = 0;
@@ -130,8 +130,8 @@ fn invoke(thread: &mut Thread, instance_ref: bool) {
         let mut frame = Frame {
             pc: 0,
             class,
-            local_vars: LocalVars::new(method.max_locals),
-            op_stack: OperandStack::new(method.max_stack),
+            local_vars: LocalVars::new(method.as_ref().code.as_ref().unwrap().max_locals),
+            op_stack: OperandStack::new(method.as_ref().code.as_ref().unwrap().max_stack),
             method,
         };
         let mut idx = 0;

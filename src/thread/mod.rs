@@ -72,8 +72,8 @@ impl Thread {
         let mut frame = Frame {
             pc: 0,
             class: class.clone(),
-            local_vars: LocalVars::new(method.max_locals.clone()),
-            op_stack: OperandStack::new(method.max_stack.clone()),
+            local_vars: LocalVars::new(method.as_ref().code.as_ref().unwrap().max_locals),
+            op_stack: OperandStack::new(method.code.as_ref().unwrap().max_stack),
             method,
         };
         let mut idx = 0;
@@ -123,13 +123,20 @@ impl Thread {
 }
 
 impl Frame {
+    fn code(&self) -> &Vec<u8> {
+        self.method.as_ref()
+            .code.as_ref()
+            .unwrap()
+            .code.as_ref()
+    }
+
     pub fn read_i8(&mut self) -> i8 {
         let bytes = [self.read_u8(); 1];
         i8::from_be_bytes(bytes)
     }
 
     pub fn read_u8(&mut self) -> u8 {
-        let u8 = self.method.code.get(self.pc as usize)
+        let u8 = self.code().get(self.pc as usize)
             .expect(format!("looking for more code in {}.{}{}", self.class.this_class.as_str(), self.method.name.as_str(), self.method.descriptor.descriptor()).as_str())
             .clone();
         self.pc += 1;
