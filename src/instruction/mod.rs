@@ -21,3 +21,4 @@ pub mod jump;
 pub mod throw;
 pub mod monitor;
 pub mod wide;
+pub mod goto;
