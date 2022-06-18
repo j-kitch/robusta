@@ -11,7 +11,7 @@
 - Proper strong, weak references
 - Use more sophisticated reference key allocation
 - Handling all data types
-- Rest of bytecode instructions
+- ~~Rest of bytecode instructions~~
 - Code structure?
 - Proper memory handling within Rust
 - Unit testing
