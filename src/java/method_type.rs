@@ -7,8 +7,10 @@ use crate::java::type_parser::TypeParser;
 /// [the JVM spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2).
 #[derive(Debug, PartialEq)]
 pub struct MethodType {
-    parameters: Vec<FieldType>,
-    returns: Option<FieldType>,
+    /// The `parameters` of the method.
+    pub parameters: Vec<FieldType>,
+    /// The return type of the method, `void` is represented by `None`.
+    pub returns: Option<FieldType>,
 }
 
 impl MethodType {

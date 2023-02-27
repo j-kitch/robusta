@@ -1,4 +1,4 @@
-use crate::java::ParseError;
+use crate::java::{Double, Float, Int, Long, ParseError, Reference, Value};
 use crate::java::type_parser::TypeParser;
 
 /// A representation of the type of a class, instance or local variable.
@@ -39,8 +39,18 @@ impl FieldType {
         parser.expect_end()?;
         Ok(field_type)
     }
-}
 
+    /// Create the zero value for the given field.
+    pub fn zero_value(&self) -> Value {
+        match self {
+            FieldType::Long => Value::Long(Long(0)),
+            FieldType::Float => Value::Float(Float(0.0)),
+            FieldType::Double => Value::Double(Double(0.0)),
+            FieldType::Reference(_) | FieldType::Array(_) => Value::Reference(Reference(0)),
+            _ => Value::Int(Int(0)),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -81,5 +91,19 @@ mod tests {
         assert!(FieldType::from_descriptor("[").is_err());
         assert!(FieldType::from_descriptor("[L").is_err());
         assert!(FieldType::from_descriptor("[L;").is_err());
+    }
+
+    #[test]
+    fn zero_value() {
+        assert_eq!(FieldType::Boolean.zero_value(), Value::Int(Int(0)));
+        assert_eq!(FieldType::Byte.zero_value(), Value::Int(Int(0)));
+        assert_eq!(FieldType::Char.zero_value(), Value::Int(Int(0)));
+        assert_eq!(FieldType::Short.zero_value(), Value::Int(Int(0)));
+        assert_eq!(FieldType::Int.zero_value(), Value::Int(Int(0)));
+        assert_eq!(FieldType::Long.zero_value(), Value::Long(Long(0)));
+        assert_eq!(FieldType::Float.zero_value(), Value::Float(Float(0.0)));
+        assert_eq!(FieldType::Double.zero_value(), Value::Double(Double(0.0)));
+        assert_eq!(FieldType::Reference("abc".to_string()).zero_value(), Value::Reference(Reference(0)));
+        assert_eq!(FieldType::Array(Box::new(FieldType::Byte)).zero_value(), Value::Reference(Reference(0)));
     }
 }
