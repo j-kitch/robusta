@@ -1,27 +1,31 @@
-use std::{io, mem};
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::io::{BufReader, ErrorKind, Read};
+use std::io::{BufReader, Read};
+use std::path::Path;
 
 use crate::class_file;
 use crate::class_file::{ClassFile, Code, Const, Method};
 
+/// A class file loader parses a class file structure from a file.
 pub struct Loader {
+    /// The underlying source of the class file.
     reader: BufReader<File>,
+    /// A buffer for reading primitive values 1-8 bytes long.
     buffer: [u8; 8],
 }
 
+/// An error occurring during class file loading.
 #[derive(Debug)]
 pub struct LoadError(Box<dyn Error>);
 
 impl LoadError {
-    pub fn new<E: Error + Into<Box<dyn Error>>>(error: E) -> Self {
+    fn new<E: Error + Into<Box<dyn Error>>>(error: E) -> Self {
         LoadError(error.into())
     }
 
-    pub fn simple(error: &str) -> Self {
+    fn simple(error: &str) -> Self {
         LoadError(Box::new(SimpleError(error.to_string())))
     }
 }
@@ -35,7 +39,7 @@ impl Display for LoadError {
 impl Error for LoadError {}
 
 #[derive(Debug)]
-pub struct SimpleError(String);
+struct SimpleError(String);
 
 impl Display for SimpleError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -46,7 +50,15 @@ impl Display for SimpleError {
 impl Error for SimpleError {}
 
 impl Loader {
-    fn read_class_file(&mut self) -> Result<ClassFile, LoadError> {
+    pub fn new(path: &Path) -> Result<Self, LoadError> {
+        let reader = BufReader::new(File::open(path).map_err(LoadError::new)?);
+        Ok(Loader { reader, buffer: [0; 8] })
+    }
+
+    /// Read the full class file from the underlying source.
+    ///
+    /// This method fully consumes the loaders contents.
+    pub fn read_class_file(&mut self) -> Result<ClassFile, LoadError> {
         let magic = self.read_u32()?;
         if magic != class_file::MAGIC {
             return Err(LoadError::simple("Expected magic constant"));
@@ -210,8 +222,7 @@ mod tests {
 
     #[test]
     fn empty_main() {
-        let mut reader = BufReader::new(File::open(Path::new("./classes/EmptyMain.class")).unwrap());
-        let mut loader = Loader { reader, buffer: [0; 8] };
+        let mut loader = Loader::new(Path::new("./classes/EmptyMain.class")).unwrap();
 
         let class_file = loader.read_class_file().unwrap();
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-mod loader;
+pub mod loader;
 
 /// The expected value at the start of a class file, identifying the class file format.
 const MAGIC: u32 = 0xCAFE_BABE;
