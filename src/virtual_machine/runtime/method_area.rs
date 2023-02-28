@@ -7,8 +7,7 @@ use crate::class_file::Code;
 use crate::class_file::loader::Loader;
 use crate::collections::AppendOnlyMap;
 use crate::java::MethodType;
-
-mod const_pool;
+use crate::virtual_machine::runtime::const_pool::ConstPool;
 
 pub struct MethodArea {
     map: Arc<AppendOnlyMap<String, Class>>,
@@ -80,13 +79,13 @@ mod tests {
         let class = method_area.insert("EmptyMain");
 
         assert_eq!(class.const_pool.len(), 3);
-        assert_eq!(class.const_pool.get_method(1), Arc::new(const_pool::Method {
+        assert_eq!(class.const_pool.get_method(1), Arc::new(crate::virtual_machine::runtime::const_pool::Method {
             name: "<init>".to_string(),
             descriptor: MethodType::from_descriptor("()V").unwrap(),
-            class: Arc::new(const_pool::Class { name: "java.lang.Object".to_string() }),
+            class: Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "java.lang.Object".to_string() }),
         }));
-        assert_eq!(class.const_pool.get_class(2), Arc::new(const_pool::Class { name: "java.lang.Object".to_string() }));
-        assert_eq!(class.const_pool.get_class(7), Arc::new(const_pool::Class { name: "EmptyMain".to_string() }));
+        assert_eq!(class.const_pool.get_class(2), Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "java.lang.Object".to_string() }));
+        assert_eq!(class.const_pool.get_class(7), Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "EmptyMain".to_string() }));
 
         assert_eq!(class.methods.len(), 2);
         assert_eq!(class.methods.get(0).unwrap(), &Arc::new(Method {

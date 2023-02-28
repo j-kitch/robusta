@@ -1,14 +1,13 @@
 use std::ops::Deref;
 use std::sync::Arc;
-use crate::runtime;
 
-use crate::runtime::{ConstPool, Method, MethodArea};
+use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
 
 /// A single Java thread in the running program.
 pub struct Thread {
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
-    method_area: Arc<MethodArea>,
+    runtime: Arc<Runtime>,
     /// The java virtual machine stack in this thread.
     ///
     /// The last frame on the stack is the currently active frame of the thread.
@@ -16,9 +15,9 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(method_area: Arc<MethodArea>, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
+    pub fn new(runtime: Arc<Runtime>, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
         Thread {
-            method_area,
+            runtime,
             stack: vec![
                 Frame {
                     const_pool: pool,
