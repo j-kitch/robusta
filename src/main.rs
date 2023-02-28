@@ -1,18 +1,23 @@
-use std::sync::mpsc::sync_channel;
-use std::sync::{Mutex, RwLock};
+use std::env::args;
+
+use robusta::java::MethodType;
+use robusta::runtime::MethodArea;
+use robusta::thread::Thread;
 
 fn main() {
-    let (sender, receiver) = sync_channel(1);
-    sender.send(1).unwrap();
+    let main_class = args().skip(1).next().unwrap();
 
-    let mut x = RwLock::new(10);
+    let method_area = MethodArea::new();
 
-    let r = x.read().unwrap();
-    let w = x.write().unwrap();
+    let class = method_area.insert(&main_class);
 
-    let y = Mutex::new(20);
+    let mut main_thread = Thread::new(
+        method_area.clone(),
+        class.const_pool.clone(),
+        class.methods.iter()
+            .find(|m| m.name.eq("main") && m.descriptor.eq(&MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap()))
+            .unwrap()
+            .clone());
 
-    let res = receiver.recv().unwrap();
-
-    println!("Res is {}", res);
+    main_thread.run();
 }

@@ -1,11 +1,12 @@
 use std::path::Path;
 use std::sync::Arc;
 
+pub use const_pool::{Const, ConstPool};
+
 use crate::class_file::Code;
 use crate::class_file::loader::Loader;
 use crate::collections::AppendOnlyMap;
 use crate::java::MethodType;
-use crate::runtime::const_pool::ConstPool;
 
 mod const_pool;
 
@@ -14,7 +15,13 @@ pub struct MethodArea {
 }
 
 impl MethodArea {
-    pub fn insert(self: Arc<Self>, name: &str) -> Class {
+    pub fn new() -> Arc<Self> {
+        Arc::new(MethodArea {
+            map: AppendOnlyMap::new()
+        })
+    }
+
+    pub fn insert(self: &Arc<Self>, name: &str) -> Class {
         let recv = self.map.clone().get_or_insert(name.to_string(), || {
             let p = Path::new("./classes")
                 .join(name.to_string())
@@ -51,15 +58,15 @@ impl MethodArea {
 
 #[derive(Clone)]
 pub struct Class {
-    const_pool: Arc<ConstPool>,
-    methods: Vec<Arc<Method>>,
+    pub const_pool: Arc<ConstPool>,
+    pub methods: Vec<Arc<Method>>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Method {
-    name: String,
-    descriptor: MethodType,
-    code: Option<Code>,
+    pub name: String,
+    pub descriptor: MethodType,
+    pub code: Option<Code>,
 }
 
 #[cfg(test)]
