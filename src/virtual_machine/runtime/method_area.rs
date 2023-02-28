@@ -1,8 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
 
-pub use const_pool::{Const, ConstPool};
-
 use crate::class_file::Code;
 use crate::class_file::loader::Loader;
 use crate::collections::AppendOnlyMap;
@@ -52,6 +50,18 @@ impl MethodArea {
             }
         });
         recv.recv().unwrap()
+    }
+
+    pub fn find_const_pool(self: &Arc<Self>, class_name: &str) -> Arc<ConstPool> {
+        self.map.get(class_name.to_string()).unwrap().const_pool.clone()
+    }
+
+    pub fn find_method(self: &Arc<Self>, class: &str, method: &str, descriptor: &MethodType) -> Arc<Method> {
+        self.map.get(class.to_string())
+            .unwrap().methods.iter()
+            .find(|m| m.name.eq(method) && m.descriptor.eq(descriptor))
+            .unwrap()
+            .clone()
     }
 }
 

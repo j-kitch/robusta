@@ -20,13 +20,12 @@ impl VirtualMachine {
     pub fn new(main_class: &str) -> Self {
         let runtime = Runtime::new();
 
-        let main_class = runtime.method_area.insert(main_class);
-        let main_method = main_class.methods.iter()
-            .find(|m| m.name.eq("main") && m.descriptor.eq(&MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap()))
-            .unwrap()
-            .clone();
+        runtime.method_area.insert(main_class);
 
-        let main_thread = Thread::new(runtime.clone(), main_class.const_pool, main_method);
+        let pool = runtime.method_area.find_const_pool(main_class);
+        let method = runtime.method_area.find_method(main_class, "main", &MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap());
+
+        let main_thread = Thread::new(runtime.clone(), pool, method);
 
         VirtualMachine { runtime, main_thread }
     }

@@ -10,6 +10,11 @@ pub struct AppendOnlyMap<K: Eq + Hash + Clone, V: Clone> {
 impl<K: Eq + Hash + Clone, V: Clone> AppendOnlyMap<K, V> {
     pub fn new() -> Arc<Self> { Arc::new(AppendOnlyMap { map: RwLock::new(HashMap::new()) }) }
 
+    pub fn get(self: &Arc<Self>, key: K) -> Option<V> {
+        let map = self.map.read().unwrap();
+        map.get(&key).and_then(|state| state.lock().unwrap().value.clone())
+    }
+
     pub fn get_or_insert<F>(self: Arc<Self>, key: K, factory: F) -> Receiver<V> where F: FnOnce() -> V {
         let (send, recv) = sync_channel(1);
 
