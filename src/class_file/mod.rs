@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+mod loader;
+
 /// The expected value at the start of a class file, identifying the class file format.
 const MAGIC: u32 = 0xCAFE_BABE;
 
@@ -35,6 +37,7 @@ pub struct ClassFile {
     pub methods: Vec<Method>,
 }
 
+#[derive(Debug, PartialEq)]
 /// An entry in the Class File's constant pool.
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4).
@@ -72,6 +75,15 @@ pub enum Const {
     },
 }
 
+impl Const {
+    fn size(&self) -> u16 {
+        match self {
+            _ => 1
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 /// The `method_info` struct of a Class File.
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6).
@@ -88,6 +100,7 @@ pub struct Method {
     pub code: Option<Code>,
 }
 
+#[derive(Debug, PartialEq)]
 /// The Code attribute for a Method.
 pub struct Code {
     /// The max size of the frame's stack.
