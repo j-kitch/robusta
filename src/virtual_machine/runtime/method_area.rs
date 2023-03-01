@@ -1,7 +1,10 @@
+use std::collections::HashSet;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::sync::mpsc::{sync_channel, SyncSender};
+use std::thread;
 
-use crate::class_file::{AccessFlagStatic, Code};
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::class_file::loader::Loader;
 use crate::collection::AppendMap;
 use crate::java::{FieldType, MethodType};
@@ -10,12 +13,15 @@ use crate::virtual_machine::runtime::heap::Heap;
 
 pub struct MethodArea {
     map: Arc<AppendMap<String, Class>>,
+    /// TODO: Potentially could do with an append set?
+    initialized: Arc<AppendMap<String, ()>>,
 }
 
 impl MethodArea {
     pub fn new() -> Arc<Self> {
         Arc::new(MethodArea {
-            map: AppendMap::new()
+            map: AppendMap::new(),
+            initialized: AppendMap::new(),
         })
     }
 
@@ -30,7 +36,7 @@ impl MethodArea {
 
             let fields: Vec<Arc<Field>> = class_file.fields.into_iter()
                 .map(|f| {
-                    let is_static = (AccessFlagStatic & f.access_flags) != 0;
+                    let is_static = (ACCESS_FLAG_STATIC & f.access_flags) != 0;
                     let name = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&f.name).unwrap() {
                         String::from_utf8(bytes.clone()).unwrap()
                     } else {
@@ -43,17 +49,26 @@ impl MethodArea {
                         panic!()
                     };
 
-                    Arc::new(Field { is_static, name, descriptor,  })
+                    Arc::new(Field { is_static, name, descriptor })
                 })
                 .collect();
 
+            let mut is_initialised = true;
+
             let methods: Vec<Arc<Method>> = class_file.methods.into_iter()
                 .map(|m| {
+                    let is_static = (m.access_flags & ACCESS_FLAG_STATIC) != 0;
+                    let is_native = (m.access_flags & ACCESS_FLAG_NATIVE) != 0;
+
                     let name = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&m.name).unwrap() {
                         String::from_utf8(bytes.clone()).unwrap()
                     } else {
                         panic!()
                     };
+
+                    if name.eq("<clinit>") {
+                        is_initialised = false;
+                    }
 
                     let descriptor = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&m.descriptor).unwrap() {
                         MethodType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
@@ -61,8 +76,12 @@ impl MethodArea {
                         panic!()
                     };
 
-                    Arc::new(Method { name, descriptor, code: m.code })
+                    Arc::new(Method { is_static, is_native, name, descriptor, code: m.code })
                 }).collect();
+
+            if is_initialised {
+                self.initialized.get_or_insert(&name.to_string(), || ());
+            }
 
             Class {
                 const_pool: Arc::new(pool),
@@ -70,6 +89,10 @@ impl MethodArea {
                 methods,
             }
         })
+    }
+
+    pub fn try_start_initialize(self: &Arc<Self>, class_name: &str) -> Option<SyncSender<()>> {
+        self.initialized.begin_insert(&class_name.to_string())
     }
 
     pub fn find_const_pool(self: &Arc<Self>, class_name: &str) -> Arc<ConstPool> {
@@ -101,6 +124,8 @@ pub struct Field {
 
 #[derive(Debug, PartialEq)]
 pub struct Method {
+    pub is_static: bool,
+    pub is_native: bool,
     pub name: String,
     pub descriptor: MethodType,
     pub code: Option<Code>,
@@ -113,7 +138,7 @@ mod tests {
     #[test]
     fn empty_main() {
         let heap = Heap::new();
-        let method_area = Arc::new(MethodArea { map: AppendMap::new() });
+        let method_area = Arc::new(MethodArea { map: AppendMap::new(), initialized: AppendMap::new() });
 
         let class = method_area.insert(heap, "EmptyMain");
 
@@ -128,6 +153,8 @@ mod tests {
 
         assert_eq!(class.methods.len(), 2);
         assert_eq!(class.methods.get(0).unwrap(), &Arc::new(Method {
+            is_native: false,
+            is_static: false,
             name: "<init>".to_string(),
             descriptor: MethodType::from_descriptor("()V").unwrap(),
             code: Some(Code {
@@ -137,6 +164,8 @@ mod tests {
             }),
         }));
         assert_eq!(class.methods.get(1).unwrap(), &Arc::new(Method {
+            is_static: true,
+            is_native: false,
             name: "main".to_string(),
             descriptor: MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap(),
             code: Some(Code {

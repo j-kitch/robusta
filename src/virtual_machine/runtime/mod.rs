@@ -13,19 +13,22 @@ mod const_pool;
 mod heap;
 
 pub use const_pool::Const;
+use crate::virtual_machine::native::NativeMethods;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools
 /// and the heap.
 pub struct Runtime {
     pub method_area: Arc<MethodArea>,
     pub heap: Arc<Heap>,
+    pub native: NativeMethods,
 }
 
 impl Runtime {
     pub fn new() -> Arc<Self> {
         Arc::new(Runtime {
             method_area: MethodArea::new(),
-            heap: Heap::new()
+            heap: Heap::new(),
+            native: NativeMethods::new(),
         })
     }
 }

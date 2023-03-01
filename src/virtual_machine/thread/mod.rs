@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{Int, Value};
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
-use crate::virtual_machine::thread::instruction::{astore_n, iload_n, istore_n, load_constant, r#return};
+use crate::virtual_machine::thread::instruction::{astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
 
 mod instruction;
 
@@ -61,6 +61,7 @@ impl Thread {
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
             0xB1 => r#return(self),
+            0xB8 => invoke_static(self),
             _ => panic!("not implemented opcode {:0x?}", opcode)
         }
     }
@@ -76,6 +77,15 @@ pub struct Frame {
     local_vars: LocalVars,
     /// The program counter within the current method.
     pc: usize,
+}
+
+impl Frame {
+    pub fn read_u16(&mut self) -> u16 {
+        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc+2];
+        let u16 = u16::from_be_bytes(bytes.try_into().unwrap());
+        self.pc += 2;
+        u16
+    }
 }
 
 /// An operand stack is used to push and pop temporary results in a frame.

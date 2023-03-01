@@ -9,6 +9,7 @@ use crate::virtual_machine::thread::Thread;
 
 mod runtime;
 mod thread;
+mod native;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 pub struct VirtualMachine {

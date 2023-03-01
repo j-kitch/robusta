@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::mpsc::{sync_channel, SyncSender};
+use std::thread::spawn;
 
 /// The `AppendMap` is a concurrent, thread safe map that doesn't allow removal, or updating
 /// a value in the map.  It is intended to be *"appended"*, allowing thread safe concurrent access
@@ -13,11 +14,11 @@ use std::sync::mpsc::{sync_channel, SyncSender};
 ///
 /// This breaks the default behaviour of maps like `HashMap` where `insert` shares the same mutable
 /// reference as all mutable references to the map's values.
-pub struct AppendMap<K: Eq + Hash + Clone, V: Clone> {
+pub struct AppendMap<K: Eq + Hash + Clone + Send + Sync + 'static, V: Clone + Send + Sync + 'static> {
     map: RwLock<HashMap<K, Mutex<State<V>>>>,
 }
 
-impl<K: Eq + Hash + Clone, V: Clone> AppendMap<K, V> {
+impl<K: Eq + Hash + Clone + Send + Sync + 'static, V: Clone + Send + Sync + 'static> AppendMap<K, V> {
     pub fn new() -> Arc<Self> { Arc::new(AppendMap { map: RwLock::new(HashMap::new()) }) }
 
     pub fn get(self: &Arc<Self>, key: &K) -> Option<Arc<V>> {
@@ -34,6 +35,25 @@ impl<K: Eq + Hash + Clone, V: Clone> AppendMap<K, V> {
             self.set_value(key, value);
         }
         self.wait_for_value(key)
+    }
+
+    /// On some occasions, we want to have full control to supply a result ourselves,
+    /// this method allows the consumer to register that they will insert, and allow them
+    /// to send the value later.
+    pub fn begin_insert(self: &Arc<Self>, key: &K) -> Option<SyncSender<V>> {
+        let is_new_state = self.try_insert_state(key);
+        let key2 = key.clone();
+        if is_new_state {
+            let (sender, receiver) = sync_channel(1);
+            let handle = self.clone();
+            spawn(move || {
+                let value = receiver.recv().unwrap();
+                handle.set_value(&key2, value);
+            });
+            Some(sender)
+        } else {
+            None
+        }
     }
 
     fn wait_for_value(self: &Arc<Self>, key: &K) -> Arc<V> {

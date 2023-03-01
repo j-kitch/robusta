@@ -6,7 +6,8 @@ pub mod loader;
 const MAGIC: u32 = 0xCAFE_BABE;
 
 /// Static access flag.
-pub const AccessFlagStatic: u16 = 0x0008;
+pub const ACCESS_FLAG_STATIC: u16 = 0x0008;
+pub const ACCESS_FLAG_NATIVE: u16 = 0x0100;
 
 /// The binary representation of a class file.
 ///
