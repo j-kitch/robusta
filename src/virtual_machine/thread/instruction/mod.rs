@@ -1,4 +1,4 @@
-use crate::java::Value;
+use crate::java::{CategoryOne, Value};
 use crate::virtual_machine::runtime::Const;
 use crate::virtual_machine::thread::Thread;
 
@@ -21,6 +21,21 @@ pub fn load_constant(thread: &mut Thread) {
         }
         _ => panic!("unsupported operation")
     }
+}
+
+/// astore_<n>
+///
+/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.astore_n).
+pub fn astore_n(thread: &mut Thread, n: u16) {
+    let mut cur_frame = thread.stack.last_mut().unwrap();
+
+    let cat1 = match cur_frame.operand_stack.pop() {
+        Value::Reference(reference) => CategoryOne { reference },
+        Value::ReturnAddress(return_address) => CategoryOne { return_address },
+        _ => panic!("unsupported operation")
+    };
+
+    cur_frame.local_vars.store_cat1(n, cat1);
 }
 
 /// Instruction `return`
