@@ -64,6 +64,17 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
     cur_frame.operand_stack.push(Value::Int(int));
 }
 
+/// aload_<n>
+///
+/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.aload_n).
+pub fn aload_n(thread: &mut Thread, n: u16) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let reference = cur_frame.local_vars.load_ref(n);
+
+    cur_frame.operand_stack.push(Value::Reference(reference));
+}
+
 /// Instruction `return`
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.return).

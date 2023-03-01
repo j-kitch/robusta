@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::java::{Int, Value};
+use crate::java::{Int, Reference, Value};
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
-use crate::virtual_machine::thread::instruction::{astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
+use crate::virtual_machine::thread::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
 
 mod instruction;
 
@@ -52,6 +52,10 @@ impl Thread {
             0x1B => iload_n(self, 1),
             0x1C => iload_n(self, 2),
             0x1D => iload_n(self, 3),
+            0x2A => aload_n(self, 0),
+            0x2B => aload_n(self, 1),
+            0x2C => aload_n(self, 2),
+            0x2D => aload_n(self, 3),
             0x3B => istore_n(self, 0),
             0x3C => istore_n(self, 1),
             0x3D => istore_n(self, 2),
@@ -131,6 +135,14 @@ impl LocalVars {
         match self.map.get(&index).unwrap() {
             Value::Int(int) => int.clone(),
             _ => panic!("expected to load int")
+        }
+    }
+
+    /// Load a ref from the local vars.
+    pub fn load_ref(&mut self, index: u16) -> Reference {
+        match self.map.get(&index).unwrap() {
+            Value::Reference(reference) => reference.clone(),
+            _ => panic!("expected to load reference")
         }
     }
 }
