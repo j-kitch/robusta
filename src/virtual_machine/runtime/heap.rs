@@ -1,8 +1,6 @@
-use std::cell::Ref;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-
-use crate::java::{Double, Float, Int, Long, Reference, Value};
+use crate::java::{Reference, Value};
 
 pub struct Heap {
     values: RwLock<HashMap<Reference, HeapValue>>,
@@ -47,10 +45,13 @@ impl Heap {
 
         values.insert(arr_ref, HeapValue::Array(Arc::new(Array::Char(bytes))));
 
+        let chars_field = Arc::new(Field { value: Value::Reference(Reference(0)) });
+        chars_field.set_value(Value::Reference(arr_ref));
+
         let obj_ref = Reference(values.len() as u32);
         let obj = HeapValue::Object(Arc::new(Object {
             class_name: "java.lang.String".to_string(),
-            fields: vec![Arc::new(Field { value: Value::Reference(arr_ref) })],
+            fields: vec![chars_field],
         }));
 
         values.insert(obj_ref, obj);
@@ -67,15 +68,7 @@ pub enum HeapValue {
 
 /// An array represented in the heap is one of the vectors defined in the enum.
 pub enum Array {
-    Boolean(Vec<i8>),
-    Byte(Vec<i8>),
     Char(Vec<u16>),
-    Short(Vec<i16>),
-    Int(Vec<Int>),
-    Long(Vec<Long>),
-    Float(Vec<Float>),
-    Double(Vec<Double>),
-    Reference(Vec<Reference>),
 }
 
 /// An object represented in the heap is a reference to the class file and the field values.

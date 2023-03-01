@@ -118,24 +118,6 @@ impl ConstPool {
         ConstPool { pool }
     }
 
-    pub fn len(&self) -> usize {
-        self.pool.len()
-    }
-
-    pub fn get_class(&self, idx: u16) -> Arc<Class> {
-        match self.pool.get(&idx).unwrap() {
-            Const::Class(class) => class.clone(),
-            _ => panic!()
-        }
-    }
-
-    pub fn get_field(&self, idx: u16) -> Arc<Field> {
-        match self.pool.get(&idx).unwrap() {
-            Const::Field(field) => field.clone(),
-            _ => panic!()
-        }
-    }
-
     pub fn get_method(&self, idx: u16) -> Arc<Method> {
         match self.pool.get(&idx).unwrap() {
             Const::Method(method) => method.clone(),

@@ -69,7 +69,6 @@ fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<V
     let chars_arr = runtime.heap.load_array(chars_ref);
     let chars_arr = match chars_arr.as_ref() {
         Array::Char(chars) => chars.clone(),
-        _ => panic!("unexpected")
     };
 
     let string = String::from_utf16(&chars_arr).unwrap();

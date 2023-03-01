@@ -1,8 +1,6 @@
-use std::collections::HashSet;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{sync_channel, SyncSender};
-use std::thread;
+use std::sync::Arc;
+use std::sync::mpsc::SyncSender;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::class_file::loader::Loader;
