@@ -142,6 +142,10 @@ impl ConstPool {
             _ => panic!()
         }
     }
+
+    pub fn get_const(&self, idx: u16) -> &Const {
+        self.pool.get(&idx).unwrap()
+    }
 }
 
 /// A single constant in a constant pool.

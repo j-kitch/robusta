@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
+use crate::virtual_machine::thread::instruction::{load_constant, r#return};
+
+mod instruction;
 
 /// A single Java thread in the running program.
 pub struct Thread {
@@ -40,10 +43,9 @@ impl Thread {
         curr_frame.pc += 1;
 
         match opcode {
-            0xB1 => {
-                self.stack.pop();
-            }
-            _ => panic!("not implemented opcode {:?}", opcode)
+            0x12 => load_constant(self),
+            0xB1 => r#return(self),
+            _ => panic!("not implemented opcode {:0x?}", opcode)
         }
     }
 }
