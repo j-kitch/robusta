@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::java::{CategoryOne, Value};
+use crate::java::{CategoryOne, Int, Value};
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
-use crate::virtual_machine::thread::instruction::{astore_n, istore_n, load_constant, r#return};
+use crate::virtual_machine::thread::instruction::{astore_n, iload_n, istore_n, load_constant, r#return};
 
 mod instruction;
 
@@ -48,6 +48,10 @@ impl Thread {
 
         match opcode {
             0x12 => load_constant(self),
+            0x1A => iload_n(self, 0),
+            0x1B => iload_n(self, 1),
+            0x1C => iload_n(self, 2),
+            0x1D => iload_n(self, 3),
             0x3B => istore_n(self, 0),
             0x3C => istore_n(self, 1),
             0x3D => istore_n(self, 2),
@@ -107,9 +111,16 @@ impl LocalVars {
         LocalVars { map: HashMap::new() }
     }
 
-    /// Store a value of category 1 (not a long or double) at the given position.
-    pub fn store_cat1(&mut self, index: u16, value: CategoryOne) {
-        let value = unsafe { value.int };
-        self.map.insert(index, Value::Int(value));
+    /// Store a value in the local vars.
+    pub fn store_value(&mut self, index: u16, value: Value) {
+        self.map.insert(index, value);
+    }
+
+    /// Load an int from the local vars.
+    pub fn load_int(&mut self, index: u16) -> Int {
+        match self.map.get(&index).unwrap() {
+            Value::Int(int) => int.clone(),
+            _ => panic!("expected to load int")
+        }
     }
 }

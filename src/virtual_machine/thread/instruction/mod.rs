@@ -29,13 +29,13 @@ pub fn load_constant(thread: &mut Thread) {
 pub fn astore_n(thread: &mut Thread, n: u16) {
     let mut cur_frame = thread.stack.last_mut().unwrap();
 
-    let cat1 = match cur_frame.operand_stack.pop() {
-        Value::Reference(reference) => CategoryOne { reference },
-        Value::ReturnAddress(return_address) => CategoryOne { return_address },
-        _ => panic!("unsupported operation")
-    };
+    let value = cur_frame.operand_stack.pop();
+    match &value {
+        Value::Reference(_) | Value::ReturnAddress(_) => {},
+        _ => panic!("Expected a reference or return address")
+    }
 
-    cur_frame.local_vars.store_cat1(n, cat1);
+    cur_frame.local_vars.store_value(n, value);
 }
 
 /// istore_<n>
@@ -44,12 +44,23 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
 pub fn istore_n(thread: &mut Thread, n: u16) {
     let mut cur_frame = thread.stack.last_mut().unwrap();
 
-    let cat1 = match cur_frame.operand_stack.pop() {
-        Value::Int(int) => CategoryOne { int },
+    let int = match cur_frame.operand_stack.pop() {
+        Value::Int(int) => int,
         _ => panic!("unsupported operation")
     };
 
-    cur_frame.local_vars.store_cat1(n, cat1);
+    cur_frame.local_vars.store_value(n, Value::Int(int));
+}
+
+/// iload_<n>
+///
+/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.iload_n).
+pub fn iload_n(thread: &mut Thread, n: u16) {
+    let mut cur_frame = thread.stack.last_mut().unwrap();
+
+    let int = cur_frame.local_vars.load_int(n);
+
+    cur_frame.operand_stack.push(Value::Int(int));
 }
 
 /// Instruction `return`
