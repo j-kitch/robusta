@@ -125,7 +125,7 @@ pub fn invoke_static(thread: &mut Thread) {
     if method.is_native {
         let func = thread.runtime.native.find(class_name.as_str(), method.name.as_str(), &method.descriptor).unwrap();
 
-        let result = func(args);
+        let result = func(thread.runtime.clone(), args);
         if let Some(result) = result {
             cur_frame.operand_stack.push(result);
         }

@@ -1,3 +1,4 @@
+use std::cell::Ref;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -15,6 +16,23 @@ impl Heap {
             string_consts: RwLock::new(HashMap::new()),
         })
     }
+
+    pub fn load_object(self: &Arc<Self>, reference: Reference) -> Arc<Object> {
+        let values = self.values.read().unwrap();
+        match values.get(&reference).unwrap() {
+            HeapValue::Object(object) => object.clone(),
+            _ => panic!("expected object")
+        }
+    }
+
+    pub fn load_array(self: &Arc<Self>, reference: Reference) -> Arc<Array> {
+        let values = self.values.read().unwrap();
+        match values.get(&reference).unwrap() {
+            HeapValue::Array(array) => array.clone(),
+            _ => panic!("expected array")
+        }
+    }
+
 
     pub fn insert_string_const(self: &Arc<Self>, string_const: &str) -> Reference {
         let mut string_consts = self.string_consts.write().unwrap();
@@ -63,9 +81,9 @@ pub enum Array {
 /// An object represented in the heap is a reference to the class file and the field values.
 pub struct Object {
     /// The class name is the key into the class.
-    class_name: String,
+    pub class_name: String,
     /// The set of fields, in definition order from superclass to leaf class.
-    fields: Vec<Arc<Field>>,
+    pub fields: Vec<Arc<Field>>,
 }
 
 pub struct Field {

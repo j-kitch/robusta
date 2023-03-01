@@ -10,7 +10,7 @@ use crate::virtual_machine::runtime::heap::Heap;
 
 mod method_area;
 mod const_pool;
-mod heap;
+pub mod heap;
 
 pub use const_pool::Const;
 use crate::virtual_machine::native::NativeMethods;
