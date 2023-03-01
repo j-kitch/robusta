@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::java::{CategoryOne, Value};
 
+use crate::java::{CategoryOne, Value};
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
-use crate::virtual_machine::thread::instruction::{astore_n, load_constant, r#return};
+use crate::virtual_machine::thread::instruction::{astore_n, istore_n, load_constant, r#return};
 
 mod instruction;
 
@@ -28,9 +28,9 @@ impl Thread {
                     operand_stack: OperandStack::new(),
                     local_vars: LocalVars::new(),
                     method,
-                    pc: 0
+                    pc: 0,
                 }
-            ]
+            ],
         }
     }
 
@@ -48,6 +48,10 @@ impl Thread {
 
         match opcode {
             0x12 => load_constant(self),
+            0x3B => istore_n(self, 0),
+            0x3C => istore_n(self, 1),
+            0x3D => istore_n(self, 2),
+            0x3E => istore_n(self, 3),
             0x4B => astore_n(self, 0),
             0x4C => astore_n(self, 1),
             0x4D => astore_n(self, 2),
@@ -74,7 +78,7 @@ pub struct Frame {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2).
 pub struct OperandStack {
-    stack: Vec<Value>
+    stack: Vec<Value>,
 }
 
 impl OperandStack {
@@ -95,7 +99,7 @@ impl OperandStack {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.1).
 pub struct LocalVars {
-    map: HashMap<u16, Value>
+    map: HashMap<u16, Value>,
 }
 
 impl LocalVars {

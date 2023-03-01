@@ -38,6 +38,20 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
     cur_frame.local_vars.store_cat1(n, cat1);
 }
 
+/// istore_<n>
+///
+/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.istore_n).
+pub fn istore_n(thread: &mut Thread, n: u16) {
+    let mut cur_frame = thread.stack.last_mut().unwrap();
+
+    let cat1 = match cur_frame.operand_stack.pop() {
+        Value::Int(int) => CategoryOne { int },
+        _ => panic!("unsupported operation")
+    };
+
+    cur_frame.local_vars.store_cat1(n, cat1);
+}
+
 /// Instruction `return`
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.return).
