@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::class_file;
 use crate::class_file::ClassFile;
-use crate::java::{Int, MethodType, Reference};
+use crate::java::{FieldType, Int, MethodType, Reference};
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
@@ -33,6 +33,38 @@ impl ConstPool {
                     };
 
                     pool.insert(key, Const::Class(Arc::new(Class { name })));
+                }
+                class_file::Const::FieldRef { class, name_and_type } => {
+                    let class = pool.get(class).unwrap();
+                    if let Const::Class(class) = class {
+                        let name_and_type = file.const_pool.get(name_and_type).unwrap();
+                        if let class_file::Const::NameAndType { name, descriptor } = name_and_type {
+                            let name_const = file.const_pool.get(name).unwrap();
+                            let name = if let class_file::Const::Utf8 { bytes } = name_const {
+                                String::from_utf8(bytes.clone()).unwrap()
+                            } else {
+                                panic!("err")
+                            };
+                            let descriptor = file.const_pool.get(descriptor).unwrap();
+                            let descriptor = if let class_file::Const::Utf8 { bytes } = descriptor {
+                                FieldType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
+                            } else {
+                                panic!()
+                            };
+
+                            let field = Const::Field(Arc::new(Field {
+                                name,
+                                descriptor,
+                                class: class.clone(),
+                            }));
+
+                            pool.insert(key, field);
+                        } else {
+                            panic!()
+                        }
+                    } else {
+                        panic!()
+                    }
                 }
                 class_file::Const::MethodRef { class, name_and_type } => {
                     let class = pool.get(class).unwrap();
@@ -68,14 +100,13 @@ impl ConstPool {
                 }
                 class_file::Const::Integer { int } => {
                     pool.insert(key, Const::Integer(Arc::new(Integer { int: Int(*int) })));
-                },
+                }
                 class_file::Const::String { string } => {
                     let string = if let class_file::Const::Utf8 { bytes } = file.const_pool.get(string).unwrap() {
                         std::string::String::from_utf8(bytes.clone()).unwrap()
                     } else {
                         panic!()
                     };
-
                 }
                 _ => {}
             }
@@ -94,6 +125,13 @@ impl ConstPool {
         }
     }
 
+    pub fn get_field(&self, idx: u16) -> Arc<Field> {
+        match self.pool.get(&idx).unwrap() {
+            Const::Field(field) => field.clone(),
+            _ => panic!()
+        }
+    }
+
     pub fn get_method(&self, idx: u16) -> Arc<Method> {
         match self.pool.get(&idx).unwrap() {
             Const::Method(method) => method.clone(),
@@ -105,6 +143,7 @@ impl ConstPool {
 /// A single constant in a constant pool.
 pub enum Const {
     Class(Arc<Class>),
+    Field(Arc<Field>),
     Method(Arc<Method>),
     Integer(Arc<Integer>),
     String(Arc<StringConst>),
@@ -118,6 +157,17 @@ pub struct Class {
     ///
     /// For more information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.2.1).
     pub name: String,
+}
+
+#[derive(Debug, PartialEq)]
+/// A symbolic link to a field.
+pub struct Field {
+    /// The name of the field.
+    pub name: String,
+    /// The type of the field.
+    pub descriptor: FieldType,
+    /// The class that the field is defined on.
+    pub class: Arc<Class>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -166,5 +216,27 @@ mod tests {
         }));
         assert_eq!(const_pool.get_class(2), Arc::new(Class { name: "java.lang.Object".to_string() }));
         assert_eq!(const_pool.get_class(7), Arc::new(Class { name: "EmptyMain".to_string() }));
+    }
+
+    #[test]
+    fn java_lang_string() {
+        let mut loader = Loader::new(Path::new("./classes/java/lang/String.class")).unwrap();
+        let class_file = loader.read_class_file().unwrap();
+
+        let const_pool = ConstPool::new(&class_file);
+
+        assert_eq!(const_pool.len(), 4);
+        assert_eq!(const_pool.get_method(1), Arc::new(Method {
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+            class: Arc::new(Class { name: "java.lang.Object".to_string() }),
+        }));
+        assert_eq!(const_pool.get_field(2), Arc::new(Field {
+            class: Arc::new(Class { name: "java.lang.String".to_string() }),
+            name: "chars".to_string(),
+            descriptor: FieldType::from_descriptor("[C").unwrap(),
+        }));
+        assert_eq!(const_pool.get_class(3), Arc::new(Class { name: "java.lang.String".to_string() }));
+        assert_eq!(const_pool.get_class(4), Arc::new(Class { name: "java.lang.Object".to_string() }));
     }
 }
