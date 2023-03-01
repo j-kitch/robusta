@@ -33,6 +33,8 @@ pub struct ClassFile {
     /// or non-zero, a valid index into `const_pool`, which must be a `Const::Class` representing
     /// the super class of this type.
     pub super_class: u16,
+    /// The fields supplied in this class file.
+    pub fields: Vec<Field>,
     /// The methods supplied in the class file.
     pub methods: Vec<Method>,
 }
@@ -65,6 +67,15 @@ pub enum Const {
         /// constant.
         string: u16,
     },
+    /// The `CONSTANT_Fieldref_info` structure, used to represent a field on a class.
+    FieldRef {
+        /// An index into the `const_pool`, a valid `Const::Class`, representing the class
+        /// that this field is defined on.
+        class: u16,
+        /// An index into the `const_pool`, a valid `Const::NameAndType`, representing the
+        /// name and field signature of this method.
+        name_and_type: u16,
+    },
     /// The `CONSTANT_Methodref_info` structure, used to represent a method on a class.
     MethodRef {
         /// An index into the `const_pool`, a valid `Const::Class`, representing the class
@@ -92,6 +103,21 @@ impl Const {
             _ => 1
         }
     }
+}
+
+#[derive(Debug, PartialEq)]
+/// The `field_info` struct of a Class File.
+///
+/// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5).
+pub struct Field {
+    /// A mask of flags denoting access permissions to and properties of this field.
+    pub access_flags: u16,
+    /// A valid index into `const_pool`, which must be a valid `Const::Utf8` value, the name of
+    /// this field.
+    pub name: u16,
+    /// A valid index into `const_pool`, which must be a valid `Const::Utf8` value, the descriptor
+    /// of this field.
+    pub descriptor: u16,
 }
 
 #[derive(Debug, PartialEq)]

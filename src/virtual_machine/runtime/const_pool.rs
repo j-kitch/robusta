@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::class_file;
 use crate::class_file::ClassFile;
-use crate::java::MethodType;
+use crate::java::{Int, MethodType, Reference};
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
@@ -66,6 +66,17 @@ impl ConstPool {
                         panic!()
                     }
                 }
+                class_file::Const::Integer { int } => {
+                    pool.insert(key, Const::Integer(Arc::new(Integer { int: Int(*int) })));
+                },
+                class_file::Const::String { string } => {
+                    let string = if let class_file::Const::Utf8 { bytes } = file.const_pool.get(string).unwrap() {
+                        std::string::String::from_utf8(bytes.clone()).unwrap()
+                    } else {
+                        panic!()
+                    };
+
+                }
                 _ => {}
             }
         }
@@ -95,6 +106,8 @@ impl ConstPool {
 pub enum Const {
     Class(Arc<Class>),
     Method(Arc<Method>),
+    Integer(Arc<Integer>),
+    String(Arc<StringConst>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -116,6 +129,18 @@ pub struct Method {
     pub descriptor: MethodType,
     /// The class that the method is defined on.
     pub class: Arc<Class>,
+}
+
+#[derive(Debug, PartialEq)]
+/// A constant integer.
+pub struct Integer {
+    pub int: Int,
+}
+
+#[derive(Debug, PartialEq)]
+/// A reference to a constant string.
+pub struct StringConst {
+    pub string: Reference,
 }
 
 #[cfg(test)]

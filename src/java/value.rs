@@ -33,7 +33,7 @@ pub struct Reference(pub u32);
 /// this might be something we decide to change later.
 pub struct ReturnAddress(pub u32);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 /// A generic enumeration over the potential runtime values in the JVM.
 pub enum Value {
     Int(Int),

@@ -8,6 +8,7 @@ pub use method_area::{Method, MethodArea};
 
 mod method_area;
 mod const_pool;
+mod heap;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools
 /// and the heap.
