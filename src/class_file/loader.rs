@@ -117,8 +117,14 @@ impl Loader {
                 let bytes = self.read_length(length as usize)?;
                 Ok(Const::Utf8 { bytes })
             }
+            3 => Ok(Const::Integer {
+                int: self.read_i32()?,
+            }),
             7 => Ok(Const::Class {
                 name: self.read_u16()?
+            }),
+            8 => Ok(Const::String {
+                string: self.read_u16()?
             }),
             10 => Ok(Const::MethodRef {
                 class: self.read_u16()?,
@@ -128,7 +134,7 @@ impl Loader {
                 name: self.read_u16()?,
                 descriptor: self.read_u16()?,
             }),
-            _ => Err(LoadError::simple("Unknown tag"))
+            _ => Err(LoadError::simple(format!("unknown tag {}", tag).as_str()))
         }
     }
 
@@ -207,6 +213,14 @@ impl Loader {
         Ok(u32::from_be_bytes(*u32_slice))
     }
 
+    fn read_i32(&mut self) -> Result<i32, LoadError> {
+        self.reader.read_exact(&mut self.buffer[0..4])
+            .map_err(LoadError::new)?;
+        let i32_slice: &[u8; 4] = &self.buffer[0..4].try_into()
+            .map_err(LoadError::new)?;
+        Ok(i32::from_be_bytes(*i32_slice))
+    }
+
     fn read_length(&mut self, length: usize) -> Result<Vec<u8>, LoadError> {
         let mut vec = vec![0; length];
         self.reader.read_exact(&mut vec).map_err(LoadError::new)?;
@@ -265,6 +279,67 @@ mod tests {
                 max_stack: 0,
                 max_locals: 1,
                 code: vec![0xb1],
+            }),
+        });
+    }
+
+    #[test]
+    fn print_constants() {
+        let mut loader = Loader::new(Path::new("./classes/PrintConstants.class")).unwrap();
+
+        let class_file = loader.read_class_file().unwrap();
+
+        assert_eq!(class_file.minor_version, 0);
+        assert_eq!(class_file.major_version, 63);
+        assert_eq!(class_file.const_pool.len(), 26);
+        assert_eq!(class_file.const_pool.get(&1).unwrap(), &Const::MethodRef { class: 2, name_and_type: 3 });
+        assert_eq!(class_file.const_pool.get(&2).unwrap(), &Const::Class { name: 4 });
+        assert_eq!(class_file.const_pool.get(&3).unwrap(), &Const::NameAndType { name: 5, descriptor: 6 });
+        assert_eq!(class_file.const_pool.get(&4).unwrap(), &Const::Utf8 { bytes: "java/lang/Object".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&5).unwrap(), &Const::Utf8 { bytes: "<init>".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&6).unwrap(), &Const::Utf8 { bytes: "()V".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&7).unwrap(), &Const::String { string: 8 });
+        assert_eq!(class_file.const_pool.get(&8).unwrap(), &Const::Utf8 { bytes: "hello world".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&9).unwrap(), &Const::Integer { int: 542354326 });
+        assert_eq!(class_file.const_pool.get(&10).unwrap(), &Const::MethodRef { class: 11, name_and_type: 12 });
+        assert_eq!(class_file.const_pool.get(&11).unwrap(), &Const::Class { name: 13 });
+        assert_eq!(class_file.const_pool.get(&12).unwrap(), &Const::NameAndType { name: 14, descriptor: 15 });
+        assert_eq!(class_file.const_pool.get(&13).unwrap(), &Const::Utf8 { bytes: "Robusta".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&14).unwrap(), &Const::Utf8 { bytes: "println".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&15).unwrap(), &Const::Utf8 { bytes: "(I)V".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&16).unwrap(), &Const::MethodRef { class: 11, name_and_type: 17 });
+        assert_eq!(class_file.const_pool.get(&17).unwrap(), &Const::NameAndType { name: 14, descriptor: 18 });
+        assert_eq!(class_file.const_pool.get(&18).unwrap(), &Const::Utf8 { bytes: "(Ljava/lang/String;)V".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&19).unwrap(), &Const::Class { name: 20 });
+        assert_eq!(class_file.const_pool.get(&20).unwrap(), &Const::Utf8 { bytes: "PrintConstants".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&21).unwrap(), &Const::Utf8 { bytes: "Code".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&22).unwrap(), &Const::Utf8 { bytes: "LineNumberTable".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&23).unwrap(), &Const::Utf8 { bytes: "main".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&24).unwrap(), &Const::Utf8 { bytes: "([Ljava/lang/String;)V".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&25).unwrap(), &Const::Utf8 { bytes: "SourceFile".as_bytes().into() });
+        assert_eq!(class_file.const_pool.get(&26).unwrap(), &Const::Utf8 { bytes: "PrintConstants.java".as_bytes().into() });
+        assert_eq!(class_file.access_flags, 0x21);
+        assert_eq!(class_file.this_class, 19);
+        assert_eq!(class_file.super_class, 2);
+        assert_eq!(class_file.methods.len(), 2);
+        assert_eq!(class_file.methods.get(0).unwrap(), &Method {
+            access_flags: 0x1,
+            name: 5,
+            descriptor: 6,
+            code: Some(Code {
+                max_stack: 1,
+                max_locals: 1,
+                code: vec![0x2a, 0xb7, 0, 1, 0xb1],
+            }),
+        });
+        assert_eq!(class_file.methods.get(1).unwrap(), &Method {
+            access_flags: 0x9,
+            name: 23,
+            descriptor: 24,
+            code: Some(Code {
+                max_stack: 1,
+                max_locals: 3,
+                code: vec![0x12, 0x7, 0x4c, 0x12, 0x9, 0x3d, 0x1c, 0xb8, 0, 0xa, 0x2b, 0xb8, 0x0, 0x10, 0xb1],
             }),
         });
     }

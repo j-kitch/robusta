@@ -48,11 +48,22 @@ pub enum Const {
         /// [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.7).
         bytes: Vec<u8>
     },
+    /// The `CONSTANT_Integer_info` structure is used to represent an int constant.
+    Integer {
+        /// The int constant.
+        int: i32
+    },
     /// The `CONSTANT_Class_info` structure, used to represent a class or an interface.
     Class {
         /// An index into the `const_pool`, a valid `Const::Utf8`, representing a valid
         /// binary class or interface name encoded in internal form.
         name: u16
+    },
+    /// The `CONSTANT_String_info` structure, used to represent a string constant.
+    String {
+        /// An index into the `const_pool`, a valid `Const::Utf8`, representing a string
+        /// constant.
+        string: u16,
     },
     /// The `CONSTANT_Methodref_info` structure, used to represent a method on a class.
     MethodRef {
@@ -61,7 +72,7 @@ pub enum Const {
         class: u16,
         /// An index into the `const_pool`, a valid `Const::NameAndType`, representing the
         /// name and method signature of this method.
-        name_and_type: u16
+        name_and_type: u16,
     },
     /// The `CONSTANT_NameAndType_info` structure is used to represent a field or method,
     /// without indicating which class or interface type it belongs to:
@@ -71,7 +82,7 @@ pub enum Const {
         name: u16,
         /// An index into the `const_pool`, a valid `Const::Utf8`, representing a valid field or
         /// method type descriptor.
-        descriptor: u16
+        descriptor: u16,
     },
 }
 
