@@ -5,6 +5,9 @@ pub mod loader;
 /// The expected value at the start of a class file, identifying the class file format.
 const MAGIC: u32 = 0xCAFE_BABE;
 
+/// Static access flag.
+pub const AccessFlagStatic: u16 = 0x0008;
+
 /// The binary representation of a class file.
 ///
 /// For further reference, see [the JVM spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html).
@@ -101,6 +104,17 @@ impl Const {
     fn size(&self) -> u16 {
         match self {
             _ => 1
+        }
+    }
+
+    pub fn runtime_pool_order(&self) -> usize {
+        match self {
+            Const::Integer { int: _ } => 0,
+            Const::String { string: _ } => 1,
+            Const::Class { name: _ } => 2,
+            Const::FieldRef { class: _, name_and_type: _ } => 3,
+            Const::MethodRef { class: _, name_and_type: _ } => 4,
+            _ => 5
         }
     }
 }

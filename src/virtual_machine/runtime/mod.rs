@@ -6,6 +6,8 @@ use std::sync::Arc;
 pub use const_pool::ConstPool;
 pub use method_area::{Method, MethodArea};
 
+use crate::virtual_machine::runtime::heap::Heap;
+
 mod method_area;
 mod const_pool;
 mod heap;
@@ -14,12 +16,14 @@ mod heap;
 /// and the heap.
 pub struct Runtime {
     pub method_area: Arc<MethodArea>,
+    pub heap: Arc<Heap>,
 }
 
 impl Runtime {
     pub fn new() -> Arc<Self> {
         Arc::new(Runtime {
-            method_area: MethodArea::new()
+            method_area: MethodArea::new(),
+            heap: Heap::new()
         })
     }
 }

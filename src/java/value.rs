@@ -18,7 +18,7 @@ pub struct Float(pub f32);
 /// Double is the 64-bit floating-point number in the JVM.
 pub struct Double(pub f64);
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 /// Reference is the reference type in the JVM.  References are 32-bit unsigned integers
 /// that key into the heap.
 ///

@@ -144,7 +144,7 @@ impl Loader {
         }
     }
 
-    fn read_field(&mut self, const_pool: &HashMap<u16, Const>) -> Result<Field, LoadError> {
+    fn read_field(&mut self, _: &HashMap<u16, Const>) -> Result<Field, LoadError> {
         let mut field = Field {
             access_flags: 0,
             name: 0,

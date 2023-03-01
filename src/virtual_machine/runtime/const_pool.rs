@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::class_file;
 use crate::class_file::ClassFile;
 use crate::java::{FieldType, Int, MethodType, Reference};
+use crate::virtual_machine::runtime::heap::Heap;
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
@@ -12,15 +13,15 @@ pub struct ConstPool {
 }
 
 impl ConstPool {
-    pub fn new(file: &ClassFile) -> ConstPool {
-        let mut pool = HashMap::new();
+    pub fn new(file: &ClassFile, heap: Arc<Heap>) -> ConstPool {
+        let mut pool: HashMap<u16, Const> = HashMap::new();
 
         // Want to descend keys to ensure that when we visit references to other constants,
         // that those constants have already been added.
-        let mut keys: Vec<u16> = file.const_pool.keys().map(|key| *key).collect();
-        keys.sort_by(|a, b| a.cmp(b).reverse());
+        let mut keys: Vec<(&u16, &class_file::Const)> = file.const_pool.iter().collect();
+        keys.sort_by_key(|(_, c)| c.runtime_pool_order());
 
-        for key in keys {
+        for (key, _) in keys {
             let val = file.const_pool.get(&key).unwrap();
             match val {
                 class_file::Const::Class { name } => {
@@ -32,7 +33,7 @@ impl ConstPool {
                         panic!("err")
                     };
 
-                    pool.insert(key, Const::Class(Arc::new(Class { name })));
+                    pool.insert(*key, Const::Class(Arc::new(Class { name })));
                 }
                 class_file::Const::FieldRef { class, name_and_type } => {
                     let class = pool.get(class).unwrap();
@@ -58,7 +59,7 @@ impl ConstPool {
                                 class: class.clone(),
                             }));
 
-                            pool.insert(key, field);
+                            pool.insert(*key, field);
                         } else {
                             panic!()
                         }
@@ -90,7 +91,7 @@ impl ConstPool {
                                 class: class.clone(),
                             }));
 
-                            pool.insert(key, method);
+                            pool.insert(*key, method);
                         } else {
                             panic!()
                         }
@@ -99,14 +100,17 @@ impl ConstPool {
                     }
                 }
                 class_file::Const::Integer { int } => {
-                    pool.insert(key, Const::Integer(Arc::new(Integer { int: Int(*int) })));
+                    pool.insert(*key, Const::Integer(Arc::new(Integer { int: Int(*int) })));
                 }
                 class_file::Const::String { string } => {
                     let string = if let class_file::Const::Utf8 { bytes } = file.const_pool.get(string).unwrap() {
-                        std::string::String::from_utf8(bytes.clone()).unwrap()
+                        let str = String::from_utf8(bytes.clone()).unwrap();
+                        let str_ref = heap.insert_string_const(str.as_str());
+                        str_ref
                     } else {
                         panic!()
                     };
+                    pool.insert(*key, Const::String(Arc::new(StringConst { string })));
                 }
                 _ => {}
             }
@@ -203,10 +207,11 @@ mod tests {
 
     #[test]
     fn empty_main() {
+        let heap = Heap::new();
         let mut loader = Loader::new(Path::new("./classes/EmptyMain.class")).unwrap();
         let class_file = loader.read_class_file().unwrap();
 
-        let const_pool = ConstPool::new(&class_file);
+        let const_pool = ConstPool::new(&class_file, heap);
 
         assert_eq!(const_pool.len(), 3);
         assert_eq!(const_pool.get_method(1), Arc::new(Method {
@@ -220,10 +225,11 @@ mod tests {
 
     #[test]
     fn java_lang_string() {
+        let heap = Heap::new();
         let mut loader = Loader::new(Path::new("./classes/java/lang/String.class")).unwrap();
         let class_file = loader.read_class_file().unwrap();
 
-        let const_pool = ConstPool::new(&class_file);
+        let const_pool = ConstPool::new(&class_file, heap);
 
         assert_eq!(const_pool.len(), 4);
         assert_eq!(const_pool.get_method(1), Arc::new(Method {
