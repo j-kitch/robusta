@@ -1,3 +1,4 @@
+use crate::java::Value;
 use crate::virtual_machine::runtime::Const;
 use crate::virtual_machine::thread::Thread;
 
@@ -13,12 +14,12 @@ pub fn load_constant(thread: &mut Thread) {
 
     match cur_frame.const_pool.get_const(index) {
         Const::String(string) => {
-            panic!("string")
+            cur_frame.operand_stack.push(Value::Reference(string.string));
         }
         Const::Integer(int) => {
-            panic!("err")
+            cur_frame.operand_stack.push(Value::Int(int.int));
         }
-        _ => panic!("other err")
+        _ => panic!("unsupported operation")
     }
 }
 

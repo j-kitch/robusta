@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::java::Value;
 
 use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
 use crate::virtual_machine::thread::instruction::{load_constant, r#return};
@@ -23,6 +24,7 @@ impl Thread {
             stack: vec![
                 Frame {
                     const_pool: pool,
+                    operand_stack: OperandStack::new(),
                     method,
                     pc: 0
                 }
@@ -56,6 +58,24 @@ pub struct Frame {
     const_pool: Arc<ConstPool>,
     /// A reference to the related method.
     method: Arc<Method>,
+    operand_stack: OperandStack,
     /// The program counter within the current method.
     pc: usize,
+}
+
+/// An operand stack is used to push and pop temporary results in a frame.
+///
+/// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2).
+pub struct OperandStack {
+    stack: Vec<Value>
+}
+
+impl OperandStack {
+    pub fn new() -> Self {
+        OperandStack { stack: vec![] }
+    }
+
+    pub fn push(&mut self, value: Value) {
+        self.stack.push(value);
+    }
 }
