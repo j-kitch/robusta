@@ -3,23 +3,23 @@ use std::sync::Arc;
 
 use crate::class_file::Code;
 use crate::class_file::loader::Loader;
-use crate::collections::AppendOnlyMap;
+use crate::collection::AppendMap;
 use crate::java::MethodType;
 use crate::virtual_machine::runtime::const_pool::ConstPool;
 
 pub struct MethodArea {
-    map: Arc<AppendOnlyMap<String, Class>>,
+    map: Arc<AppendMap<String, Class>>,
 }
 
 impl MethodArea {
     pub fn new() -> Arc<Self> {
         Arc::new(MethodArea {
-            map: AppendOnlyMap::new()
+            map: AppendMap::new()
         })
     }
 
-    pub fn insert(self: &Arc<Self>, name: &str) -> Class {
-        let recv = self.map.clone().get_or_insert(name.to_string(), || {
+    pub fn insert(self: &Arc<Self>, name: &str) -> Arc<Class> {
+        self.map.clone().get_or_insert(&name.to_string(), || {
             let p = Path::new("./classes")
                 .join(name.to_string())
                 .with_extension("class");
@@ -48,16 +48,15 @@ impl MethodArea {
                 const_pool: Arc::new(pool),
                 methods,
             }
-        });
-        recv.recv().unwrap()
+        })
     }
 
     pub fn find_const_pool(self: &Arc<Self>, class_name: &str) -> Arc<ConstPool> {
-        self.map.get(class_name.to_string()).unwrap().const_pool.clone()
+        self.map.get(&class_name.to_string()).unwrap().const_pool.clone()
     }
 
     pub fn find_method(self: &Arc<Self>, class: &str, method: &str, descriptor: &MethodType) -> Arc<Method> {
-        self.map.get(class.to_string())
+        self.map.get(&class.to_string())
             .unwrap().methods.iter()
             .find(|m| m.name.eq(method) && m.descriptor.eq(descriptor))
             .unwrap()
@@ -84,7 +83,7 @@ mod tests {
 
     #[test]
     fn empty_main() {
-        let method_area = Arc::new(MethodArea { map: AppendOnlyMap::new() });
+        let method_area = Arc::new(MethodArea { map: AppendMap::new() });
 
         let class = method_area.insert("EmptyMain");
 
