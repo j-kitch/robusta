@@ -260,8 +260,6 @@ impl Loader {
 mod tests {
     use std::path::Path;
 
-    use crate::class_file::Const::FieldRef;
-
     use super::*;
 
     #[test]

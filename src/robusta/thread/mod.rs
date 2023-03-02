@@ -1,21 +1,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
 
 use crate::java::{Int, Reference, Value};
-use crate::virtual_machine::runtime::{ConstPool, Method, Runtime};
-use crate::virtual_machine::thread::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
-
-mod instruction;
+use crate::runtime::{ConstPool, Method, Runtime};
 
 /// A single Java thread in the running program.
 pub struct Thread {
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
-    runtime: Arc<Runtime>,
+    pub runtime: Arc<Runtime>,
     /// The java virtual machine stack in this thread.
     ///
     /// The last frame on the stack is the currently active frame of the thread.
-    stack: Vec<Frame>,
+    pub stack: Vec<Frame>,
 }
 
 impl Thread {
@@ -74,13 +72,13 @@ impl Thread {
 /// A single frame in a JVM thread's stack.
 pub struct Frame {
     /// A reference to the related class's constant pool.
-    const_pool: Arc<ConstPool>,
+    pub const_pool: Arc<ConstPool>,
     /// A reference to the related method.
-    method: Arc<Method>,
-    operand_stack: OperandStack,
-    local_vars: LocalVars,
+    pub method: Arc<Method>,
+    pub operand_stack: OperandStack,
+    pub local_vars: LocalVars,
     /// The program counter within the current method.
-    pc: usize,
+    pub pc: usize,
 }
 
 impl Frame {

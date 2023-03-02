@@ -6,14 +6,13 @@ use std::sync::Arc;
 pub use const_pool::ConstPool;
 pub use method_area::{Method, MethodArea};
 
-use crate::virtual_machine::runtime::heap::Heap;
-
 mod method_area;
 mod const_pool;
 pub mod heap;
 
 pub use const_pool::Const;
-use crate::virtual_machine::native::NativeMethods;
+use crate::native::NativeMethods;
+use crate::runtime::heap::Heap;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools
 /// and the heap.

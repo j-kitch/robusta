@@ -1,7 +1,7 @@
 use std::thread::spawn;
 use crate::java::{MethodType, Value};
-use crate::virtual_machine::runtime::Const;
-use crate::virtual_machine::thread::Thread;
+use crate::runtime::Const;
+use crate::thread::Thread;
 
 /// Instruction `ldc`
 ///

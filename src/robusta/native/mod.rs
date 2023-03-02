@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::java::{MethodType, Value};
-use crate::virtual_machine::runtime::heap::Array;
-use crate::virtual_machine::runtime::Runtime;
+use crate::runtime::heap::Array;
+use crate::runtime::Runtime;
 
 pub struct NativeMethods {
     methods: Vec<NativeMethod>

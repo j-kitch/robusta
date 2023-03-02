@@ -6,8 +6,8 @@ use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::class_file::loader::Loader;
 use crate::collection::AppendMap;
 use crate::java::{FieldType, MethodType};
-use crate::virtual_machine::runtime::const_pool::ConstPool;
-use crate::virtual_machine::runtime::heap::Heap;
+use crate::runtime::ConstPool;
+use crate::runtime::heap::Heap;
 
 pub struct MethodArea {
     map: Arc<AppendMap<String, Class>>,
@@ -131,6 +131,7 @@ pub struct Method {
 
 #[cfg(test)]
 mod tests {
+    use crate::runtime::Const;
     use super::*;
 
     #[test]
@@ -140,14 +141,14 @@ mod tests {
 
         let class = method_area.insert(heap, "EmptyMain");
 
-        assert_eq!(class.const_pool.len(), 3);
-        assert_eq!(class.const_pool.get_method(1), Arc::new(crate::virtual_machine::runtime::const_pool::Method {
+        assert_eq!(class.const_pool.as_ref().len(), 3);
+        assert_eq!(class.const_pool.get_method(1), Arc::new(crate::runtime::const_pool::Method {
             name: "<init>".to_string(),
             descriptor: MethodType::from_descriptor("()V").unwrap(),
-            class: Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "java.lang.Object".to_string() }),
+            class: Arc::new(crate::runtime::const_pool::Class { name: "java.lang.Object".to_string() }),
         }));
-        assert_eq!(class.const_pool.get_class(2), Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "java.lang.Object".to_string() }));
-        assert_eq!(class.const_pool.get_class(7), Arc::new(crate::virtual_machine::runtime::const_pool::Class { name: "EmptyMain".to_string() }));
+        assert_eq!(class.const_pool.get_const(2), &Const::Class(Arc::new(crate::runtime::const_pool::Class { name: "java.lang.Object".to_string() })));
+        assert_eq!(class.const_pool.get_const(7), &Const::Class(Arc::new(crate::runtime::const_pool::Class { name: "EmptyMain".to_string() })));
 
         assert_eq!(class.methods.len(), 2);
         assert_eq!(class.methods.get(0).unwrap(), &Arc::new(Method {

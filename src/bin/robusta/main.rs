@@ -1,6 +1,6 @@
 use std::env::args;
 
-use robusta::virtual_machine::VirtualMachine;
+use robusta::VirtualMachine;
 
 fn main() {
     let main_class = args().skip(1).next().unwrap();

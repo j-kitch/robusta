@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::class_file;
 use crate::class_file::ClassFile;
 use crate::java::{FieldType, Int, MethodType, Reference};
-use crate::virtual_machine::runtime::heap::Heap;
+use crate::runtime::heap::Heap;
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
@@ -128,8 +128,13 @@ impl ConstPool {
     pub fn get_const(&self, idx: u16) -> &Const {
         self.pool.get(&idx).unwrap()
     }
+
+    pub fn len(&self) -> usize {
+        self.pool.len()
+    }
 }
 
+#[derive(Debug, PartialEq)]
 /// A single constant in a constant pool.
 pub enum Const {
     Class(Arc<Class>),
@@ -205,8 +210,8 @@ mod tests {
             descriptor: MethodType::from_descriptor("()V").unwrap(),
             class: Arc::new(Class { name: "java.lang.Object".to_string() }),
         }));
-        assert_eq!(const_pool.get_class(2), Arc::new(Class { name: "java.lang.Object".to_string() }));
-        assert_eq!(const_pool.get_class(7), Arc::new(Class { name: "EmptyMain".to_string() }));
+        assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
+        assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
     }
 
     #[test]
@@ -223,12 +228,12 @@ mod tests {
             descriptor: MethodType::from_descriptor("()V").unwrap(),
             class: Arc::new(Class { name: "java.lang.Object".to_string() }),
         }));
-        assert_eq!(const_pool.get_field(2), Arc::new(Field {
+        assert_eq!(const_pool.get_const(2), &Const::Field(Arc::new(Field {
             class: Arc::new(Class { name: "java.lang.String".to_string() }),
             name: "chars".to_string(),
             descriptor: FieldType::from_descriptor("[C").unwrap(),
-        }));
-        assert_eq!(const_pool.get_class(3), Arc::new(Class { name: "java.lang.String".to_string() }));
-        assert_eq!(const_pool.get_class(4), Arc::new(Class { name: "java.lang.Object".to_string() }));
+        })));
+        assert_eq!(const_pool.get_const(3), &Const::Class(Arc::new(Class { name: "java.lang.String".to_string() })));
+        assert_eq!(const_pool.get_const(4), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
     }
 }

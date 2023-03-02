@@ -97,6 +97,11 @@ impl<K: Eq + Hash + Clone + Send + Sync + 'static, V: Clone + Send + Sync + 'sta
             sender.send(value.clone()).unwrap();
         }
     }
+
+    pub fn len(&self) -> usize {
+        let map = self.map.read().unwrap();
+        map.len()
+    }
 }
 
 /// The internal state against a given key, this value is used as we want all consumers of a
