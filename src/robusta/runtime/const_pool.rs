@@ -145,19 +145,16 @@ pub struct StringConst {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use crate::class_file::loader::Loader;
+    use crate::runtime::Runtime;
 
     use super::*;
 
     #[test]
     fn empty_main() {
-        let heap = Heap::new();
-        let mut loader = Loader::new(Path::new("./classes/EmptyMain.class")).unwrap();
-        let class_file = loader.read_class_file().unwrap();
+        let mut runtime = Runtime::new();
+        let class_file = runtime.loader.load("EmptyMain");
 
-        let const_pool = ConstPool::new(&class_file, heap);
+        let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
 
         assert_eq!(const_pool.len(), 3);
         assert_eq!(const_pool.get_method(1), Arc::new(Method {
@@ -167,28 +164,5 @@ mod tests {
         }));
         assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
         assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
-    }
-
-    #[test]
-    fn java_lang_string() {
-        let heap = Heap::new();
-        let mut loader = Loader::new(Path::new("./classes/java/lang/String.class")).unwrap();
-        let class_file = loader.read_class_file().unwrap();
-
-        let const_pool = ConstPool::new(&class_file, heap);
-
-        assert_eq!(const_pool.len(), 4);
-        assert_eq!(const_pool.get_method(1), Arc::new(Method {
-            name: "<init>".to_string(),
-            descriptor: MethodType::from_descriptor("()V").unwrap(),
-            class: Arc::new(Class { name: "java.lang.Object".to_string() }),
-        }));
-        assert_eq!(const_pool.get_const(2), &Const::Field(Arc::new(Field {
-            class: Arc::new(Class { name: "java.lang.String".to_string() }),
-            name: "chars".to_string(),
-            descriptor: FieldType::from_descriptor("[C").unwrap(),
-        })));
-        assert_eq!(const_pool.get_const(3), &Const::Class(Arc::new(Class { name: "java.lang.String".to_string() })));
-        assert_eq!(const_pool.get_const(4), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
     }
 }

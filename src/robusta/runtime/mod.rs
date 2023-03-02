@@ -1,6 +1,7 @@
 //! Module `runtime` defines the common runtime areas that are shared across all threads in a
 //! single instance of a running JVM.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub use const_pool::ConstPool;
@@ -11,6 +12,7 @@ mod const_pool;
 pub mod heap;
 
 pub use const_pool::Const;
+use crate::loader::Loader;
 use crate::native::NativeMethods;
 use crate::runtime::heap::Heap;
 
@@ -20,6 +22,7 @@ pub struct Runtime {
     pub method_area: Arc<MethodArea>,
     pub heap: Arc<Heap>,
     pub native: NativeMethods,
+    pub loader: Arc<Loader>,
 }
 
 impl Runtime {
@@ -28,6 +31,7 @@ impl Runtime {
             method_area: MethodArea::new(),
             heap: Heap::new(),
             native: NativeMethods::new(),
+            loader: Loader::new(vec![PathBuf::from("./classes")])
         })
     }
 }

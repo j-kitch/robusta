@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use crate::class_file::const_pool::Const;
 
-pub mod loader;
 pub mod const_pool;
 
 /// The expected value at the start of a class file, identifying the class file format.
-const MAGIC: u32 = 0xCAFE_BABE;
+pub const MAGIC: u32 = 0xCAFE_BABE;
 
 /// Static access flag.
 pub const ACCESS_FLAG_STATIC: u16 = 0x0008;

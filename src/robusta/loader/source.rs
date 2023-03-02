@@ -13,10 +13,10 @@ pub trait Source {
 }
 
 /// Create a new class loader source from the class path.
-pub fn new_source(class_path: Vec<PathBuf>) -> Box<dyn Source> {
+pub fn new_source(class_path: Vec<PathBuf>) -> Box<dyn Source + Sync + Send> {
     let mut sources = Vec::new();
     for path in class_path.iter() {
-        let source: Box<dyn Source> = if path.is_dir() {
+        let source: Box<dyn Source + Sync + Send> = if path.is_dir() {
             Box::new(DirSource { root_dir: path.to_path_buf() })
         } else {
             let file = File::open(path).unwrap();
@@ -30,7 +30,7 @@ pub fn new_source(class_path: Vec<PathBuf>) -> Box<dyn Source> {
 
 /// Create a composite source from other sources.
 struct CompositeSource {
-    sources: Vec<Box<dyn Source>>,
+    sources: Vec<Box<dyn Source + Sync + Send>>,
 }
 
 impl Source for CompositeSource {

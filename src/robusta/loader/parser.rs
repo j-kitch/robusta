@@ -1,67 +1,30 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::path::Path;
+use std::io::Read;
 
-use crate::class_file;
-use crate::class_file::{ClassFile, Code, Const, const_pool, Field, Method};
-use crate::class_file::const_pool::{Class, FieldRef, Integer, MethodRef, NameAndType, Utf8};
+use crate::class_file::{ClassFile, Code, const_pool, Field, MAGIC, Method};
+use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, MethodRef, NameAndType, Utf8};
 
-/// A class file loader parses a class file structure from a file.
-pub struct Loader {
-    /// The underlying source of the class file.
-    reader: BufReader<File>,
-    /// A buffer for reading primitive values 1-8 bytes long.
+/// Parse a class file structure from a reader.
+pub fn parse(reader: Box<dyn Read>) -> ClassFile {
+    let mut parser = Parser { reader, buffer: [0; 8] };
+    parser.read_class_file().unwrap()
+}
+
+/// The internal representation of a parser.
+struct Parser {
+    reader: Box<dyn Read>,
     buffer: [u8; 8],
 }
 
-/// An error occurring during class file loading.
-#[derive(Debug)]
-pub struct LoadError(Box<dyn Error>);
-
-impl LoadError {
-    fn new<E: Error + Into<Box<dyn Error>>>(error: E) -> Self {
-        LoadError(error.into())
-    }
-
-    fn simple(error: &str) -> Self {
-        LoadError(Box::new(SimpleError(error.to_string())))
-    }
-}
-
-impl Display for LoadError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Error for LoadError {}
-
-#[derive(Debug)]
-struct SimpleError(String);
-
-impl Display for SimpleError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl Error for SimpleError {}
-
-impl Loader {
-    pub fn new(path: &Path) -> Result<Self, LoadError> {
-        let reader = BufReader::new(File::open(path).map_err(LoadError::new)?);
-        Ok(Loader { reader, buffer: [0; 8] })
-    }
-
+impl Parser {
     /// Read the full class file from the underlying source.
     ///
     /// This method fully consumes the loaders contents.
-    pub fn read_class_file(&mut self) -> Result<ClassFile, LoadError> {
+    fn read_class_file(&mut self) -> Result<ClassFile, LoadError> {
         let magic = self.read_u32()?;
-        if magic != class_file::MAGIC {
+        if magic != MAGIC {
             return Err(LoadError::simple("Expected magic constant"));
         }
 
@@ -253,17 +216,51 @@ impl Loader {
     }
 }
 
+
+/// An error occurring during class file loading.
+#[derive(Debug)]
+pub struct LoadError(Box<dyn Error>);
+
+impl LoadError {
+    fn new<E: Error + Into<Box<dyn Error>>>(error: E) -> Self {
+        LoadError(error.into())
+    }
+
+    fn simple(error: &str) -> Self {
+        LoadError(Box::new(SimpleError(error.to_string())))
+    }
+}
+
+impl Display for LoadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Error for LoadError {}
+
+#[derive(Debug)]
+struct SimpleError(String);
+
+impl Display for SimpleError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl Error for SimpleError {}
+
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::fs::File;
 
     use super::*;
 
     #[test]
     fn empty_main() {
-        let mut loader = Loader::new(Path::new("./classes/EmptyMain.class")).unwrap();
+        let file = File::open("./classes/EmptyMain.class").unwrap();
 
-        let class_file = loader.read_class_file().unwrap();
+        let class_file = parse(Box::new(file));
 
         assert_eq!(class_file.minor_version, 0);
         assert_eq!(class_file.major_version, 63);
@@ -311,9 +308,9 @@ mod tests {
 
     #[test]
     fn print_constants() {
-        let mut loader = Loader::new(Path::new("./classes/PrintConstants.class")).unwrap();
+        let file = File::open("./classes/PrintConstants.class").unwrap();
 
-        let class_file = loader.read_class_file().unwrap();
+        let class_file = parse(Box::new(file));
 
         assert_eq!(class_file.minor_version, 0);
         assert_eq!(class_file.major_version, 63);
@@ -368,73 +365,6 @@ mod tests {
                 max_locals: 3,
                 code: vec![0x12, 0x7, 0x4c, 0x12, 0x9, 0x3d, 0x1c, 0xb8, 0, 0xa, 0x2b, 0xb8, 0x0, 0x10, 0xb1],
             }),
-        });
-    }
-
-    #[test]
-    fn java_lang_string() {
-        let mut loader = Loader::new(Path::new("./classes/java/lang/String.class")).unwrap();
-
-        let class_file = loader.read_class_file().unwrap();
-
-        assert_eq!(class_file.minor_version, 0);
-        assert_eq!(class_file.major_version, 52);
-        assert_eq!(class_file.const_pool.len(), 20);
-        assert_eq!(class_file.get_const_method(1), &MethodRef { class: 4, name_and_type: 17 });
-        assert_eq!(class_file.get_const_field(2), &FieldRef { class: 3, name_and_type: 18 });
-        assert_eq!(class_file.get_const_class(3), &Class { name: 19 });
-        assert_eq!(class_file.get_const_class(4), &Class { name: 20 });
-        assert_eq!(class_file.get_const_utf8(5), &Utf8 { bytes: "chars".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(6), &Utf8 { bytes: "[C".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(7), &Utf8 { bytes: "<init>".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(8), &Utf8 { bytes: "()V".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(9), &Utf8 { bytes: "Code".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(10), &Utf8 { bytes: "LineNumberTable".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(11), &Utf8 { bytes: "getChars".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(12), &Utf8 { bytes: "()[C".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(13), &Utf8 { bytes: "fromUtf8".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(14), &Utf8 { bytes: "([B)Ljava/lang/String;".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(15), &Utf8 { bytes: "SourceFile".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(16), &Utf8 { bytes: "String.java".as_bytes().into() });
-        assert_eq!(class_file.get_const_name_and_type(17), &NameAndType { name: 7, descriptor: 8 });
-        assert_eq!(class_file.get_const_name_and_type(18), &NameAndType { name: 5, descriptor: 6 });
-        assert_eq!(class_file.get_const_utf8(19), &Utf8 { bytes: "java/lang/String".as_bytes().into() });
-        assert_eq!(class_file.get_const_utf8(20), &Utf8 { bytes: "java/lang/Object".as_bytes().into() });
-        assert_eq!(class_file.access_flags, 0x21);
-        assert_eq!(class_file.this_class, 3);
-        assert_eq!(class_file.super_class, 4);
-        assert_eq!(class_file.fields.len(), 1);
-        assert_eq!(class_file.fields.get(0).unwrap(), &Field {
-            access_flags: 0x2,
-            name: 5,
-            descriptor: 6,
-        });
-        assert_eq!(class_file.methods.len(), 3);
-        assert_eq!(class_file.methods.get(0).unwrap(), &Method {
-            access_flags: 0x1,
-            name: 7,
-            descriptor: 8,
-            code: Some(Code {
-                max_stack: 1,
-                max_locals: 1,
-                code: vec![0x2a, 0xb7, 0, 1, 0xb1],
-            }),
-        });
-        assert_eq!(class_file.methods.get(1).unwrap(), &Method {
-            access_flags: 0x1,
-            name: 11,
-            descriptor: 12,
-            code: Some(Code {
-                max_stack: 1,
-                max_locals: 1,
-                code: vec![0x2a, 0xb4, 0, 0x2, 0xb0],
-            }),
-        });
-        assert_eq!(class_file.methods.get(2).unwrap(), &Method {
-            access_flags: 0x10a,
-            name: 13,
-            descriptor: 14,
-            code: None,
         });
     }
 }

@@ -93,7 +93,7 @@ pub fn invoke_static(thread: &mut Thread) {
     let class_name = method.class.name.clone();
 
     // Load the class if not loaded.
-    let class = thread.runtime.method_area.insert(thread.runtime.heap.clone(), method.class.name.as_str());
+    let class = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
 
     // Does the class need to be initialized by us?
     let send_init = thread.runtime.method_area.try_start_initialize(method.class.name.as_str());

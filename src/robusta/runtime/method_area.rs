@@ -1,13 +1,10 @@
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
-use crate::class_file::loader::Loader;
 use crate::collection::AppendMap;
 use crate::java::{FieldType, MethodType};
-use crate::runtime::ConstPool;
-use crate::runtime::heap::Heap;
+use crate::runtime::{ConstPool, Runtime};
 
 pub struct MethodArea {
     map: Arc<AppendMap<String, Class>>,
@@ -23,14 +20,10 @@ impl MethodArea {
         })
     }
 
-    pub fn insert(self: &Arc<Self>, heap: Arc<Heap>, name: &str) -> Arc<Class> {
+    pub fn insert(self: &Arc<Self>, runtime: Arc<Runtime>, name: &str) -> Arc<Class> {
         self.map.clone().get_or_insert(&name.to_string(), || {
-            let p = Path::new("./classes")
-                .join(name.to_string())
-                .with_extension("class");
-            let mut loader = Loader::new(&p).unwrap();
-            let class_file = loader.read_class_file().unwrap();
-            let pool = ConstPool::new(&class_file, heap);
+            let class_file = runtime.loader.load(name);
+            let pool = ConstPool::new(&class_file, runtime.heap.clone());
 
             let fields: Vec<Arc<Field>> = class_file.fields.iter()
                 .map(|f| {
@@ -120,10 +113,10 @@ mod tests {
 
     #[test]
     fn empty_main() {
-        let heap = Heap::new();
+        let runtime = Runtime::new();
         let method_area = Arc::new(MethodArea { map: AppendMap::new(), initialized: AppendMap::new() });
 
-        let class = method_area.insert(heap, "EmptyMain");
+        let class = method_area.insert(runtime, "EmptyMain");
 
         assert_eq!(class.const_pool.as_ref().len(), 3);
         assert_eq!(class.const_pool.get_method(1), Arc::new(crate::runtime::const_pool::Method {
