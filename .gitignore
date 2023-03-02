@@ -4,3 +4,6 @@
 
 # IntelliJ
 .idea
+
+# MdBook
+./src/doc/book/
