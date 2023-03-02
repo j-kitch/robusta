@@ -6,4 +6,4 @@
 .idea
 
 # MdBook
-./src/doc/book/
+src/doc/book/
