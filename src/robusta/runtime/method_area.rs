@@ -32,49 +32,32 @@ impl MethodArea {
             let class_file = loader.read_class_file().unwrap();
             let pool = ConstPool::new(&class_file, heap);
 
-            let fields: Vec<Arc<Field>> = class_file.fields.into_iter()
+            let fields: Vec<Arc<Field>> = class_file.fields.iter()
                 .map(|f| {
                     let is_static = (ACCESS_FLAG_STATIC & f.access_flags) != 0;
-                    let name = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&f.name).unwrap() {
-                        String::from_utf8(bytes.clone()).unwrap()
-                    } else {
-                        panic!()
-                    };
-
-                    let descriptor = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&f.descriptor).unwrap() {
-                        FieldType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
-                    } else {
-                        panic!()
-                    };
-
+                    let name = class_file.get_const_utf8(f.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = class_file.get_const_utf8(f.descriptor);
+                    let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
                     Arc::new(Field { is_static, name, descriptor })
-                })
-                .collect();
+                }).collect();
 
             let mut is_initialised = true;
 
-            let methods: Vec<Arc<Method>> = class_file.methods.into_iter()
+            let methods: Vec<Arc<Method>> = class_file.methods.iter()
                 .map(|m| {
                     let is_static = (m.access_flags & ACCESS_FLAG_STATIC) != 0;
                     let is_native = (m.access_flags & ACCESS_FLAG_NATIVE) != 0;
-
-                    let name = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&m.name).unwrap() {
-                        String::from_utf8(bytes.clone()).unwrap()
-                    } else {
-                        panic!()
-                    };
+                    let name = class_file.get_const_utf8(m.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
 
                     if name.eq("<clinit>") {
                         is_initialised = false;
                     }
 
-                    let descriptor = if let crate::class_file::Const::Utf8 { bytes } = class_file.const_pool.get(&m.descriptor).unwrap() {
-                        MethodType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
-                    } else {
-                        panic!()
-                    };
-
-                    Arc::new(Method { is_static, is_native, name, descriptor, code: m.code })
+                    let descriptor = class_file.get_const_utf8(m.descriptor);
+                    let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    Arc::new(Method { is_static, is_native, name, descriptor, code: m.code.clone() })
                 }).collect();
 
             if is_initialised {
@@ -132,6 +115,7 @@ pub struct Method {
 #[cfg(test)]
 mod tests {
     use crate::runtime::Const;
+
     use super::*;
 
     #[test]

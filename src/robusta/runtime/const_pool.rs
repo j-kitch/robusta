@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::class_file;
 use crate::class_file::ClassFile;
 use crate::java::{FieldType, Int, MethodType, Reference};
 use crate::runtime::heap::Heap;
+
+use crate::class_file::const_pool as cp;
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
@@ -15,112 +16,66 @@ pub struct ConstPool {
 impl ConstPool {
     pub fn new(file: &ClassFile, heap: Arc<Heap>) -> ConstPool {
         let mut pool: HashMap<u16, Const> = HashMap::new();
+        let mut pool = ConstPool { pool };
 
         // Want to descend keys to ensure that when we visit references to other constants,
         // that those constants have already been added.
-        let mut keys: Vec<(&u16, &class_file::Const)> = file.const_pool.iter().collect();
-        keys.sort_by_key(|(_, c)| c.runtime_pool_order());
+        let mut keys: Vec<(&u16, &cp::Const)> = file.const_pool.iter().collect();
+        keys.sort_by_key(|(_, con)| con.order());
 
         for (key, _) in keys {
             let val = file.const_pool.get(&key).unwrap();
             match val {
-                class_file::Const::Class { name } => {
-                    let name_const = file.const_pool.get(name).unwrap();
-                    let name = if let class_file::Const::Utf8 { bytes } = name_const {
-                        String::from_utf8(bytes.clone()).unwrap()
-                            .replace("/", ".")
-                    } else {
-                        panic!("err")
-                    };
-
-                    pool.insert(*key, Const::Class(Arc::new(Class { name })));
+                cp::Const::Integer(integer) => {
+                    pool.pool.insert(*key, Const::Integer(Arc::new(Integer { int: Int(integer.int )})));
                 }
-                class_file::Const::FieldRef { class, name_and_type } => {
-                    let class = pool.get(class).unwrap();
-                    if let Const::Class(class) = class {
-                        let name_and_type = file.const_pool.get(name_and_type).unwrap();
-                        if let class_file::Const::NameAndType { name, descriptor } = name_and_type {
-                            let name_const = file.const_pool.get(name).unwrap();
-                            let name = if let class_file::Const::Utf8 { bytes } = name_const {
-                                String::from_utf8(bytes.clone()).unwrap()
-                            } else {
-                                panic!("err")
-                            };
-                            let descriptor = file.const_pool.get(descriptor).unwrap();
-                            let descriptor = if let class_file::Const::Utf8 { bytes } = descriptor {
-                                FieldType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
-                            } else {
-                                panic!()
-                            };
-
-                            let field = Const::Field(Arc::new(Field {
-                                name,
-                                descriptor,
-                                class: class.clone(),
-                            }));
-
-                            pool.insert(*key, field);
-                        } else {
-                            panic!()
-                        }
-                    } else {
-                        panic!()
-                    }
+                cp::Const::String(string) => {
+                    let string = file.get_const_string(string.string);
+                    let string = file.get_const_utf8(string.string);
+                    let string = String::from_utf8(string.bytes.clone()).unwrap();
+                    let reference = heap.insert_string_const(string.as_str());
+                    pool.pool.insert(*key, Const::String(Arc::new(StringConst { string: reference })));
                 }
-                class_file::Const::MethodRef { class, name_and_type } => {
-                    let class = pool.get(class).unwrap();
-                    if let Const::Class(class) = class {
-                        let name_and_type = file.const_pool.get(name_and_type).unwrap();
-                        if let class_file::Const::NameAndType { name, descriptor } = name_and_type {
-                            let name_const = file.const_pool.get(name).unwrap();
-                            let name = if let class_file::Const::Utf8 { bytes } = name_const {
-                                String::from_utf8(bytes.clone()).unwrap()
-                            } else {
-                                panic!("err")
-                            };
-                            let descriptor = file.const_pool.get(descriptor).unwrap();
-                            let descriptor = if let class_file::Const::Utf8 { bytes } = descriptor {
-                                MethodType::from_descriptor(&String::from_utf8(bytes.clone()).unwrap()).unwrap()
-                            } else {
-                                panic!()
-                            };
-
-                            let method = Const::Method(Arc::new(Method {
-                                name,
-                                descriptor,
-                                class: class.clone(),
-                            }));
-
-                            pool.insert(*key, method);
-                        } else {
-                            panic!()
-                        }
-                    } else {
-                        panic!()
-                    }
+                cp::Const::Class(class) => {
+                    let name = file.get_const_utf8(class.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap()
+                        .replace("/", ".");
+                    pool.pool.insert(*key, Const::Class(Arc::new(Class { name })));
                 }
-                class_file::Const::Integer { int } => {
-                    pool.insert(*key, Const::Integer(Arc::new(Integer { int: Int(*int) })));
+                cp::Const::FieldRef(field) => {
+                    let class = pool.get_class(field.class).clone();
+                    let name_and_type = file.get_const_name_and_type(field.name_and_type);
+                    let name = file.get_const_utf8(name_and_type.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = file.get_const_utf8(name_and_type.descriptor);
+                    let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    pool.pool.insert(*key, Const::Field(Arc::new(Field { class, name, descriptor })));
                 }
-                class_file::Const::String { string } => {
-                    let string = if let class_file::Const::Utf8 { bytes } = file.const_pool.get(string).unwrap() {
-                        let str = String::from_utf8(bytes.clone()).unwrap();
-                        let str_ref = heap.insert_string_const(str.as_str());
-                        str_ref
-                    } else {
-                        panic!()
-                    };
-                    pool.insert(*key, Const::String(Arc::new(StringConst { string })));
+                cp::Const::MethodRef(method) => {
+                    let class = pool.get_class(method.class).clone();
+                    let name_and_type = file.get_const_name_and_type(method.name_and_type);
+                    let name = file.get_const_utf8(name_and_type.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = file.get_const_utf8(name_and_type.descriptor);
+                    let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    pool.pool.insert(*key, Const::Method(Arc::new(Method { class, name, descriptor })));
                 }
                 _ => {}
             }
         }
-        ConstPool { pool }
+        pool
     }
 
     pub fn get_method(&self, idx: u16) -> Arc<Method> {
         match self.pool.get(&idx).unwrap() {
             Const::Method(method) => method.clone(),
+            _ => panic!()
+        }
+    }
+
+    pub fn get_class(&self, idx: u16) -> Arc<Class> {
+        match self.pool.get(&idx).unwrap() {
+            Const::Class(class) => class.clone(),
             _ => panic!()
         }
     }
