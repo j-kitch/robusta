@@ -15,7 +15,7 @@ pub struct ConstPool {
 
 impl ConstPool {
     pub fn new(file: &ClassFile, heap: Arc<Heap>) -> ConstPool {
-        let mut pool: HashMap<u16, Const> = HashMap::new();
+        let pool: HashMap<u16, Const> = HashMap::new();
         let mut pool = ConstPool { pool };
 
         // Want to descend keys to ensure that when we visit references to other constants,

@@ -7,3 +7,6 @@
 
 # MdBook
 src/doc/book/
+
+# Java 8 Runtime
+classes/rt.jar
