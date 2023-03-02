@@ -8,6 +8,7 @@ pub mod native;
 pub mod runtime;
 pub mod thread;
 mod instruction;
+mod loader;
 
 use std::sync::Arc;
 use crate::java::MethodType;
