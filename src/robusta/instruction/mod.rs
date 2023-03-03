@@ -27,6 +27,7 @@ pub fn load_constant(thread: &mut Thread) {
             cur_frame.operand_stack.push(Value::Int(int.int));
         }
         Const::Class(class) => {
+            resolve_class(thread.runtime.clone(), class.name.as_str());
             let class_ref = thread.runtime.heap.get_class_object(class.name.as_str());
             cur_frame.operand_stack.push(Value::Reference(class_ref));
         }
