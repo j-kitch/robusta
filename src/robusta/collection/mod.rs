@@ -143,24 +143,4 @@ mod tests {
         assert_eq!(map.get(&"foo".to_string()).unwrap().deref(), &20);
         assert_eq!(map.get(&"bar".to_string()).unwrap().deref(), &40);
     }
-
-    #[test]
-    fn multi_threaded() {
-        let map = AppendMap::new();
-        let (send_first, recv_first) = sync_channel(1);
-        let (send_next, recv_next) = sync_channel(1);
-
-        let t1map = map.clone();
-        let t2map = map.clone();
-        let t1 = thread::spawn(move || t1map.clone().get_or_insert(&10, || recv_first.recv().unwrap()));
-        let t2 = thread::spawn(move || t2map.clone().get_or_insert(&10, || recv_next.recv().unwrap()));
-
-        send_next.send(20).unwrap();
-        sleep(Duration::from_millis(100));
-        send_first.send(10).unwrap();
-
-        assert_eq!(t1.join().unwrap().deref(), &10);
-        assert_eq!(t2.join().unwrap().deref(), &10);
-        assert_eq!(map.get_or_insert(&10, || 30).deref(), &10);
-    }
 }

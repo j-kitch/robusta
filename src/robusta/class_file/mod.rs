@@ -49,7 +49,7 @@ impl ClassFile {
         let con = self.const_pool.get(&index).unwrap();
         match con {
             Const::Utf8(utf8) => utf8,
-            _ => panic!()
+            other => panic!("Expected const utf8, got {:?}", other)
         }
     }
 

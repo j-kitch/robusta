@@ -4,7 +4,7 @@ use std::sync::mpsc::SyncSender;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::AppendMap;
 use crate::java::{FieldType, MethodType};
-use crate::loader::Source;
+use crate::loader::Loader;
 use crate::runtime::{ConstPool, Runtime};
 
 pub struct MethodArea {

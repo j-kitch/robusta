@@ -4,17 +4,17 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+pub use const_pool::Const;
 pub use const_pool::ConstPool;
 pub use method_area::{Method, MethodArea};
+
+use crate::loader::ClassFileLoader;
+use crate::native::NativeMethods;
+use crate::runtime::heap::Heap;
 
 mod method_area;
 mod const_pool;
 pub mod heap;
-
-pub use const_pool::Const;
-use crate::loader::{Sources};
-use crate::native::NativeMethods;
-use crate::runtime::heap::Heap;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools
 /// and the heap.
@@ -22,7 +22,7 @@ pub struct Runtime {
     pub method_area: Arc<MethodArea>,
     pub heap: Arc<Heap>,
     pub native: NativeMethods,
-    pub loader: Sources,
+    pub loader: ClassFileLoader,
 }
 
 impl Runtime {
@@ -31,7 +31,7 @@ impl Runtime {
             method_area: MethodArea::new(),
             heap: Heap::new(),
             native: NativeMethods::new(),
-            loader: Sources::new(vec![PathBuf::from("./classes")])
+            loader: ClassFileLoader::new(vec![PathBuf::from("./classes")]),
         })
     }
 }

@@ -144,6 +144,7 @@ pub struct StringConst {
 
 #[cfg(test)]
 mod tests {
+    use crate::loader::Loader;
     use crate::runtime::Runtime;
 
     use super::*;
@@ -151,17 +152,16 @@ mod tests {
     #[test]
     fn empty_main() {
         let mut runtime = Runtime::new();
-        // let class_file = runtime.loader.load("EmptyMain");
-        panic!();
-        // let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
-        //
-        // assert_eq!(const_pool.len(), 3);
-        // assert_eq!(const_pool.get_method(1), Arc::new(Method {
-        //     name: "<init>".to_string(),
-        //     descriptor: MethodType::from_descriptor("()V").unwrap(),
-        //     class: Arc::new(Class { name: "java.lang.Object".to_string() }),
-        // }));
-        // assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
-        // assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
+        let class_file = runtime.loader.find("EmptyMain").unwrap();
+        let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
+
+        assert_eq!(const_pool.len(), 3);
+        assert_eq!(const_pool.get_method(1), Arc::new(Method {
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+            class: Arc::new(Class { name: "java.lang.Object".to_string() }),
+        }));
+        assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
+        assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
     }
 }

@@ -250,122 +250,61 @@ impl Display for SimpleError {
 
 impl Error for SimpleError {}
 
-// #[cfg(test)]
-// mod tests {
-//     use std::fs::File;
-//     use std::os::unix::raw::blkcnt_t;
-//
-//     use super::*;
-//
-//     #[test]
-//     fn empty_main() {
-//         let file = File::open("./classes/EmptyMain.class").unwrap();
-//
-//         let class_file = parse(Box::new(file));
-//
-//         assert_eq!(class_file.minor_version, 0);
-//         assert_eq!(class_file.major_version, 63);
-//         assert_eq!(class_file.const_pool.len(), 14);
-//         assert_eq!(class_file.get_const_method(1), &MethodRef { class: 2, name_and_type: 3 });
-//         assert_eq!(class_file.get_const_class(2), &Class { name: 4 });
-//         assert_eq!(class_file.get_const_name_and_type(3), &NameAndType { name: 5, descriptor: 6 });
-//         assert_eq!(class_file.get_const_utf8(4), &Utf8 { bytes: "java/lang/Object".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(5), &Utf8 { bytes: "<init>".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(6), &Utf8 { bytes: "()V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_class(7), &Class { name: 8 });
-//         assert_eq!(class_file.get_const_utf8(8), &Utf8 { bytes: "EmptyMain".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(9), &Utf8 { bytes: "Code".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(10), &Utf8 { bytes: "LineNumberTable".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(11), &Utf8 { bytes: "main".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(12), &Utf8 { bytes: "([Ljava/lang/String;)V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(13), &Utf8 { bytes: "SourceFile".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(14), &Utf8 { bytes: "EmptyMain.java".as_bytes().into() });
-//         assert_eq!(class_file.access_flags, 0x21);
-//         assert_eq!(class_file.this_class, 7);
-//         assert_eq!(class_file.super_class, 2);
-//         assert_eq!(class_file.fields.len(), 0);
-//         assert_eq!(class_file.methods.len(), 2);
-//         assert_eq!(class_file.methods.get(0).unwrap(), &Method {
-//             access_flags: 0x1,
-//             name: 5,
-//             descriptor: 6,
-//             code: Some(Code {
-//                 max_stack: 1,
-//                 max_locals: 1,
-//                 code: vec![0x2a, 0xb7, 0, 1, 0xb1],
-//             }),
-//         });
-//         assert_eq!(class_file.methods.get(1).unwrap(), &Method {
-//             access_flags: 0x9,
-//             name: 11,
-//             descriptor: 12,
-//             code: Some(Code {
-//                 max_stack: 0,
-//                 max_locals: 1,
-//                 code: vec![0xb1],
-//             }),
-//         });
-//     }
-//
-//     #[test]
-//     fn print_constants() {
-//         let file = File::open("./classes/PrintConstants.class").unwrap();
-//
-//         let class_file = parse(Box::new(file));
-//
-//         assert_eq!(class_file.minor_version, 0);
-//         assert_eq!(class_file.major_version, 63);
-//         assert_eq!(class_file.const_pool.len(), 26);
-//         assert_eq!(class_file.get_const_method(1), &MethodRef { class: 2, name_and_type: 3 });
-//         assert_eq!(class_file.get_const_class(2), &Class { name: 4 });
-//         assert_eq!(class_file.get_const_name_and_type(3), &NameAndType { name: 5, descriptor: 6 });
-//         assert_eq!(class_file.get_const_utf8(4), &Utf8 { bytes: "java/lang/Object".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(5), &Utf8 { bytes: "<init>".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(6), &Utf8 { bytes: "()V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_string(7), &const_pool::String { string: 8 });
-//         assert_eq!(class_file.get_const_utf8(8), &Utf8 { bytes: "hello world".as_bytes().into() });
-//         assert_eq!(class_file.get_const_integer(9), &Integer { int: 542354326 });
-//         assert_eq!(class_file.get_const_method(10), &MethodRef { class: 11, name_and_type: 12 });
-//         assert_eq!(class_file.get_const_class(11), &Class { name: 13 });
-//         assert_eq!(class_file.get_const_name_and_type(12), &NameAndType { name: 14, descriptor: 15 });
-//         assert_eq!(class_file.get_const_utf8(13), &Utf8 { bytes: "Robusta".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(14), &Utf8 { bytes: "println".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(15), &Utf8 { bytes: "(I)V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_method(16), &MethodRef { class: 11, name_and_type: 17 });
-//         assert_eq!(class_file.get_const_name_and_type(17), &NameAndType { name: 14, descriptor: 18 });
-//         assert_eq!(class_file.get_const_utf8(18), &Utf8 { bytes: "(Ljava/lang/String;)V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_class(19), &Class { name: 20 });
-//         assert_eq!(class_file.get_const_utf8(20), &Utf8 { bytes: "PrintConstants".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(21), &Utf8 { bytes: "Code".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(22), &Utf8 { bytes: "LineNumberTable".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(23), &Utf8 { bytes: "main".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(24), &Utf8 { bytes: "([Ljava/lang/String;)V".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(25), &Utf8 { bytes: "SourceFile".as_bytes().into() });
-//         assert_eq!(class_file.get_const_utf8(26), &Utf8 { bytes: "PrintConstants.java".as_bytes().into() });
-//         assert_eq!(class_file.access_flags, 0x21);
-//         assert_eq!(class_file.this_class, 19);
-//         assert_eq!(class_file.super_class, 2);
-//         assert_eq!(class_file.fields.len(), 0);
-//         assert_eq!(class_file.methods.len(), 2);
-//         assert_eq!(class_file.methods.get(0).unwrap(), &Method {
-//             access_flags: 0x1,
-//             name: 5,
-//             descriptor: 6,
-//             code: Some(Code {
-//                 max_stack: 1,
-//                 max_locals: 1,
-//                 code: vec![0x2a, 0xb7, 0, 1, 0xb1],
-//             }),
-//         });
-//         assert_eq!(class_file.methods.get(1).unwrap(), &Method {
-//             access_flags: 0x9,
-//             name: 23,
-//             descriptor: 24,
-//             code: Some(Code {
-//                 max_stack: 1,
-//                 max_locals: 3,
-//                 code: vec![0x12, 0x7, 0x4c, 0x12, 0x9, 0x3d, 0x1c, 0xb8, 0, 0xa, 0x2b, 0xb8, 0x0, 0x10, 0xb1],
-//             }),
-//         });
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::os::unix::raw::blkcnt_t;
+
+    use super::*;
+
+    #[test]
+    fn empty_main() {
+        let mut file = File::open("./classes/EmptyMain.class").unwrap();
+
+        let class_file = parse(&mut file);
+
+        assert_eq!(class_file.minor_version, 0);
+        assert_eq!(class_file.major_version, 63);
+        assert_eq!(class_file.const_pool.len(), 14);
+        assert_eq!(class_file.get_const_method(1), &MethodRef { class: 2, name_and_type: 3 });
+        assert_eq!(class_file.get_const_class(2), &Class { name: 4 });
+        assert_eq!(class_file.get_const_name_and_type(3), &NameAndType { name: 5, descriptor: 6 });
+        assert_eq!(class_file.get_const_utf8(4), &Utf8 { bytes: "java/lang/Object".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(5), &Utf8 { bytes: "<init>".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(6), &Utf8 { bytes: "()V".as_bytes().into() });
+        assert_eq!(class_file.get_const_class(7), &Class { name: 8 });
+        assert_eq!(class_file.get_const_utf8(8), &Utf8 { bytes: "EmptyMain".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(9), &Utf8 { bytes: "Code".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(10), &Utf8 { bytes: "LineNumberTable".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(11), &Utf8 { bytes: "main".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(12), &Utf8 { bytes: "([Ljava/lang/String;)V".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(13), &Utf8 { bytes: "SourceFile".as_bytes().into() });
+        assert_eq!(class_file.get_const_utf8(14), &Utf8 { bytes: "EmptyMain.java".as_bytes().into() });
+        assert_eq!(class_file.access_flags, 0x21);
+        assert_eq!(class_file.this_class, 7);
+        assert_eq!(class_file.super_class, 2);
+        assert_eq!(class_file.fields.len(), 0);
+        assert_eq!(class_file.methods.len(), 2);
+        assert_eq!(class_file.methods.get(0).unwrap(), &Method {
+            access_flags: 0x1,
+            name: 5,
+            descriptor: 6,
+            code: Some(Code {
+                max_stack: 1,
+                max_locals: 1,
+                code: vec![0x2a, 0xb7, 0, 1, 0xb1],
+            }),
+        });
+        assert_eq!(class_file.methods.get(1).unwrap(), &Method {
+            access_flags: 0x9,
+            name: 11,
+            descriptor: 12,
+            code: Some(Code {
+                max_stack: 0,
+                max_locals: 1,
+                code: vec![0xb1],
+            }),
+        });
+    }
+
+}
