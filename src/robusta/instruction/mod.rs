@@ -9,6 +9,7 @@ mod new;
 pub mod dup;
 pub mod invoke;
 pub mod field;
+pub mod r#return;
 
 /// Instruction `ldc`
 ///

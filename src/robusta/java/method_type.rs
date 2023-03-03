@@ -48,6 +48,20 @@ impl MethodType {
         }
         result
     }
+
+    pub fn descriptor(&self) -> String {
+        let mut descriptor = "(".to_string();
+        for param in &self.parameters {
+            descriptor.push_str(&param.descriptor());
+        }
+        descriptor.push(')');
+        if let Some(value) = &self.returns {
+            descriptor.push_str(&value.descriptor());
+        } else {
+            descriptor.push('V');
+        }
+        descriptor
+    }
 }
 
 #[cfg(test)]

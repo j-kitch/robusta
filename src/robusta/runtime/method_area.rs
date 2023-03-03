@@ -162,7 +162,7 @@ impl Class {
 
             class = curr_class.super_class.clone();
         }
-        panic!("Could not find method {:?}", method)
+        panic!("Could not find method {}#{}{:?}",method.class.name.as_str() ,method.name.as_str(), method.descriptor.descriptor())
     }
 
     /// On an object in the heap, the fields are laid out in order from super parent to child,

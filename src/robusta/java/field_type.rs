@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::java::{Double, Float, Int, Long, ParseError, Reference, Value};
 use crate::java::type_parser::TypeParser;
 
@@ -59,6 +60,21 @@ impl FieldType {
             FieldType::Reference(class_name) => Some(class_name.clone()),
             FieldType::Array(field_type) => field_type.class_name(),
             _ => None
+        }
+    }
+
+    pub fn descriptor(&self) -> String {
+        match self {
+            FieldType::Boolean => "Z".to_string(),
+            FieldType::Byte => "B".to_string(),
+            FieldType::Char => "C".to_string(),
+            FieldType::Short => "S".to_string(),
+            FieldType::Int => "I".to_string(),
+            FieldType::Long => "J".to_string(),
+            FieldType::Float => "F".to_string(),
+            FieldType::Double => "D".to_string(),
+            FieldType::Reference(class_name) => format!("L{};", class_name.replace(".", "/")),
+            FieldType::Array(component) => format!("[{}", component.descriptor())
         }
     }
 }

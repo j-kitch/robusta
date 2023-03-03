@@ -4,6 +4,7 @@ use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, lo
 use crate::instruction::dup::dup;
 use crate::instruction::field::get_field;
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
+use crate::instruction::r#return::a_return;
 
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
@@ -86,6 +87,7 @@ impl Thread {
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
             0x59 => dup(self),
+            0xB0 => a_return(self),
             0xB1 => r#return(self),
             0xB4 => get_field(self),
             0xB6 => invoke_virtual(self),
