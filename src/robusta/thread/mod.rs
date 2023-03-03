@@ -4,6 +4,7 @@ use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, lo
 use crate::instruction::dup::dup;
 use crate::instruction::field::get_field;
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
+use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::a_return;
 
 use crate::java::{Int, Reference, Value};
@@ -69,6 +70,13 @@ impl Thread {
         curr_frame.pc += 1;
 
         match opcode {
+            0x02 => iconst_n(self, -1),
+            0x03 => iconst_n(self, 0),
+            0x04 => iconst_n(self, 1),
+            0x05 => iconst_n(self, 2),
+            0x06 => iconst_n(self, 3),
+            0x07 => iconst_n(self, 4),
+            0x08 => iconst_n(self, 5),
             0x12 => load_constant(self),
             0x1A => iload_n(self, 0),
             0x1B => iload_n(self, 1),

@@ -7,4 +7,12 @@ public class String {
     private String() {
 
     }
+
+    public int length() {
+        return chars.length;
+    }
+
+    char[] toCharArray() {
+        return chars;
+    }
 }

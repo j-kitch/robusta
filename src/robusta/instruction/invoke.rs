@@ -18,6 +18,8 @@ pub fn invoke_special(thread: &mut Thread) {
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
     let method = class.find_instance_method(&method);
 
+    println!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor());
+
     let args: Vec<Value> = (0..method.descriptor.parameters.len() + 1)
         .map(|_| cur_frame.operand_stack.pop())
         .rev()

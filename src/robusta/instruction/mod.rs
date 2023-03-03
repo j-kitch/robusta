@@ -10,6 +10,7 @@ pub mod dup;
 pub mod invoke;
 pub mod field;
 pub mod r#return;
+pub mod r#const;
 
 /// Instruction `ldc`
 ///
