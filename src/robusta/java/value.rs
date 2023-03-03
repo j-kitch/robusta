@@ -52,6 +52,13 @@ impl Value {
         }
     }
 
+    pub fn reference(&self) -> Reference {
+        match self {
+            Value::Reference(reference) => reference.clone(),
+            _ => panic!("expected int")
+        }
+    }
+
     pub fn width(&self) -> usize {
         match self {
             Value::Long(_) | Value::Double(_) => 2,

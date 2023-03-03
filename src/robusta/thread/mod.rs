@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
-use crate::instruction::array::array_length;
-use crate::instruction::branch::{if_int_cmp_ge, if_int_cmp_le};
+use crate::instruction::array::{array_length, char_array_load, char_array_store};
+use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
 use crate::instruction::locals::{iload, istore};
-use crate::instruction::math::i_add;
+use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
@@ -103,6 +103,7 @@ impl Thread {
             0x2B => aload_n(self, 1),
             0x2C => aload_n(self, 2),
             0x2D => aload_n(self, 3),
+            0x34 => char_array_load(self),
             0x36 => istore(self),
             0x3B => istore_n(self, 0),
             0x3C => istore_n(self, 1),
@@ -112,10 +113,13 @@ impl Thread {
             0x4C => astore_n(self, 1),
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
+            0x55 => char_array_store(self),
             0x59 => dup(self),
             0x60 => i_add(self),
+            0x84 => i_inc(self),
             0xA2 => if_int_cmp_ge(self),
             0xA4 => if_int_cmp_le(self),
+            0xA7 => goto(self),
             0xAC => i_return(self),
             0xB0 => a_return(self),
             0xB1 => r#return(self),
@@ -171,6 +175,12 @@ impl Frame {
         let byte = self.method.code.as_ref().unwrap().code[self.pc];
         self.pc += 1;
         byte
+    }
+
+    pub fn read_i8(&mut self) -> i8 {
+        let byte = self.method.code.as_ref().unwrap().code[self.pc];
+        self.pc += 1;
+        i8::from_be_bytes([byte])
     }
 
     pub fn read_u16(&mut self) -> u16 {

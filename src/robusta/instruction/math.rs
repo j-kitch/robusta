@@ -11,3 +11,14 @@ pub fn i_add(thread: &mut Thread) {
 
     frame.operand_stack.push(Value::Int(Int(result)))
 }
+
+pub fn i_inc(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let constant = frame.read_i8();
+
+    let value = frame.local_vars.load_int(index as u16);
+    let (value, _) = value.0.overflowing_add(constant as i32);
+
+    frame.local_vars.store_value(index as u16, Value::Int(Int(value)))
+}

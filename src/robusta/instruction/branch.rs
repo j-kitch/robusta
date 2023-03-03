@@ -31,3 +31,12 @@ pub fn if_int_cmp_le(thread: &mut Thread) {
         frame.pc = pc as usize;
     }
 }
+
+pub fn goto(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let offset = frame.read_i16();
+    let mut pc = frame.pc as i64;
+    pc -= 3;
+    pc += offset as i64;
+    frame.pc = pc as usize;
+}

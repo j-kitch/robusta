@@ -151,6 +151,23 @@ impl Array {
             Array::Char(vec) => Int(vec.len() as i32)
         }
     }
+    pub fn chars(&self) -> &Vec<u16> {
+        match self {
+            Array::Char(vec) => vec,
+        }
+    }
+    pub fn chars_set(&self, index: Int, value: Value) {
+        match self {
+            Array::Char(vec) => {
+                unsafe {
+                    let vec: *const u16 = vec.as_ptr();
+                    let vec: *mut u16 = vec.cast_mut();
+                    vec.offset(index.0 as isize).write(value.int().0 as u16)
+                }
+            }
+        }
+    }
+
 }
 
 /// An object represented in the heap is a reference to the class file and the field values.
