@@ -2,6 +2,8 @@ pub use new::new;
 
 use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
+use crate::native::NativeMethod;
+use crate::native::plugin::{Args, Method};
 use crate::runtime::Const;
 use crate::thread::Thread;
 
@@ -127,9 +129,18 @@ pub fn invoke_static(thread: &mut Thread) {
         .collect();
 
     if method.is_native {
-        let func = thread.runtime.native.find(class_name.as_str(), method.name.as_str(), &method.descriptor).unwrap();
+        let result = thread.runtime.native.call(
+            &Method {
+                class: class.name.clone(),
+                name: method.name.clone(),
+                descriptor: method.descriptor.clone()
+            },
+            &Args {
+                params: args,
+                runtime: thread.runtime.clone(),
+            }
+        );
 
-        let result = func(thread.runtime.clone(), args);
         if let Some(result) = result {
             cur_frame.operand_stack.push(result);
         }

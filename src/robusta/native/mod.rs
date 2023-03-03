@@ -1,10 +1,16 @@
 use std::sync::Arc;
+
 use crate::java::{MethodType, Value};
+use crate::native::plugin::{Args, Method, Plugins};
 use crate::runtime::heap::Array;
 use crate::runtime::Runtime;
 
+mod hash_code;
+pub mod plugin;
+
 pub struct NativeMethods {
-    methods: Vec<NativeMethod>
+    methods: Vec<NativeMethod>,
+    plugins: Plugins,
 }
 
 impl NativeMethods {
@@ -22,15 +28,23 @@ impl NativeMethods {
                     name: "println".to_string(),
                     descriptor: MethodType::from_descriptor("(Ljava/lang/String;)V").unwrap(),
                     function: Arc::new(robusta_println_string),
-                }
-            ]
+                },
+            ],
+            plugins: Plugins::new(),
         }
     }
 
-    pub fn find(&self, class: &str, name: &str, descriptor: &MethodType) -> Option<Function> {
-        self.methods.iter().find(|m| {
-            m.name.eq(name) && m.descriptor.eq(descriptor) && m.class.eq(class)
-        }).map(|m| m.function.clone())
+    pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
+        let func = self.methods.iter().find(|m| {
+            m.class.eq(&method.class) && m.name.eq(&method.name) && m.descriptor.eq(&method.descriptor)
+        }).map(|m| m.function.clone());
+
+        if func.is_some() {
+            let func = func.unwrap();
+            func(args.runtime.clone(), args.params.clone())
+        } else {
+            self.plugins.call(method, args)
+        }
     }
 }
 

@@ -145,14 +145,14 @@ impl Class {
         classes
     }
 
-    pub fn find_instance_method(self: &Arc<Self>, method: &Arc<const_pool::Method>) -> Arc<Method> {
+    pub fn find_instance_method(self: &Arc<Self>, method: &Arc<const_pool::Method>) -> (Arc<Class>, Arc<Method>) {
         let mut class = Some(self.clone());
         while let Some(curr_class) = &class {
             let method = curr_class.methods.iter().find(|m|
                 !m.is_static && m.name.eq(method.name.as_str()) && m.descriptor.eq(&method.descriptor));
 
             if let Some(method) = method {
-                return method.clone();
+                return (curr_class.clone(), method.clone())
             }
 
             class = curr_class.super_class.clone();

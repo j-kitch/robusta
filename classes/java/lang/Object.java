@@ -2,8 +2,9 @@ package java.lang;
 
 public class Object {
 
+    private native void registerHashCode();
     public Object() {
-
+        registerHashCode();
     }
 
     public native int hashCode();

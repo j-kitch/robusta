@@ -13,7 +13,7 @@ use crate::native::NativeMethods;
 use crate::runtime::heap::Heap;
 
 pub mod method_area;
-mod const_pool;
+pub mod const_pool;
 pub mod heap;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools

@@ -1,5 +1,6 @@
 use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
+use crate::native::plugin::{Args, Method};
 use crate::thread::Thread;
 
 /// No difference between these two methods YET
@@ -23,11 +24,25 @@ pub fn invoke_virtual(thread: &mut Thread) {
     let (object_class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), object.class_name.as_str());
 
     // Find method
-    let method = thread.runtime.method_area.find_method(object.class_name.as_str(), method.name.as_str(), &method.descriptor);
+    let (class, method) = object_class.find_instance_method(&method);
     resolve_method(thread.runtime.clone(), &method.clone());
 
     if method.is_native {
-        panic!("not implemented yet")
+        let result = thread.runtime.native.call(
+            &Method {
+                class: class.name.clone(),
+                name: method.name.clone(),
+                descriptor: method.descriptor.clone()
+            },
+            &Args {
+                params: args,
+                runtime: thread.runtime.clone(),
+            }
+        );
+
+        if let Some(result) = result {
+            cur_frame.operand_stack.push(result);
+        }
     } else {
         thread.push_frame(object.class_name.clone(), object_class.const_pool.clone(), method.clone(), args);
     }
@@ -43,7 +58,7 @@ pub fn invoke_special(thread: &mut Thread) {
     resolve_class(thread.runtime.clone(), method.class.name.as_str());
 
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
-    let method = class.find_instance_method(&method);
+    let (class, method) = class.find_instance_method(&method);
 
     let mut args: Vec<Value> = (0..method.descriptor.parameters.len() + 1)
         .map(|_| cur_frame.operand_stack.pop())
@@ -51,7 +66,21 @@ pub fn invoke_special(thread: &mut Thread) {
     args.reverse();
 
     if method.is_native {
-        panic!("not implemented yet")
+        let result = thread.runtime.native.call(
+            &Method {
+                class: class.name.clone(),
+                name: method.name.clone(),
+                descriptor: method.descriptor.clone()
+            },
+            &Args {
+                params: args,
+                runtime: thread.runtime.clone(),
+            }
+        );
+
+        if let Some(result) = result {
+            cur_frame.operand_stack.push(result);
+        }
     } else {
         thread.push_frame(class.name.clone(), class.const_pool.clone(), method.clone(), args);
     }
