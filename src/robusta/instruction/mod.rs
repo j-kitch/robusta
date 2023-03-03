@@ -8,6 +8,7 @@ use crate::thread::Thread;
 mod new;
 pub mod dup;
 pub mod invoke;
+pub mod field;
 
 /// Instruction `ldc`
 ///

@@ -164,6 +164,24 @@ impl Class {
         }
         panic!("Could not find method {:?}", method)
     }
+
+    /// On an object in the heap, the fields are laid out in order from super parent to child,
+    /// so we need to find the index offset of a field for the object in the heap.
+    pub fn find_field_idx(self: &Arc<Self>, field: &Arc<const_pool::Field>) -> usize {
+        let parents = self.inverse_hierarchy();
+        let mut idx = 0;
+
+        for parent in &parents {
+            for f in &parent.fields {
+                if !f.is_static && f.name.eq(field.name.as_str()) && f.descriptor.eq(&field.descriptor) {
+                    return idx;
+                }
+                idx += 1;
+            }
+        }
+
+        panic!("could not find field {:?} on class {:?}", field, self.name.as_str())
+    }
 }
 
 #[derive(Debug, PartialEq)]

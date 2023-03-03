@@ -2,6 +2,11 @@ use crate::instruction::new::resolve_class;
 use crate::java::Value;
 use crate::thread::Thread;
 
+/// No difference between these two methods YET
+pub fn invoke_virtual(thread: &mut Thread) {
+    invoke_special(thread)
+}
+
 pub fn invoke_special(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let method_idx = cur_frame.read_u16();

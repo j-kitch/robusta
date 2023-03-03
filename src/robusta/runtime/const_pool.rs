@@ -65,6 +65,13 @@ impl ConstPool {
         pool
     }
 
+    pub fn get_field(&self, idx: u16) -> Arc<Field> {
+        match self.pool.get(&idx).unwrap() {
+            Const::Field(field) => field.clone(),
+            _ => panic!()
+        }
+    }
+
     pub fn get_method(&self, idx: u16) -> Arc<Method> {
         match self.pool.get(&idx).unwrap() {
             Const::Method(method) => method.clone(),
