@@ -4,6 +4,7 @@ use std::sync::mpsc::SyncSender;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::AppendMap;
 use crate::java::{FieldType, MethodType};
+use crate::loader::Source;
 use crate::runtime::{ConstPool, Runtime};
 
 pub struct MethodArea {
@@ -22,7 +23,7 @@ impl MethodArea {
 
     pub fn insert(self: &Arc<Self>, runtime: Arc<Runtime>, name: &str) -> Arc<Class> {
         self.map.clone().get_or_insert(&name.to_string(), || {
-            let class_file = runtime.loader.load(name);
+            let class_file = runtime.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file, runtime.heap.clone());
 
             let fields: Vec<Arc<Field>> = class_file.fields.iter()

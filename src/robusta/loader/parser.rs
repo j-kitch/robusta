@@ -5,7 +5,6 @@ use std::io::Read;
 
 use crate::class_file::{ClassFile, Code, const_pool, Field, MAGIC, Method};
 use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, MethodRef, NameAndType, Utf8};
-use crate::loader::source::Bytes;
 
 /// Parse a class file structure from a reader.
 pub fn parse(reader: &mut dyn Read) -> ClassFile {

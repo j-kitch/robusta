@@ -12,7 +12,7 @@ mod const_pool;
 pub mod heap;
 
 pub use const_pool::Const;
-use crate::loader::Loader;
+use crate::loader::{Sources};
 use crate::native::NativeMethods;
 use crate::runtime::heap::Heap;
 
@@ -22,7 +22,7 @@ pub struct Runtime {
     pub method_area: Arc<MethodArea>,
     pub heap: Arc<Heap>,
     pub native: NativeMethods,
-    pub loader: Arc<Loader>,
+    pub loader: Sources,
 }
 
 impl Runtime {
@@ -31,7 +31,7 @@ impl Runtime {
             method_area: MethodArea::new(),
             heap: Heap::new(),
             native: NativeMethods::new(),
-            loader: Loader::new(vec![PathBuf::from("./classes")])
+            loader: Sources::new(vec![PathBuf::from("./classes")])
         })
     }
 }
