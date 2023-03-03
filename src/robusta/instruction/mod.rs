@@ -26,6 +26,10 @@ pub fn load_constant(thread: &mut Thread) {
         Const::Integer(int) => {
             cur_frame.operand_stack.push(Value::Int(int.int));
         }
+        Const::Class(class) => {
+            let class_ref = thread.runtime.heap.get_class_object(class.name.as_str());
+            cur_frame.operand_stack.push(Value::Reference(class_ref));
+        }
         other => panic!("Not supported const {:?}", other)
     }
 }

@@ -2,9 +2,13 @@ package java.lang;
 
 public final class Class<T> {
 
-    private Class() {
+    private final String name;
 
+    private Class(String name) {
+        this.name = name;
     }
 
-    public native String getName();
+    public String getName() {
+        return name;
+    }
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use crate::java::{Reference, Value};
 use crate::runtime::method_area;
@@ -8,6 +8,7 @@ use crate::runtime::method_area::Class;
 pub struct Heap {
     values: RwLock<HashMap<Reference, HeapValue>>,
     string_consts: RwLock<HashMap<String, Reference>>,
+    class_objects: RwLock<HashMap<String, Reference>>
 }
 
 impl Heap {
@@ -15,6 +16,7 @@ impl Heap {
         Arc::new(Heap {
             values: RwLock::new(HashMap::new()),
             string_consts: RwLock::new(HashMap::new()),
+            class_objects: RwLock::new(HashMap::new()),
         })
     }
 
@@ -56,15 +58,39 @@ impl Heap {
         reference
     }
 
-    pub fn insert_string_const(self: &Arc<Self>, string_const: &str) -> Reference {
-        let mut string_consts = self.string_consts.write().unwrap();
+    pub fn get_class_object(self: &Arc<Self>, class: &str) -> Reference {
         let mut values = self.values.write().unwrap();
+        let mut classes = self.class_objects.write().unwrap();
 
-        if string_consts.contains_key(string_const) {
-            return string_consts.get(string_const).unwrap().clone();
+        if let Some(reference) = classes.get(class) {
+            return reference.clone();
         }
 
-        let bytes: Vec<u16> = string_const.to_string().encode_utf16().collect();
+        let mut strings = self.string_consts.write().unwrap();
+
+        let name_ref = Heap::insert_string_const_inner(&mut strings, &mut values, class);
+        let class_obj = Arc::new(Object {
+            class_name: "java.lang.Class".to_string(),
+            fields: vec![
+                Arc::new(Field {
+                    value: Value::Reference(name_ref)
+                })
+            ]
+        });
+
+        let class_ref = Reference(values.len() as u32);
+
+        values.insert(class_ref, HeapValue::Object(class_obj));
+        classes.insert(class.to_string(), class_ref);
+        class_ref
+    }
+
+    fn insert_string_const_inner(strings: &mut RwLockWriteGuard<HashMap<String, Reference>>, values: &mut RwLockWriteGuard<HashMap<Reference, HeapValue>>, string: &str) -> Reference {
+        if strings.contains_key(string) {
+            return strings.get(string).unwrap().clone();
+        }
+
+        let bytes: Vec<u16> = string.to_string().encode_utf16().collect();
         let arr_ref = Reference(values.len() as u32);
 
         values.insert(arr_ref, HeapValue::Array(Arc::new(Array::Char(bytes))));
@@ -79,9 +105,16 @@ impl Heap {
         }));
 
         values.insert(obj_ref, obj);
-        string_consts.insert(string_const.to_string(), obj_ref);
+        strings.insert(string.to_string(), obj_ref);
 
         obj_ref
+    }
+
+    pub fn insert_string_const(self: &Arc<Self>, string_const: &str) -> Reference {
+        let mut string_consts = self.string_consts.write().unwrap();
+        let mut values = self.values.write().unwrap();
+
+        Heap::insert_string_const_inner(&mut string_consts, &mut values, string_const)
     }
 }
 
