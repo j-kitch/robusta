@@ -31,7 +31,10 @@ impl Runtime {
             method_area: MethodArea::new(),
             heap: Heap::new(),
             native: NativeMethods::new(),
-            loader: ClassFileLoader::new(vec![PathBuf::from("./classes")]),
+            loader: ClassFileLoader::new(vec![
+                PathBuf::from("./classes"),
+                PathBuf::from("./classes/EmptyMain.jar")
+            ]),
         })
     }
 }
