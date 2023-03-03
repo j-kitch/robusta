@@ -97,7 +97,6 @@ impl Loader for ClassFileLoader {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Read;
     use std::path::Path;
     use super::*;
 
@@ -109,7 +108,7 @@ mod tests {
 
     #[test]
     fn dir_loader() {
-        let mut loader = DirLoader { root_dir: Path::new("./classes").to_path_buf() };
+        let loader = DirLoader { root_dir: Path::new("./classes").to_path_buf() };
         let result = loader.find("EmptyMain").unwrap();
 
         assert_eq!(class_name(&result), "EmptyMain".to_string());
@@ -117,7 +116,7 @@ mod tests {
 
     #[test]
     fn jar_loader() {
-        let mut loader = JarLoader { jar_path: Path::new("./classes/EmptyMain.jar").to_path_buf() };
+        let loader = JarLoader { jar_path: Path::new("./classes/EmptyMain.jar").to_path_buf() };
         let result = loader.find("EmptyMain").unwrap();
 
         assert_eq!(class_name(&result), "EmptyMain".to_string());
@@ -125,7 +124,7 @@ mod tests {
 
     #[test]
     fn class_file_loader() {
-        let mut loader = ClassFileLoader::new(vec![
+        let loader = ClassFileLoader::new(vec![
             PathBuf::from("./classes"),
             PathBuf::from("./classes/EmptyMain.jar")
         ]);

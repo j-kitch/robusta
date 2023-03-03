@@ -253,7 +253,6 @@ impl Error for SimpleError {}
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-    use std::os::unix::raw::blkcnt_t;
 
     use super::*;
 

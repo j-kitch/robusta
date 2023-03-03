@@ -119,9 +119,6 @@ struct State<V> {
 #[cfg(test)]
 mod tests {
     use std::ops::Deref;
-    use std::thread;
-    use std::thread::sleep;
-    use std::time::Duration;
 
     use super::*;
 

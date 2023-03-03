@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn empty_main() {
-        let mut runtime = Runtime::new();
+        let runtime = Runtime::new();
         let class_file = runtime.loader.find("EmptyMain").unwrap();
         let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
 

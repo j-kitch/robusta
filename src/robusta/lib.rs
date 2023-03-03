@@ -16,6 +16,7 @@ use crate::runtime::Runtime;
 use crate::thread::Thread;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
+#[allow(dead_code)]
 pub struct VirtualMachine {
     runtime: Arc<Runtime>,
     main_thread: Thread,
