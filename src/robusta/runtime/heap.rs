@@ -35,12 +35,12 @@ impl Heap {
     }
 
     pub fn insert_new(self: &Arc<Self>, class: &Arc<Class>) -> Reference {
-        let fields: Vec<Arc<method_area::Field>> = class.hierarchy().iter()
+        let fields: Vec<Arc<method_area::Field>> = class.inverse_hierarchy().iter()
             .flat_map(|class| class.fields.iter())
             .map(|field| field.clone())
             .collect();
 
-        let mut obj = Object {
+        let obj = Object {
             class_name: class.name.clone(),
             fields: fields.iter().map(|f| {
                 Arc::new(Field { value: f.descriptor.zero_value() })

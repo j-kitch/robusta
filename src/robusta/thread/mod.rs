@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
+use crate::instruction::dup::dup;
+use crate::instruction::invoke::invoke_special;
 
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
@@ -82,11 +84,33 @@ impl Thread {
             0x4C => astore_n(self, 1),
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
+            0x59 => dup(self),
             0xB1 => r#return(self),
+            0xB7 => invoke_special(self),
             0xB8 => invoke_static(self),
             0xBB => new(self),
             _ => panic!("not implemented opcode {:0x?}", opcode)
         }
+    }
+
+    /// Push a new frame onto the top of the stack.
+    pub fn push_frame(&mut self, const_pool: Arc<ConstPool>, method: Arc<Method>, args: Vec<Value>) {
+
+        let mut frame = Frame {
+            const_pool,
+            local_vars: LocalVars::new(),
+            operand_stack: OperandStack::new(),
+            pc: 0,
+            method,
+        };
+
+        let mut idx = 0;
+        for arg in args {
+            frame.local_vars.store_value(idx, arg);
+            idx += arg.width() as u16;
+        }
+
+        self.stack.push(frame);
     }
 }
 

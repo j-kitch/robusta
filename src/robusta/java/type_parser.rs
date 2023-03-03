@@ -55,7 +55,7 @@ impl<'a> TypeParser<'a> {
                 self.position += 1;
                 let name_and_rest = &self.descriptor[self.position..];
                 let semicolon_pos = name_and_rest.find(';').ok_or(ParseError(self.descriptor.to_string()))?;
-                let name = name_and_rest[..semicolon_pos].to_string();
+                let name = name_and_rest[..semicolon_pos].replace('/', ".");
                 if name.is_empty() {
                     return Err(ParseError(self.descriptor.to_string()));
                 }

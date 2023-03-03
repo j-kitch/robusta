@@ -44,6 +44,15 @@ pub enum Value {
     ReturnAddress(ReturnAddress),
 }
 
+impl Value {
+    pub fn width(&self) -> usize {
+        match self {
+            Value::Long(_) | Value::Double(_) => 2,
+            _ => 1,
+        }
+    }
+}
+
 /// A union of category one types in the JVM.
 pub union CategoryOne {
     pub int: Int,

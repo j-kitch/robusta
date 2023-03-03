@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::thread::spawn;
-use crate::java::{MethodType, Value};
+
+use crate::java::Value;
 use crate::runtime::{Method, Runtime};
 use crate::runtime::method_area::Field;
 use crate::thread::Thread;
@@ -11,11 +12,16 @@ use crate::thread::Thread;
 /// This function handles this process.
 pub fn resolve_class(runtime: Arc<Runtime>, class: &str) {
 
+    let fin_resolved = runtime.method_area.try_resolve(class);
+    if fin_resolved.is_none() {
+        return;
+    }
+
     // Load class, and all it's superclasses into the method area.
     let (class, _) = runtime.method_area.insert(runtime.clone(), class);
 
     // Classes that this thread needs to initialize.
-    let mut to_init = runtime.method_area.try_start_init(class.name.as_str());
+    let to_init = runtime.method_area.try_start_init(class.name.as_str());
 
     let classes = to_init.iter().map(|t| t.0.clone()).collect();
     let mut clinit_thread = Thread::clinit(runtime.clone(), classes);
@@ -35,6 +41,8 @@ pub fn resolve_class(runtime: Arc<Runtime>, class: &str) {
     for method in class.methods.iter() {
         resolve_method(runtime.clone(), method);
     }
+
+    fin_resolved.unwrap().send(()).unwrap();
 }
 
 /// Like resolving a class, but we need to resolve every type that is in the method signature!
@@ -45,7 +53,7 @@ pub fn resolve_method(runtime: Arc<Runtime>, method: &Arc<Method>) {
 }
 
 pub fn resolve_field(runtime: Arc<Runtime>, field: &Arc<Field>) {
-    for class in field.descriptor.class_name() {
+    if let Some(class) = field.descriptor.class_name() {
         resolve_class(runtime.clone(), class.as_str())
     }
 }
@@ -56,7 +64,7 @@ pub fn resolve_field(runtime: Arc<Runtime>, field: &Arc<Field>) {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.new).
 pub fn new(thread: &mut Thread) {
-    let mut cur_frame = thread.stack.last_mut().unwrap();
+    let cur_frame = thread.stack.last_mut().unwrap();
 
     let class_idx = cur_frame.read_u16();
     let class_const = cur_frame.const_pool.get_class(class_idx);

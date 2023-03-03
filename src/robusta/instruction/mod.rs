@@ -1,12 +1,13 @@
-use std::thread::spawn;
+pub use new::new;
+
 use crate::instruction::new::{resolve_class, resolve_method};
-use crate::java::{MethodType, Value};
+use crate::java::Value;
 use crate::runtime::Const;
 use crate::thread::Thread;
 
 mod new;
-
-pub use new::new;
+pub mod dup;
+pub mod invoke;
 
 /// Instruction `ldc`
 ///
@@ -25,7 +26,7 @@ pub fn load_constant(thread: &mut Thread) {
         Const::Integer(int) => {
             cur_frame.operand_stack.push(Value::Int(int.int));
         }
-        _ => panic!("unsupported operation")
+        other => panic!("Not supported const {:?}", other)
     }
 }
 
@@ -37,7 +38,7 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
 
     let value = cur_frame.operand_stack.pop();
     match &value {
-        Value::Reference(_) | Value::ReturnAddress(_) => {},
+        Value::Reference(_) | Value::ReturnAddress(_) => {}
         _ => panic!("Expected a reference or return address")
     }
 
@@ -98,6 +99,7 @@ pub fn invoke_static(thread: &mut Thread) {
     let class_name = method.class.name.clone();
 
     // Load the class if not loaded.
+    println!("insert {}", method.class.name.as_str());
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
     resolve_class(thread.runtime.clone(), class.name.as_str());
 

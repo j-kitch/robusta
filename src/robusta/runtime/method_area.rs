@@ -1,4 +1,3 @@
-use core::slice;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
@@ -12,6 +11,7 @@ pub struct MethodArea {
     map: Arc<AppendMap<String, Class>>,
     /// TODO: Potentially could do with an append set?
     initialized: Arc<AppendMap<String, ()>>,
+    resolved: Arc<AppendMap<String, ()>>,
 }
 
 impl MethodArea {
@@ -19,10 +19,14 @@ impl MethodArea {
         Arc::new(MethodArea {
             map: AppendMap::new(),
             initialized: AppendMap::new(),
+            resolved: AppendMap::new(),
         })
     }
 
     pub fn insert(self: &Arc<Self>, runtime: Arc<Runtime>, name: &str) -> (Arc<Class>, bool) {
+        if name.contains('/') {
+            panic!("MethodArea:Insert {}", name);
+        }
         self.map.clone().get_or_insert(&name.to_string(), || {
             let class_file = runtime.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file, runtime.heap.clone());
@@ -103,6 +107,11 @@ impl MethodArea {
         self.initialized.begin_insert(&class_name.to_string())
     }
 
+    pub fn try_resolve(self: &Arc<Self>, name: &str) -> Option<SyncSender<()>> {
+        self.resolved.begin_insert(&name.to_string())
+    }
+
+
     pub fn find_const_pool(self: &Arc<Self>, class_name: &str) -> Arc<ConstPool> {
         self.map.get(&class_name.to_string()).unwrap().const_pool.clone()
     }
@@ -127,7 +136,7 @@ pub struct Class {
 
 impl Class {
     /// Iterate through the hierarchy of this class, starting at the highest root parent.
-    pub fn hierarchy<'a>(self: &'a Arc<Self>) -> Vec<Arc<Class>> {
+    pub fn inverse_hierarchy(self: &Arc<Self>) -> Vec<Arc<Class>> {
         let mut classes = Vec::new();
         let mut class = Some(self.clone());
 
@@ -139,6 +148,21 @@ impl Class {
         classes.reverse();
 
         classes
+    }
+
+    pub fn find_instance_method(self: &Arc<Self>, method: &Arc<const_pool::Method>) -> Arc<Method> {
+        let mut class = Some(self.clone());
+        while let Some(curr_class) = &class {
+            let method = curr_class.methods.iter().find(|m|
+                !m.is_static && m.name.eq(method.name.as_str()) && m.descriptor.eq(&method.descriptor));
+
+            if let Some(method) = method {
+                return method.clone();
+            }
+
+            class = curr_class.super_class.clone();
+        }
+        panic!("Could not find method {:?}", method)
     }
 }
 
