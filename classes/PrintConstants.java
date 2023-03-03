@@ -4,7 +4,7 @@ public class PrintConstants {
         String string = "hello world";
         int i = 542354326;
 
-        System.out.println(string);
-        System.out.println(string);
+        Robusta.println(string);
+        Robusta.println(i);
     }
 }

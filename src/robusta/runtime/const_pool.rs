@@ -30,7 +30,6 @@ impl ConstPool {
                     pool.pool.insert(*key, Const::Integer(Arc::new(Integer { int: Int(integer.int )})));
                 }
                 cp::Const::String(string) => {
-                    let string = file.get_const_string(string.string);
                     let string = file.get_const_utf8(string.string);
                     let string = String::from_utf8(string.bytes.clone()).unwrap();
                     let reference = heap.insert_string_const(string.as_str());
@@ -152,17 +151,17 @@ mod tests {
     #[test]
     fn empty_main() {
         let mut runtime = Runtime::new();
-        let class_file = runtime.loader.load("EmptyMain");
-
-        let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
-
-        assert_eq!(const_pool.len(), 3);
-        assert_eq!(const_pool.get_method(1), Arc::new(Method {
-            name: "<init>".to_string(),
-            descriptor: MethodType::from_descriptor("()V").unwrap(),
-            class: Arc::new(Class { name: "java.lang.Object".to_string() }),
-        }));
-        assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
-        assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
+        // let class_file = runtime.loader.load("EmptyMain");
+        panic!();
+        // let const_pool = ConstPool::new(&class_file, runtime.heap.clone());
+        //
+        // assert_eq!(const_pool.len(), 3);
+        // assert_eq!(const_pool.get_method(1), Arc::new(Method {
+        //     name: "<init>".to_string(),
+        //     descriptor: MethodType::from_descriptor("()V").unwrap(),
+        //     class: Arc::new(Class { name: "java.lang.Object".to_string() }),
+        // }));
+        // assert_eq!(const_pool.get_const(2), &Const::Class(Arc::new(Class { name: "java.lang.Object".to_string() })));
+        // assert_eq!(const_pool.get_const(7), &Const::Class(Arc::new(Class { name: "EmptyMain".to_string() })));
     }
 }

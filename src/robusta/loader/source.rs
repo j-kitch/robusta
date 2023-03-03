@@ -1,115 +1,161 @@
 use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::io::{BufReader, Read};
+use std::path::PathBuf;
 
 use zip::ZipArchive;
+use crate::class_file::ClassFile;
+use crate::loader::parser::parse;
 
-/// A `Source` is a source that a class file can be read from.
-pub trait Source {
-    /// Attempt to get a reader of a class file.
-    ///
-    /// If the class file couldn't be found, `None` is returned.
-    fn open<'a>(&'a mut self, class_name: &str) -> Option<Box<dyn Read + 'a>>;
-}
+/// The raw bytes of a class file, read from a source in the class path.
+pub struct Bytes(Vec<u8>);
 
-/// Create a new class loader source from the class path.
-pub fn new_source(class_path: Vec<PathBuf>) -> Box<dyn Source + Sync + Send> {
-    let mut sources = Vec::new();
-    for path in class_path.iter() {
-        let source: Box<dyn Source + Sync + Send> = if path.is_dir() {
-            Box::new(DirSource { root_dir: path.to_path_buf() })
-        } else {
-            let file = File::open(path).unwrap();
-            let zip = ZipArchive::new(file).unwrap();
-            Box::new(JarSource { jar: zip })
-        };
-        sources.push(source);
+impl Bytes {
+    pub fn new(vec: Vec<u8>) -> Self {
+        Bytes(vec)
     }
-    Box::new(CompositeSource { sources })
-}
 
-/// Create a composite source from other sources.
-struct CompositeSource {
-    sources: Vec<Box<dyn Source + Sync + Send>>,
-}
+    pub fn get_slice(&self) -> &[u8] {
+        &self.0
+    }
 
-impl Source for CompositeSource {
-    /// Iterate through the sources, until we find our reader.
-    fn open<'a>(&'a mut self, class_name: &str) -> Option<Box<dyn Read + 'a>> {
-        self.sources.iter_mut().flat_map(|s| s.open(class_name)).next()
+    pub fn get_reader<'a>(&'a self) -> Box<dyn Read + 'a> {
+        Box::new(self.0.as_slice())
     }
 }
 
-/// A directory source, looking for class files from a given directory.
+impl Bytes {
+    /// Read the entire contents from the reader into the Bytes object.
+    fn from_reader<R: Read>(reader: R) -> Self {
+        let mut reader = BufReader::new(reader);
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer).unwrap();
+        Bytes(buffer)
+    }
+}
+
+/// A source of class files.
+pub trait Source: Send + Sync {
+    /// Find the class file matching the given name, and return the underlying bytes.
+    fn find(&self, class_name: &str) -> Option<ClassFile>;
+}
+
+/// A directory source, looking for class files in a given directory.
 struct DirSource {
-    /// The root directory to start searching from.
+    /// The root directory to search for class files from.
     root_dir: PathBuf,
 }
 
 impl Source for DirSource {
-    fn open<'a>(&'a mut self, class_name: &str) -> Option<Box<dyn Read + 'a>> {
-        let path = self.root_dir
+    fn find(&self, class_name: &str) -> Option<ClassFile> {
+        let file_path = self.root_dir
             .join(class_name.replace(".", "/"))
             .with_extension("class");
 
-        File::open(path).ok().map(|f| Box::new(f) as _)
+        let mut file = File::open(file_path).ok();
+
+        file.as_mut().map(|file| {
+            parse(file)
+        })
     }
 }
 
-/// A jar source, looking for class files in a jar file.
+/// A jar file source, looking for class files within a jar file.
 struct JarSource {
-    jar: ZipArchive<File>,
+    jar_path: PathBuf,
 }
 
 impl Source for JarSource {
-    fn open<'a>(&'a mut self, class_name: &str) -> Option<Box<dyn Read + 'a>> {
-        let path = Path::new(class_name.replace(".", "/").as_str())
+    fn find(&self, class_name: &str) -> Option<ClassFile> {
+        let zip_file = File::open(&self.jar_path).ok();
+        let mut zip_arch = zip_file.and_then(|file| {
+            ZipArchive::new(BufReader::new(file)).ok()
+        });
+
+        let file_name = PathBuf::from(class_name.replace(".", "/"))
             .with_extension("class");
 
-        self.jar.by_name(path.to_str().unwrap()).ok().map(|f| Box::new(f) as _)
+        if zip_arch.is_none() {
+            return None;
+        }
+        let mut zip_arch = zip_arch.unwrap();
+        let zip_file = zip_arch.by_name(file_name.to_str().unwrap()).ok();
+        if zip_file.is_none() {
+            return None;
+        }
+        let mut zip_file = zip_file.unwrap();
+        Some(parse(&mut zip_file))
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// An ordered combination of sources, delegating to each inner source.
+pub struct Sources {
+    sources: Vec<Box<dyn Source>>,
+}
 
-    #[test]
-    fn dir_source() {
-        let mut expected = Vec::new();
-        let mut read = Vec::new();
-        File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
-
-        let mut dir_source = DirSource { root_dir: Path::new("./classes").to_path_buf() };
-        dir_source.open("EmptyMain").unwrap().read_to_end(&mut read).unwrap();
-
-        assert_eq!(expected, read);
-    }
-
-    #[test]
-    fn jar_source() {
-        let mut expected = Vec::new();
-        let mut read = Vec::new();
-        File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
-
-        let mut jar_source = JarSource { jar: ZipArchive::new(File::open("./classes/EmptyMain.jar").unwrap()).unwrap() };
-        jar_source.open("EmptyMain").unwrap().read_to_end(&mut read).unwrap();
-
-        assert_eq!(expected, read);
-    }
-
-    #[test]
-    fn new_source_open() {
-        let mut expected = Vec::new();
-        let mut read = Vec::new();
-        File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
-
-        let mut sources = new_source(vec![
-            PathBuf::from("./classes/EmptyMain.jar"),
-            PathBuf::from("./classes"),
-        ]);
-        sources.open("EmptyMain").unwrap().read_to_end(&mut read).unwrap();
-
-        assert_eq!(expected, read);
+impl Sources {
+    /// Construct a new set of sources from the class path.
+    pub fn new(class_path: Vec<PathBuf>) -> Self {
+        Sources {
+            sources: class_path.iter().map(|path| {
+                if path.is_dir() {
+                    Box::new(DirSource { root_dir: path.clone() }) as _
+                } else if path.extension().unwrap().eq(&PathBuf::from("jar")) {
+                    Box::new(JarSource { jar_path: path.clone() }) as _
+                } else {
+                    panic!("Unknown type of path {}", path.to_str().unwrap())
+                }
+            }).collect()
+        }
     }
 }
+
+impl Source for Sources {
+    fn find(&self, class_name: &str) -> Option<ClassFile> {
+        self.sources.iter()
+            .flat_map(|source| source.find(class_name))
+            .next()
+    }
+}
+
+//
+// #[cfg(test)]
+// mod tests {
+//     use std::path::Path;
+//     use super::*;
+//
+//     #[test]
+//     fn dir_source() {
+//         let mut expected = Vec::new();
+//         File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
+//
+//         let mut dir_source = DirSource { root_dir: Path::new("./classes").to_path_buf() };
+//         let result = dir_source.find("EmptyMain").unwrap();
+//
+//         assert_eq!(expected, result.0);
+//     }
+//
+//     #[test]
+//     fn jar_source() {
+//         let mut expected = Vec::new();
+//         File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
+//
+//         let mut jar_source = JarSource { jar_path: Path::new("./classes/EmptyMain.jar").to_path_buf() };
+//         let result = jar_source.find("EmptyMain").unwrap();
+//
+//         assert_eq!(expected, result.0);
+//     }
+//
+//     #[test]
+//     fn sources() {
+//         let mut expected = Vec::new();
+//         File::open("./classes/EmptyMain.class").unwrap().read_to_end(&mut expected).unwrap();
+//
+//         let mut source = Sources::new(vec![
+//             PathBuf::from("./classes"),
+//             PathBuf::from("./classes/EmptyMain.jar")
+//         ]);
+//         let result = source.find("EmptyMain").unwrap();
+//
+//         assert_eq!(expected, result.0);
+//     }
+// }

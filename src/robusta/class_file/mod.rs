@@ -73,7 +73,7 @@ impl ClassFile {
         let con = self.const_pool.get(&index).unwrap();
         match con {
             Const::String(string) => string,
-            _ => panic!()
+            other => panic!("Expected const string, got {:?}", other)
         }
     }
 
