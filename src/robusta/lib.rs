@@ -33,7 +33,7 @@ impl VirtualMachine {
         let pool = runtime.method_area.find_const_pool(main_class);
         let method = runtime.method_area.find_method(main_class, "main", &MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap());
 
-        let main_thread = Thread::new(runtime.clone(), pool, method);
+        let main_thread = Thread::new(runtime.clone(), main_class.to_string(), pool, method);
 
         VirtualMachine { runtime, main_thread }
     }

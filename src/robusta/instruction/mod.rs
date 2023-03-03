@@ -5,7 +5,7 @@ use crate::java::Value;
 use crate::runtime::Const;
 use crate::thread::Thread;
 
-mod new;
+pub mod new;
 pub mod dup;
 pub mod invoke;
 pub mod field;
@@ -43,7 +43,6 @@ pub fn load_constant(thread: &mut Thread) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.astore_n).
 pub fn astore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-
     let value = cur_frame.operand_stack.pop();
     match &value {
         Value::Reference(_) | Value::ReturnAddress(_) => {}
@@ -107,7 +106,6 @@ pub fn invoke_static(thread: &mut Thread) {
     let class_name = method.class.name.clone();
 
     // Load the class if not loaded.
-    println!("insert {}", method.class.name.as_str());
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
     resolve_class(thread.runtime.clone(), class.name.as_str());
 

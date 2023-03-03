@@ -11,7 +11,6 @@ use crate::thread::Thread;
 ///
 /// This function handles this process.
 pub fn resolve_class(runtime: Arc<Runtime>, class: &str) {
-
     let fin_resolved = runtime.method_area.try_resolve(class);
     if fin_resolved.is_none() {
         return;
@@ -25,7 +24,6 @@ pub fn resolve_class(runtime: Arc<Runtime>, class: &str) {
 
     let classes = to_init.iter().map(|t| t.0.clone()).collect();
     let mut clinit_thread = Thread::clinit(runtime.clone(), classes);
-
     spawn(move || clinit_thread.run()).join().unwrap();
 
     for (_, sender) in to_init {
@@ -68,10 +66,31 @@ pub fn new(thread: &mut Thread) {
 
     let class_idx = cur_frame.read_u16();
     let class_const = cur_frame.const_pool.get_class(class_idx);
+
+    println!("{} new - {}", thread.group.as_str(), class_const.name.as_str());
+
     resolve_class(thread.runtime.clone(), class_const.name.as_str());
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), class_const.name.as_str());
-
     let new_ref = thread.runtime.heap.insert_new(&class);
 
     cur_frame.operand_stack.push(Value::Reference(new_ref));
+}
+
+pub fn new_array(thread: &mut Thread) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+    let array_type = cur_frame.read_u8();
+
+    let count = cur_frame.operand_stack.pop();
+    let count = if let Value::Int(int) = count {
+        int
+    } else {
+        panic!("Expected count to be int")
+    };
+
+    let arr_ref = match array_type {
+        5 => thread.runtime.heap.insert_char_array(count.0 as usize),
+        _ => panic!("newarray has not been implemented for array type {}", array_type)
+    };
+
+    cur_frame.operand_stack.push(Value::Reference(arr_ref));
 }

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use rand::{RngCore, thread_rng};
 
 use crate::java::{Reference, Value};
 use crate::runtime::method_area;
@@ -12,6 +13,19 @@ pub struct Heap {
 }
 
 impl Heap {
+    fn insert(values: &mut RwLockWriteGuard<HashMap<Reference, HeapValue>>, value: HeapValue) -> Reference {
+        let mut rng = thread_rng();
+        let mut reference = rng.next_u32();
+        loop {
+            if !values.contains_key(&Reference(reference)) {
+                values.insert(Reference(reference), value);
+                break;
+            }
+            reference = rng.next_u32();
+        }
+        Reference(reference)
+    }
+
     pub fn new() -> Arc<Self> {
         Arc::new(Heap {
             values: RwLock::new(HashMap::new()),
@@ -36,6 +50,15 @@ impl Heap {
         }
     }
 
+    pub fn insert_char_array(self: &Arc<Self>, length: usize) -> Reference {
+        let char_arr = Arc::new(Array::Char(vec![0; length]));
+        let mut values = self.values.write().unwrap();
+
+        let arr_ref = Heap::insert(&mut values, HeapValue::Array(char_arr));
+
+        arr_ref
+    }
+
     pub fn insert_new(self: &Arc<Self>, class: &Arc<Class>) -> Reference {
         let fields: Vec<Arc<method_area::Field>> = class.inverse_hierarchy().iter()
             .flat_map(|class| class.fields.iter())
@@ -49,13 +72,12 @@ impl Heap {
             }).collect(),
         };
 
+        println!("New obj {}", obj.class_name.as_str());
+
         // TODO: Extremely poor code here - very very temporary!
         let mut values = self.values.write().unwrap();
-        let reference = Reference(values.len() as u32);
 
-        values.insert(reference, HeapValue::Object(Arc::new(obj)));
-
-        reference
+        Heap::insert(&mut values, HeapValue::Object(Arc::new(obj)))
     }
 
     pub fn get_class_object(self: &Arc<Self>, class: &str) -> Reference {
@@ -78,9 +100,7 @@ impl Heap {
             ]
         });
 
-        let class_ref = Reference(values.len() as u32);
-
-        values.insert(class_ref, HeapValue::Object(class_obj));
+        let class_ref = Heap::insert(&mut values, HeapValue::Object(class_obj));
         classes.insert(class.to_string(), class_ref);
         class_ref
     }
@@ -91,20 +111,17 @@ impl Heap {
         }
 
         let bytes: Vec<u16> = string.to_string().encode_utf16().collect();
-        let arr_ref = Reference(values.len() as u32);
-
-        values.insert(arr_ref, HeapValue::Array(Arc::new(Array::Char(bytes))));
+        let arr_ref = Heap::insert(values, HeapValue::Array(Arc::new(Array::Char(bytes))));
 
         let chars_field = Arc::new(Field { value: Value::Reference(Reference(0)) });
         chars_field.set_value(Value::Reference(arr_ref));
 
-        let obj_ref = Reference(values.len() as u32);
         let obj = HeapValue::Object(Arc::new(Object {
             class_name: "java.lang.String".to_string(),
             fields: vec![chars_field],
         }));
+        let obj_ref = Heap::insert(values, obj);
 
-        values.insert(obj_ref, obj);
         strings.insert(string.to_string(), obj_ref);
 
         obj_ref

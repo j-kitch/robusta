@@ -8,4 +8,5 @@ name = "robusta"
 path = "src/robusta/lib.rs"
 
 [dependencies]
+rand = "0.8.5"
 zip = "0.6.4"

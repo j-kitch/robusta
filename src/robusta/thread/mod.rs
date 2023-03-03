@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::dup::dup;
-use crate::instruction::field::get_field;
+use crate::instruction::field::{get_field, put_field};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
+use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::a_return;
 
@@ -12,6 +13,7 @@ use crate::runtime::{ConstPool, Method, Runtime};
 
 /// A single Java thread in the running program.
 pub struct Thread {
+    pub group: String,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
     pub runtime: Arc<Runtime>,
@@ -22,11 +24,13 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(runtime: Arc<Runtime>, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
+    pub fn new(runtime: Arc<Runtime>, class: String, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
         Thread {
+            group: "MainThread".to_string(),
             runtime,
             stack: vec![
                 Frame {
+                    class,
                     const_pool: pool,
                     operand_stack: OperandStack::new(),
                     local_vars: LocalVars::new(),
@@ -43,9 +47,10 @@ impl Thread {
         let mut classes = classes;
         classes.reverse();
 
-        let mut thread = Thread { runtime, stack: Vec::new() };
+        let mut thread = Thread { group: "<clinit>".to_string(), runtime, stack: Vec::new() };
         for class in classes.iter() {
             thread.stack.push(Frame {
+                class: class.name.clone(),
                 const_pool: class.const_pool.clone(),
                 operand_stack: OperandStack::new(),
                 local_vars: LocalVars::new(),
@@ -68,6 +73,13 @@ impl Thread {
         let bytecode = &curr_frame.method.code.as_ref().unwrap().code;
         let opcode = bytecode[curr_frame.pc];
         curr_frame.pc += 1;
+
+        println!("{} {}.{}{} {:00x}",
+                 self.group.as_str(),
+                 curr_frame.class.as_str(),
+                 curr_frame.method.name.as_str(),
+                 curr_frame.method.descriptor.descriptor(),
+                opcode);
 
         match opcode {
             0x02 => iconst_n(self, -1),
@@ -98,18 +110,21 @@ impl Thread {
             0xB0 => a_return(self),
             0xB1 => r#return(self),
             0xB4 => get_field(self),
+            0xB5 => put_field(self),
             0xB6 => invoke_virtual(self),
             0xB7 => invoke_special(self),
             0xB8 => invoke_static(self),
             0xBB => new(self),
+            0xBC => new_array(self),
             _ => panic!("not implemented opcode {:0x?}", opcode)
         }
     }
 
     /// Push a new frame onto the top of the stack.
-    pub fn push_frame(&mut self, const_pool: Arc<ConstPool>, method: Arc<Method>, args: Vec<Value>) {
+    pub fn push_frame(&mut self, class: String, const_pool: Arc<ConstPool>, method: Arc<Method>, args: Vec<Value>) {
 
         let mut frame = Frame {
+            class,
             const_pool,
             local_vars: LocalVars::new(),
             operand_stack: OperandStack::new(),
@@ -129,6 +144,7 @@ impl Thread {
 
 /// A single frame in a JVM thread's stack.
 pub struct Frame {
+    pub class: String,
     /// A reference to the related class's constant pool.
     pub const_pool: Arc<ConstPool>,
     /// A reference to the related method.
@@ -140,6 +156,12 @@ pub struct Frame {
 }
 
 impl Frame {
+    pub fn read_u8(&mut self) -> u8 {
+        let byte = self.method.code.as_ref().unwrap().code[self.pc];
+        self.pc += 1;
+        byte
+    }
+
     pub fn read_u16(&mut self) -> u16 {
         let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc+2];
         let u16 = u16::from_be_bytes(bytes.try_into().unwrap());

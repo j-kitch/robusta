@@ -84,13 +84,8 @@ impl MethodArea {
     /// This method lets the calling thread know which classes it is in charge of loading.
     pub fn try_start_init(self: &Arc<Self>, class_name: &str) -> Vec<(Arc<Class>, SyncSender<()>)> {
 
-        let mut class = self.map.get(&class_name.to_string());
-        let mut classes = Vec::new();
-
-        while let Some(curr_class) = class.as_ref() {
-            classes.push(curr_class.clone());
-            class = curr_class.super_class.clone().and_then(|c| self.map.get(&c.name));
-        }
+        let class = self.map.get(&class_name.to_string());
+        let classes = class.unwrap().inverse_hierarchy();
 
         let mut result = Vec::new();
         for class in classes {
