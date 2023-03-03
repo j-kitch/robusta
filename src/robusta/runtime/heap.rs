@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+
 use crate::java::{Reference, Value};
+use crate::runtime::method_area;
+use crate::runtime::method_area::Class;
 
 pub struct Heap {
     values: RwLock<HashMap<Reference, HeapValue>>,
@@ -31,6 +34,27 @@ impl Heap {
         }
     }
 
+    pub fn insert_new(self: &Arc<Self>, class: &Arc<Class>) -> Reference {
+        let fields: Vec<Arc<method_area::Field>> = class.hierarchy().iter()
+            .flat_map(|class| class.fields.iter())
+            .map(|field| field.clone())
+            .collect();
+
+        let mut obj = Object {
+            class_name: class.name.clone(),
+            fields: fields.iter().map(|f| {
+                Arc::new(Field { value: f.descriptor.zero_value() })
+            }).collect(),
+        };
+
+        // TODO: Extremely poor code here - very very temporary!
+        let mut values = self.values.write().unwrap();
+        let reference = Reference(values.len() as u32);
+
+        values.insert(reference, HeapValue::Object(Arc::new(obj)));
+
+        reference
+    }
 
     pub fn insert_string_const(self: &Arc<Self>, string_const: &str) -> Reference {
         let mut string_consts = self.string_consts.write().unwrap();

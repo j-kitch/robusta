@@ -50,6 +50,17 @@ impl FieldType {
             _ => Value::Int(Int(0)),
         }
     }
+
+    /// A field type might involve (at most 1) class names in the signature.
+    ///
+    /// For class loading we need to be aware of any class names in the type.
+    pub fn class_name(&self) -> Option<String> {
+        match self {
+            FieldType::Reference(class_name) => Some(class_name.clone()),
+            FieldType::Array(field_type) => field_type.class_name(),
+            _ => None
+        }
+    }
 }
 
 #[cfg(test)]

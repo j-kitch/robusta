@@ -1,7 +1,12 @@
 use std::thread::spawn;
+use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::{MethodType, Value};
 use crate::runtime::Const;
 use crate::thread::Thread;
+
+mod new;
+
+pub use new::new;
 
 /// Instruction `ldc`
 ///
@@ -93,25 +98,12 @@ pub fn invoke_static(thread: &mut Thread) {
     let class_name = method.class.name.clone();
 
     // Load the class if not loaded.
-    let class = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
-
-    // Does the class need to be initialized by us?
-    let send_init = thread.runtime.method_area.try_start_initialize(method.class.name.as_str());
-    if send_init.is_some() {
-        // We need to run the full <clinit> of the class first!
-        let clinit_method = thread.runtime.method_area.find_method(method.class.name.as_str(), "<clinit>", &MethodType::from_descriptor("()V").unwrap());
-        let mut clinit_thread = Thread::new(thread.runtime.clone(), class.const_pool.clone(), clinit_method);
-
-        // Run <clinit> on another thread
-        let clinit_handle = spawn(move|| clinit_thread.run());
-        clinit_handle.join().unwrap();
-
-        // Mark as initialized.
-        send_init.unwrap().send(()).unwrap();
-    }
+    let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
+    resolve_class(thread.runtime.clone(), class.name.as_str());
 
     // We can call the static method now
     let method = thread.runtime.method_area.find_method(method.class.name.as_str(), method.name.as_str(), &method.descriptor);
+    resolve_method(thread.runtime.clone(), &method);
 
     if !method.is_static {
         panic!("Expected a static method");

@@ -1,6 +1,8 @@
 //! This module defines the Robusta implementation of a Java Virtual Machine, as defined
 //! in the [specification](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html).
 
+extern crate core;
+
 pub mod java;
 pub mod class_file;
 pub mod collection;

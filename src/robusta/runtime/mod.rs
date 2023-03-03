@@ -12,7 +12,7 @@ use crate::loader::ClassFileLoader;
 use crate::native::NativeMethods;
 use crate::runtime::heap::Heap;
 
-mod method_area;
+pub mod method_area;
 mod const_pool;
 pub mod heap;
 

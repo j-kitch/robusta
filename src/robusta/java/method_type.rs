@@ -34,6 +34,20 @@ impl MethodType {
         parser.expect_end()?;
         Ok(method_type)
     }
+
+    /// Get all the class names in this method signature for the purpose of class loading.
+    pub fn class_names(&self) -> Vec<String> {
+        let mut result = Vec::new();
+        for param in self.parameters.iter() {
+            if let Some(name) = param.class_name() {
+                result.push(name);
+            }
+        }
+        if let Some(name) = self.returns.as_ref().and_then(|ft| ft.class_name()) {
+            result.push(name)
+        }
+        result
+    }
 }
 
 #[cfg(test)]

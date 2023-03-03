@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, r#return};
+use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
@@ -30,6 +30,26 @@ impl Thread {
                 }
             ],
         }
+    }
+
+    /// Create a thread who's job is to run all the <clinit> methods of the given classes in order.
+    pub fn clinit(runtime: Arc<Runtime>, classes: Vec<Arc<crate::runtime::method_area::Class>>) -> Self {
+        // Reverse the classes order (want first inserted last into the stack).
+        let mut classes = classes;
+        classes.reverse();
+
+        let mut thread = Thread { runtime, stack: Vec::new() };
+        for class in classes.iter() {
+            thread.stack.push(Frame {
+                const_pool: class.const_pool.clone(),
+                operand_stack: OperandStack::new(),
+                local_vars: LocalVars::new(),
+                method: class.methods.iter().find(|m| m.name.eq("<clinit>")).unwrap().clone(),
+                pc: 0,
+            });
+        }
+
+        thread
     }
 
     pub fn run(&mut self) {
@@ -64,6 +84,7 @@ impl Thread {
             0x4E => astore_n(self, 3),
             0xB1 => r#return(self),
             0xB8 => invoke_static(self),
+            0xBB => new(self),
             _ => panic!("not implemented opcode {:0x?}", opcode)
         }
     }
