@@ -45,6 +45,13 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn int(&self) -> Int {
+        match self {
+            Value::Int(int) => int.clone(),
+            _ => panic!("expected int")
+        }
+    }
+
     pub fn width(&self) -> usize {
         match self {
             Value::Long(_) | Value::Double(_) => 2,

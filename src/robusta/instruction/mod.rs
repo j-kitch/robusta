@@ -11,6 +11,10 @@ pub mod invoke;
 pub mod field;
 pub mod r#return;
 pub mod r#const;
+pub mod array;
+pub mod math;
+pub mod branch;
+pub mod locals;
 
 /// Instruction `ldc`
 ///

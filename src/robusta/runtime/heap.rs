@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use rand::{RngCore, thread_rng};
 
-use crate::java::{Reference, Value};
+use crate::java::{Int, Reference, Value};
 use crate::runtime::method_area;
 use crate::runtime::method_area::Class;
 
@@ -143,6 +143,14 @@ pub enum HeapValue {
 /// An array represented in the heap is one of the vectors defined in the enum.
 pub enum Array {
     Char(Vec<u16>),
+}
+
+impl Array {
+    pub fn length(&self) -> Int {
+        match self {
+            Array::Char(vec) => Int(vec.len() as i32)
+        }
+    }
 }
 
 /// An object represented in the heap is a reference to the class file and the field values.

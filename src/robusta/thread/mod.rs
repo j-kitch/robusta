@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
+use crate::instruction::array::array_length;
+use crate::instruction::branch::{if_int_cmp_ge, if_int_cmp_le};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
+use crate::instruction::locals::{iload, istore};
+use crate::instruction::math::i_add;
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
-use crate::instruction::r#return::a_return;
+use crate::instruction::r#return::{a_return, i_return};
 
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
@@ -90,6 +94,7 @@ impl Thread {
             0x07 => iconst_n(self, 4),
             0x08 => iconst_n(self, 5),
             0x12 => load_constant(self),
+            0x15 => iload(self),
             0x1A => iload_n(self, 0),
             0x1B => iload_n(self, 1),
             0x1C => iload_n(self, 2),
@@ -98,6 +103,7 @@ impl Thread {
             0x2B => aload_n(self, 1),
             0x2C => aload_n(self, 2),
             0x2D => aload_n(self, 3),
+            0x36 => istore(self),
             0x3B => istore_n(self, 0),
             0x3C => istore_n(self, 1),
             0x3D => istore_n(self, 2),
@@ -107,6 +113,10 @@ impl Thread {
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
             0x59 => dup(self),
+            0x60 => i_add(self),
+            0xA2 => if_int_cmp_ge(self),
+            0xA4 => if_int_cmp_le(self),
+            0xAC => i_return(self),
             0xB0 => a_return(self),
             0xB1 => r#return(self),
             0xB4 => get_field(self),
@@ -116,6 +126,7 @@ impl Thread {
             0xB8 => invoke_static(self),
             0xBB => new(self),
             0xBC => new_array(self),
+            0xBE => array_length(self),
             _ => panic!("not implemented opcode {:0x?}", opcode)
         }
     }
@@ -167,6 +178,13 @@ impl Frame {
         let u16 = u16::from_be_bytes(bytes.try_into().unwrap());
         self.pc += 2;
         u16
+    }
+
+    pub fn read_i16(&mut self) -> i16 {
+        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc+2];
+        let i16 = i16::from_be_bytes(bytes.try_into().unwrap());
+        self.pc += 2;
+        i16
     }
 }
 
