@@ -67,7 +67,7 @@ pub fn new(thread: &mut Thread) {
     let class_idx = cur_frame.read_u16();
     let class_const = cur_frame.const_pool.get_class(class_idx);
 
-    println!("{} new - {}", thread.group.as_str(), class_const.name.as_str());
+    // println!("{} new - {}", thread.group.as_str(), class_const.name.as_str());
 
     resolve_class(thread.runtime.clone(), class_const.name.as_str());
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), class_const.name.as_str());

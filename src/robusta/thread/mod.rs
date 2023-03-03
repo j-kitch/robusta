@@ -78,12 +78,12 @@ impl Thread {
         let opcode = bytecode[curr_frame.pc];
         curr_frame.pc += 1;
 
-        println!("{} {}.{}{} {:00x}",
-                 self.group.as_str(),
-                 curr_frame.class.as_str(),
-                 curr_frame.method.name.as_str(),
-                 curr_frame.method.descriptor.descriptor(),
-                opcode);
+        // println!("{} {}.{}{} {:00x}",
+        //          self.group.as_str(),
+        //          curr_frame.class.as_str(),
+        //          curr_frame.method.name.as_str(),
+        //          curr_frame.method.descriptor.descriptor(),
+        //         opcode);
 
         match opcode {
             0x02 => iconst_n(self, -1),

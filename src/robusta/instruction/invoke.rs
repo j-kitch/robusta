@@ -9,7 +9,7 @@ pub fn invoke_virtual(thread: &mut Thread) {
 
     // TODO: Not Handling interface methods here
     let method = cur_frame.const_pool.get_method(method_idx);
-    println!("{} invokevirtual - {}.{}{}", thread.group.as_str(), method.class.name.as_str(), method.name.as_str(), method.descriptor.descriptor());
+    // println!("{} invokevirtual - {}.{}{}", thread.group.as_str(), method.class.name.as_str(), method.name.as_str(), method.descriptor.descriptor());
     resolve_class(thread.runtime.clone(), method.class.name.as_str());
 
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());
@@ -33,7 +33,7 @@ pub fn invoke_special(thread: &mut Thread) {
 
     // TODO: Not Handling interface methods here
     let method = cur_frame.const_pool.get_method(method_idx);
-    println!("{} invokespecial - {}.{}{}", thread.group.as_str(), method.class.name.as_str(), method.name.as_str(), method.descriptor.descriptor());
+    // println!("{} invokespecial - {}.{}{}", thread.group.as_str(), method.class.name.as_str(), method.name.as_str(), method.descriptor.descriptor());
     resolve_class(thread.runtime.clone(), method.class.name.as_str());
 
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());

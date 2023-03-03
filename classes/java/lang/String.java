@@ -8,6 +8,10 @@ public class String {
 
     }
 
+    String(char[] chars) {
+        this.chars = chars;
+    }
+
     public int length() {
         return chars.length;
     }

@@ -72,8 +72,6 @@ impl Heap {
             }).collect(),
         };
 
-        println!("New obj {}", obj.class_name.as_str());
-
         // TODO: Extremely poor code here - very very temporary!
         let mut values = self.values.write().unwrap();
 

@@ -28,4 +28,12 @@ public final class StringBuilder {
         }
         return this;
     }
+
+    public String toString() {
+        char[] result = new char[count];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = chars[i];
+        }
+        return new String(result);
+    }
 }

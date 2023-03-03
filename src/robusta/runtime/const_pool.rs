@@ -82,7 +82,7 @@ impl ConstPool {
     pub fn get_class(&self, idx: u16) -> Arc<Class> {
         match self.pool.get(&idx).unwrap() {
             Const::Class(class) => class.clone(),
-            _ => panic!()
+            other => panic!()
         }
     }
 
