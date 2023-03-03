@@ -2,7 +2,6 @@ pub use new::new;
 
 use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
-use crate::native::NativeMethod;
 use crate::native::plugin::{Args, Method};
 use crate::runtime::Const;
 use crate::thread::Thread;
