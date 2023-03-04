@@ -98,6 +98,7 @@ impl Loader for ClassFileLoader {
 #[cfg(test)]
 mod tests {
     use std::path::Path;
+
     use super::*;
 
     fn class_name(file: &ClassFile) -> String {

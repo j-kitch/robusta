@@ -201,7 +201,7 @@ mod tests {
 
     use super::*;
 
-    // #[test]
+// #[test]
     // fn empty_main() {
     //     let runtime = Runtime::new();
     //     let method_area = Arc::new(MethodArea { map: AppendMap::new(), initialized: AppendMap::new() });

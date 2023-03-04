@@ -108,7 +108,6 @@ pub fn invoke_static(thread: &mut Thread) {
 
     let method_idx = cur_frame.read_u16();
     let method = cur_frame.const_pool.get_method(method_idx);
-    let class_name = method.class.name.clone();
 
     // Load the class if not loaded.
     let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), method.class.name.as_str());

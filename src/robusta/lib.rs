@@ -3,6 +3,12 @@
 
 extern crate core;
 
+use std::sync::Arc;
+
+use crate::java::MethodType;
+use crate::runtime::Runtime;
+use crate::thread::Thread;
+
 pub mod java;
 pub mod class_file;
 pub mod collection;
@@ -11,11 +17,6 @@ pub mod runtime;
 pub mod thread;
 mod instruction;
 mod loader;
-
-use std::sync::Arc;
-use crate::java::MethodType;
-use crate::runtime::Runtime;
-use crate::thread::Thread;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 #[allow(dead_code)]

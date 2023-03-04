@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::java::{MethodType, Value};
+use crate::java::Value;
 use crate::native::{Args, Method, Plugin};
 use crate::runtime::Runtime;
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
@@ -11,7 +12,6 @@ use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
-
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
 

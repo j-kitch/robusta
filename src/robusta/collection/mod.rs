@@ -122,7 +122,7 @@ mod tests {
 
     use super::*;
 
-    // #[test]
+// #[test]
     // fn only_first_insert_works() {
     //     let map = AppendMap::new();
     //

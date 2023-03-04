@@ -2,10 +2,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::class_file::ClassFile;
+use crate::class_file::const_pool as cp;
 use crate::java::{FieldType, Int, MethodType, Reference};
 use crate::runtime::heap::Heap;
-
-use crate::class_file::const_pool as cp;
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.

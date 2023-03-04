@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::java::{MethodType, Value};
 use crate::native::hash_code::hash_code_plugins;
 use crate::native::robusta::robusta_plugins;
-use crate::runtime::heap::Array;
 use crate::runtime::Runtime;
 
 mod hash_code;

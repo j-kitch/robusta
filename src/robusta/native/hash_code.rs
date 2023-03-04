@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::{Arc, RwLock};
+
 use rand::{Rng, thread_rng};
 
 use crate::java::{Int, MethodType, Reference, Value};
@@ -53,7 +53,7 @@ impl Plugin for RegisterHashCode {
             method.descriptor.eq(&MethodType::from_descriptor("()V").unwrap())
     }
 
-    fn call(&self, method: &Method, args: &Args) -> Option<Value> {
+    fn call(&self, _: &Method, args: &Args) -> Option<Value> {
         let reference = args.params[0].reference();
         let int: Int = Int(thread_rng().gen());
 
