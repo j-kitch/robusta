@@ -15,6 +15,7 @@ use crate::runtime::heap::Heap;
 pub mod method_area;
 pub mod const_pool;
 pub mod heap;
+pub mod heap2;
 
 /// The runtime of a Java Virtual Machine consists of the method area, the runtime constant pools
 /// and the heap.

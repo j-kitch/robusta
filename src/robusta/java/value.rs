@@ -52,6 +52,27 @@ impl Value {
         }
     }
 
+    pub fn long(&self) -> Long {
+        match self {
+            Value::Long(long) => long.clone(),
+            _ => panic!("expected int")
+        }
+    }
+
+    pub fn float(&self) -> Float {
+        match self {
+            Value::Float(float) => float.clone(),
+            _ => panic!("expected int")
+        }
+    }
+
+    pub fn double(&self) -> Double {
+        match self {
+            Value::Double(double) => double.clone(),
+            _ => panic!("expected int")
+        }
+    }
+
     pub fn reference(&self) -> Reference {
         match self {
             Value::Reference(reference) => reference.clone(),

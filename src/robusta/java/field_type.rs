@@ -78,6 +78,29 @@ impl FieldType {
             FieldType::Array(component) => format!("[{}", component.descriptor())
         }
     }
+
+    pub fn width(&self) -> usize {
+        match self {
+            FieldType::Boolean | FieldType::Byte => 1,
+            FieldType::Char | FieldType::Short => 2,
+            FieldType::Long | FieldType::Double => 8,
+            _ => 4
+        }
+    }
+
+    // Value to match for array component types.
+    pub fn arr_comp(&self) -> usize {
+        match self {
+            FieldType::Boolean | FieldType::Byte => 0,
+            FieldType::Char => 1,
+            FieldType::Short => 2,
+            FieldType::Int => 3,
+            FieldType::Long => 4,
+            FieldType::Float => 5,
+            FieldType::Double => 6,
+            FieldType::Reference(_) | FieldType::Array(_) => 7
+        }
+    }
 }
 
 #[cfg(test)]
