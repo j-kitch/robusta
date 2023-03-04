@@ -24,7 +24,7 @@ impl HeapInner {
         HeapInner {
             info: AppendMap::new(),
             allocator: Allocator {
-                data: [0; HEAP_SIZE],
+                data: vec![0; HEAP_SIZE].into_boxed_slice(),
                 used: AtomicUsize::new(0),
             },
         }
@@ -344,7 +344,7 @@ const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 
 /// The allocator is the actual heap memory that is used for storing objects.
 pub struct Allocator {
-    data: [u8; HEAP_SIZE],
+    data: Box<[u8]>,
     used: AtomicUsize,
 }
 

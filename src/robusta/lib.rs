@@ -29,6 +29,14 @@ impl VirtualMachine {
     pub fn new(main_class: &str) -> Self {
         let runtime = Runtime::new();
 
+        for class in [
+            "java.lang.Object",
+            "java.lang.Class",
+            "java.lang.String"
+        ] {
+            runtime.method_area.insert(runtime.clone(), class);
+        }
+
         runtime.method_area.insert(runtime.clone(), main_class);
 
         let pool = runtime.method_area.find_const_pool(main_class);

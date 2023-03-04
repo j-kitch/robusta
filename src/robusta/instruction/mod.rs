@@ -29,7 +29,8 @@ pub fn load_constant(thread: &mut Thread) {
 
     match cur_frame.const_pool.get_const(index) {
         Const::String(string) => {
-            cur_frame.operand_stack.push(Value::Reference(string.string));
+            let string_ref = thread.runtime.heap.insert_string_const(thread.runtime.clone(), string.string.as_str());
+            cur_frame.operand_stack.push(Value::Reference(string_ref));
         }
         Const::Integer(int) => {
             cur_frame.operand_stack.push(Value::Int(int.int));

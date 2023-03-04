@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::class_file::ClassFile;
 use crate::class_file::const_pool as cp;
-use crate::java::{FieldType, Int, MethodType, Reference};
+use crate::java::{FieldType, Int, MethodType};
 use crate::runtime::Runtime;
 
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
@@ -13,7 +13,7 @@ pub struct ConstPool {
 }
 
 impl ConstPool {
-    pub fn new(file: &ClassFile, runtime: Arc<Runtime>) -> ConstPool {
+    pub fn new(file: &ClassFile, _: Arc<Runtime>) -> ConstPool {
         let pool: HashMap<u16, Const> = HashMap::new();
         let mut pool = ConstPool { pool };
 
@@ -29,10 +29,12 @@ impl ConstPool {
                     pool.pool.insert(*key, Const::Integer(Arc::new(Integer { int: Int(integer.int )})));
                 }
                 cp::Const::String(string) => {
+                    // IMPORTANT: Ok we cannot load a string constant immediately into the heap, since that involves
+                    // loading java.lang.String, which creates a java.lang.Object => java.lang.String => java.lang.Object
+                    // cycle in the class loading where each is waiting forever for the other.
                     let string = file.get_const_utf8(string.string);
                     let string = String::from_utf8(string.bytes.clone()).unwrap();
-                    let reference = runtime.heap.insert_string_const(runtime.clone(), string.as_str());
-                    pool.pool.insert(*key, Const::String(Arc::new(StringConst { string: reference })));
+                    pool.pool.insert(*key, Const::String(Arc::new(StringConst { string })));
                 }
                 cp::Const::Class(class) => {
                     let name = file.get_const_utf8(class.name);
@@ -145,7 +147,7 @@ pub struct Integer {
 #[derive(Debug, PartialEq)]
 /// A reference to a constant string.
 pub struct StringConst {
-    pub string: Reference,
+    pub string: String
 }
 //
 // #[cfg(test)]
