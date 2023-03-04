@@ -219,7 +219,7 @@ impl Array {
 
     pub fn set_element(&self, index: Int, value: Value) {
         let header = self.header();
-        let index = index.0 as usize;
+        let index = index.0 as usize * header.component.width();
         write_value(self.data, index, &header.component.to_field(), value)
     }
 
@@ -349,7 +349,7 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            array.header.write(ArrayHeader { component, length: size });
+            array.header.write(ArrayHeader { component, length: data_size });
             array.data.write_bytes(0, size);
 
             array
