@@ -4,12 +4,11 @@ public class String {
 
     private char[] chars;
 
-    private String() {
-
+    public String() {
+        this.chars = "".toCharArray();
     }
-
-    String(char[] chars) {
-        this.chars = chars;
+    public String(char[] chars) {
+        this.chars = chars.clone();
     }
 
     public int length() {
@@ -19,4 +18,6 @@ public class String {
     char[] toCharArray() {
         return chars;
     }
+
+    public native String intern();
 }
