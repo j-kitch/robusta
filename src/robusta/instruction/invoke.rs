@@ -1,6 +1,6 @@
 use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
-use crate::native::plugin::{Args, Method};
+use crate::native::{Args, Method};
 use crate::thread::Thread;
 
 /// No difference between these two methods YET

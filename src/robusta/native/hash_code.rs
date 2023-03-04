@@ -4,23 +4,24 @@ use std::sync::{Arc, RwLock};
 use rand::{Rng, thread_rng};
 
 use crate::java::{Int, MethodType, Reference, Value};
-use crate::native::plugin::{Args, Method, Plugin};
+use crate::native::{Args, Method, Plugin};
 
 pub fn hash_code_plugins() -> Vec<Box<dyn Plugin>> {
-    let library = Arc::new(HashCodeLibrary { hash_codes: RwLock::new(HashMap::new()) });
+    let state = Arc::new(State { hash_codes: RwLock::new(HashMap::new()) });
 
-    let get_hash_code: Box<dyn Plugin> = Box::new(GetHashCode { library: library.clone() }) as _;
-    let register_hash_code: Box<dyn Plugin> = Box::new(RegisterHashCode { library: library.clone() }) as _;
+    let get_hash_code: Box<dyn Plugin> = Box::new(GetHashCode { library: state.clone() }) as _;
+    let register_hash_code: Box<dyn Plugin> = Box::new(RegisterHashCode { library: state.clone() }) as _;
 
     vec![get_hash_code, register_hash_code]
 }
 
-struct HashCodeLibrary {
+/// The shared state for hash code functions.
+struct State {
     hash_codes: RwLock<HashMap<Reference, Int>>,
 }
 
 struct GetHashCode {
-    library: Arc<HashCodeLibrary>,
+    library: Arc<State>,
 }
 
 impl Plugin for GetHashCode {
@@ -42,7 +43,7 @@ impl Plugin for GetHashCode {
 }
 
 struct RegisterHashCode {
-    library: Arc<HashCodeLibrary>,
+    library: Arc<State>,
 }
 
 impl Plugin for RegisterHashCode {

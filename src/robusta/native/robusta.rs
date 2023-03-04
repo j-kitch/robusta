@@ -1,14 +1,14 @@
 use std::str::from_utf8;
 use std::sync::Arc;
 use crate::java::{MethodType, Value};
-use crate::native::plugin::{Method, Plugin};
-use crate::native::simple::simple;
+use crate::native::{Method, Plugin};
+use crate::native::stateless::stateless;
 use crate::runtime::heap::Array;
 use crate::runtime::Runtime;
 
 pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
-        simple(
+        stateless(
             Method {
                 class: "Robusta".to_string(),
                 name: "println".to_string(),
@@ -16,7 +16,7 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
             },
             Arc::new(robusta_println_int)
         ),
-        simple(
+        stateless(
             Method {
                 class: "Robusta".to_string(),
                 name: "println".to_string(),
