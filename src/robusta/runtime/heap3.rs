@@ -30,6 +30,12 @@ impl HeapInner {
         }
     }
 
+    pub fn print_stats(&self) {
+        let used = self.allocator.used.load(Ordering::SeqCst);
+        let fraction = 100.0 * (used as f64) / HEAP_SIZE as f64;
+        println!("Used {} bytes of heap ({:.2}%)", used, fraction)
+    }
+
     pub fn add_class(&self, class: Arc<Class>) -> Arc<ClassInfo> {
         let (a, _) = self.info.clone().get_or_insert(&class.name, || {
             let parent = if let Some(parent) = &class.super_class {

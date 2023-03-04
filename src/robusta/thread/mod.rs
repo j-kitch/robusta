@@ -68,6 +68,7 @@ impl Thread {
 
     pub fn run(&mut self) {
         while !self.stack.is_empty() {
+            // self.runtime.heap.print_stats();
             self.next();
         }
     }

@@ -16,6 +16,12 @@ pub struct Heap {
 }
 
 impl Heap {
+    pub fn print_stats(&self) {
+        self.inner.print_stats();
+        let values = self.values.read().unwrap();
+        println!("{} objects in the heap", values.len());
+    }
+
     fn insert(values: &mut RwLockWriteGuard<HashMap<Reference, HeapValue>>, value: HeapValue) -> Reference {
         let mut rng = thread_rng();
         let mut reference = rng.next_u32();
