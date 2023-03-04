@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 
-use rand::{Rng, SeedableRng, thread_rng};
-use rand::prelude::ThreadRng;
+use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 
 use crate::java::{Int, MethodType, Reference, Value};
