@@ -8,7 +8,7 @@ use crate::runtime::method_area;
 use crate::runtime::method_area::Class;
 
 pub struct Heap {
-    values: RwLock<HashMap<Reference, HeapValue>>,
+    values: RwLock<HashMap<Reference, heap3::>>,
     string_consts: RwLock<HashMap<String, Reference>>,
     class_objects: RwLock<HashMap<String, Reference>>
 }
