@@ -89,6 +89,23 @@ pub struct ClassInfo {
 }
 
 impl ClassInfo {
+    /// Find parents starting from the given class.
+    pub fn find_parents_from(self: &Arc<Self>, name: &str) -> Vec<Arc<ClassInfo>> {
+        let mut parents = Vec::new();
+        let mut found = false;
+        let mut class = Some(self);
+        while let Some(current) = class {
+            if !found {
+                found = current.name.eq(name);
+            }
+            if found {
+                parents.push(current.clone());
+            }
+            class = current.parent.as_ref();
+        }
+        parents
+    }
+
     pub fn find_parent(self: &Arc<Self>, name: &str) -> Option<Arc<ClassInfo>> {
         let mut class = Some(self);
         while let Some(current) = class {
@@ -160,10 +177,10 @@ impl Object {
     fn find_field(&self, field: &Field) -> Arc<FieldInfo> {
         let header = self.header();
 
-        let class = header.class.find_parent(field.class.name.as_str())
-            .expect("Could not find class {}");
+        let classes = header.class.find_parents_from(field.class.name.as_str());
 
-        class.fields.iter()
+        classes.iter()
+            .flat_map(|c| c.fields.iter())
             .find(|f| f.name.eq(field.name.as_str()) && f.descriptor.eq(&field.descriptor))
             .expect("Could not find field")
             .clone()

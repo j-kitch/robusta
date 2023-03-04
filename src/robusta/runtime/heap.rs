@@ -92,7 +92,7 @@ impl Heap {
 
         let name_field = const_pool::Field {
             name: "name".to_string(),
-            descriptor: FieldType::from_descriptor("Llava/lang.String;").unwrap(),
+            descriptor: FieldType::from_descriptor("Ljava/lang.String;").unwrap(),
             class: Arc::new(const_pool::Class { name: "java.lang.Class".to_string() }),
         };
 
