@@ -36,7 +36,11 @@ pub fn load_constant(thread: &mut Thread) {
         }
         Const::Class(class) => {
             resolve_class(thread.runtime.clone(), class.name.as_str());
-            let class_ref = thread.runtime.heap.get_class_object(class.name.as_str());
+            let class_ref = thread.runtime.heap.get_class_object(
+                thread.runtime.clone(),
+                class.name.as_str(),
+                &thread.runtime.method_area.insert(thread.runtime.clone(), "java.lang.Class").0.clone()
+            );
             cur_frame.operand_stack.push(Value::Reference(class_ref));
         }
         other => panic!("Not supported const {:?}", other)

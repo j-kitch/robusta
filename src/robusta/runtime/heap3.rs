@@ -1,10 +1,8 @@
 use std::mem::size_of;
-use std::ops::{Add, Mul};
-use std::process::Output;
-use std::sync::{Arc, RwLock};
+use std::slice::from_raw_parts;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::class_file::ClassFile;
 use crate::collection::AppendMap;
 use crate::java::{Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::runtime::const_pool::Field;
@@ -12,6 +10,7 @@ use crate::runtime::method_area::Class;
 
 const ALIGN: usize = 4;
 
+#[allow(dead_code)]
 /// (8 byte primitive) * Integer.MAX_VALUE
 const ARRAY_MAX_LENGTH: u64 = 17_179_869_176;
 
@@ -21,19 +20,18 @@ pub struct HeapInner {
 }
 
 impl HeapInner {
-
     pub fn new() -> Self {
         HeapInner {
             info: AppendMap::new(),
             allocator: Allocator {
                 data: [0; HEAP_SIZE],
                 used: AtomicUsize::new(0),
-            }
+            },
         }
     }
 
     pub fn add_class(&self, class: Arc<Class>) -> Arc<ClassInfo> {
-        let (a, b) = self.info.clone().get_or_insert(&class.name, || {
+        let (a, _) = self.info.clone().get_or_insert(&class.name, || {
             let parent = if let Some(parent) = &class.super_class {
                 Some(self.add_class(parent.clone()))
             } else {
@@ -61,7 +59,7 @@ impl HeapInner {
             let padding = ALIGN - (offset % ALIGN);
             let width = offset + padding;
 
-            let mut fields = our_fields.into_iter()
+            let fields = our_fields.into_iter()
                 .map(Arc::new)
                 .collect();
 
@@ -78,8 +76,8 @@ impl HeapInner {
 }
 
 #[derive(Clone)]
-struct ClassInfo {
-    name: String,
+pub struct ClassInfo {
+    pub name: String,
     parent: Option<Arc<ClassInfo>>,
     /// The fields in this class, does not include parent fields.
     fields: Vec<Arc<FieldInfo>>,
@@ -145,10 +143,18 @@ pub struct Object {
     data: *mut u8,
 }
 
+unsafe impl Send for Object {}
+
+unsafe impl Sync for Object {}
+
 impl Object {
+    pub fn class(&self) -> Arc<ClassInfo> {
+        let header = self.header();
+        header.class.clone()
+    }
 
     fn header(&self) -> &ObjectHeader {
-        unsafe { self.header.as_ref().unwrap()  }
+        unsafe { self.header.as_ref().unwrap() }
     }
 
     fn find_field(&self, field: &Field) -> Arc<FieldInfo> {
@@ -193,6 +199,10 @@ pub struct Array {
     header: *mut ArrayHeader,
     data: *mut u8,
 }
+
+unsafe impl Send for Array {}
+
+unsafe impl Sync for Array {}
 
 impl Array {
     fn header(&self) -> &ArrayHeader {
@@ -250,6 +260,18 @@ impl Array {
         let offset = index.0 as usize * self.header().component.width();
         read_value(self.data, offset, &self.header().component.to_field())
     }
+
+    pub fn as_chars_slice(&self) -> &[u16] {
+        let header = self.header();
+        if header.component.ne(&ArrayType::Char) {
+            panic!("cannot export as chars slice")
+        }
+        let length = header.length / header.component.width();
+        let pointer: *mut u16 = self.data.cast();
+        unsafe {
+            from_raw_parts(pointer.cast_const(), length)
+        }
+    }
 }
 
 #[repr(C)]
@@ -264,8 +286,12 @@ struct ArrayHeader {
     length: usize,
 }
 
-#[derive(Clone)]
-enum ArrayType {
+unsafe impl Send for ArrayHeader {}
+
+unsafe impl Sync for ArrayHeader {}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ArrayType {
     BooleanOrByte,
     Char,
     Short,
@@ -317,7 +343,7 @@ impl ArrayType {
 const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 
 /// The allocator is the actual heap memory that is used for storing objects.
-struct Allocator {
+pub struct Allocator {
     data: [u8; HEAP_SIZE],
     used: AtomicUsize,
 }
@@ -406,7 +432,7 @@ fn read_value(data_start: *mut u8, offset: usize, field: &FieldType) -> Value {
                 Value::Int(Int(pointer.read() as i32))
             }
             FieldType::Int => {
-                let pointer: *mut i32= pointer.cast();
+                let pointer: *mut i32 = pointer.cast();
                 Value::Int(Int(pointer.read()))
             }
             FieldType::Long => {

@@ -20,8 +20,9 @@ pub fn invoke_virtual(thread: &mut Thread) {
 
     let object_ref = args[0];
     let object = thread.runtime.heap.load_object(object_ref.reference());
-    resolve_class(thread.runtime.clone(), object.class_name.as_str());
-    let (object_class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), object.class_name.as_str());
+
+    // resolve_class(thread.runtime.clone(), object.class_name.as_str());
+    let (object_class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), object.class().as_ref().name.as_str());
 
     // Find method
     let (class, method) = object_class.find_instance_method(&method);
@@ -44,7 +45,7 @@ pub fn invoke_virtual(thread: &mut Thread) {
             cur_frame.operand_stack.push(result);
         }
     } else {
-        thread.push_frame(object.class_name.clone(), object_class.const_pool.clone(), method.clone(), args);
+        thread.push_frame(object.class().name.clone(), object_class.const_pool.clone(), method.clone(), args);
     }
 }
 

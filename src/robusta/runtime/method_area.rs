@@ -29,7 +29,7 @@ impl MethodArea {
         }
         self.map.clone().get_or_insert(&name.to_string(), || {
             let class_file = runtime.loader.find(name).unwrap();
-            let pool = ConstPool::new(&class_file, runtime.heap.clone());
+            let pool = ConstPool::new(&class_file, runtime.clone());
 
             let super_class = if class_file.super_class == 0 { None } else {
                 let super_class = pool.get_class(class_file.super_class);
@@ -197,10 +197,6 @@ pub struct Method {
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::Const;
-
-    use super::*;
-
 // #[test]
     // fn empty_main() {
     //     let runtime = Runtime::new();

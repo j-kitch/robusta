@@ -3,12 +3,14 @@ use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use rand::{RngCore, thread_rng};
 
-use crate::java::{Int, Reference, Value};
-use crate::runtime::method_area;
+use crate::java::{FieldType, Int, Reference, Value};
+pub use crate::runtime::heap3::{Array, ArrayType, HeapInner, Object};
+use crate::runtime::{const_pool, Runtime};
 use crate::runtime::method_area::Class;
 
 pub struct Heap {
-    values: RwLock<HashMap<Reference, heap3::>>,
+    inner: HeapInner,
+    values: RwLock<HashMap<Reference, HeapValue>>,
     string_consts: RwLock<HashMap<String, Reference>>,
     class_objects: RwLock<HashMap<String, Reference>>
 }
@@ -29,6 +31,7 @@ impl Heap {
 
     pub fn new() -> Arc<Self> {
         Arc::new(Heap {
+            inner: HeapInner::new(),
             values: RwLock::new(HashMap::new()),
             string_consts: RwLock::new(HashMap::new()),
             class_objects: RwLock::new(HashMap::new()),
@@ -52,34 +55,25 @@ impl Heap {
     }
 
     pub fn insert_char_array(self: &Arc<Self>, length: usize) -> Reference {
-        let char_arr = Arc::new(Array::Char(vec![0; length]));
+        let char_arr = self.inner.allocator.new_array(ArrayType::Char, Int(length as i32));
         let mut values = self.values.write().unwrap();
 
-        let arr_ref = Heap::insert(&mut values, HeapValue::Array(char_arr));
+        let arr_ref = Heap::insert(&mut values, HeapValue::Array(Arc::new(char_arr)));
 
         arr_ref
     }
 
     pub fn insert_new(self: &Arc<Self>, class: &Arc<Class>) -> Reference {
-        let fields: Vec<Arc<method_area::Field>> = class.inverse_hierarchy().iter()
-            .flat_map(|class| class.fields.iter())
-            .map(|field| field.clone())
-            .collect();
-
-        let obj = Object {
-            class_name: class.name.clone(),
-            fields: fields.iter().map(|f| {
-                Arc::new(Field { value: f.descriptor.zero_value() })
-            }).collect(),
-        };
+        let class = self.inner.add_class(class.clone());
+        let object = self.inner.allocator.new_object(class.clone());
 
         // TODO: Extremely poor code here - very very temporary!
         let mut values = self.values.write().unwrap();
 
-        Heap::insert(&mut values, HeapValue::Object(Arc::new(obj)))
+        Heap::insert(&mut values, HeapValue::Object(Arc::new(object)))
     }
 
-    pub fn get_class_object(self: &Arc<Self>, class: &str) -> Reference {
+    pub fn get_class_object(self: &Arc<Self>, runtime: Arc<Runtime>, class: &str, class_class: &Arc<Class>) -> Reference {
         let mut values = self.values.write().unwrap();
         let mut classes = self.class_objects.write().unwrap();
 
@@ -89,110 +83,72 @@ impl Heap {
 
         let mut strings = self.string_consts.write().unwrap();
 
-        let name_ref = Heap::insert_string_const_inner(&mut strings, &mut values, class);
-        let class_obj = Arc::new(Object {
-            class_name: "java.lang.Class".to_string(),
-            fields: vec![
-                Arc::new(Field {
-                    value: Value::Reference(name_ref)
-                })
-            ]
-        });
+        let name_ref = self.insert_string_const_inner(
+            runtime.method_area.insert(runtime.clone(), "java.lang.String").0.clone(),
+            &mut strings, &mut values, class);
 
-        let class_ref = Heap::insert(&mut values, HeapValue::Object(class_obj));
+        let class_class_info = self.inner.add_class(class_class.clone());
+        let class_obj = self.inner.allocator.new_object(class_class_info);
+
+        let name_field = const_pool::Field {
+            name: "name".to_string(),
+            descriptor: FieldType::from_descriptor("Llava/lang.String;").unwrap(),
+            class: Arc::new(const_pool::Class { name: "java.lang.Class".to_string() }),
+        };
+
+        class_obj.set_field(&name_field, Value::Reference(name_ref));
+
+        let class_ref = Heap::insert(&mut values, HeapValue::Object(Arc::new(class_obj)));
         classes.insert(class.to_string(), class_ref);
         class_ref
     }
 
-    fn insert_string_const_inner(strings: &mut RwLockWriteGuard<HashMap<String, Reference>>, values: &mut RwLockWriteGuard<HashMap<Reference, HeapValue>>, string: &str) -> Reference {
+    fn insert_string_const_inner(&self,
+                                 string_class: Arc<Class>,
+                                 strings: &mut RwLockWriteGuard<HashMap<String, Reference>>,
+                                 values: &mut RwLockWriteGuard<HashMap<Reference, HeapValue>>,
+                                 string: &str) -> Reference {
         if strings.contains_key(string) {
             return strings.get(string).unwrap().clone();
         }
 
         let bytes: Vec<u16> = string.to_string().encode_utf16().collect();
-        let arr_ref = Heap::insert(values, HeapValue::Array(Arc::new(Array::Char(bytes))));
+        let arr = self.inner.allocator.new_array(ArrayType::Char, Int(bytes.len() as i32));
+        for (index, ch) in bytes.iter().enumerate() {
+            arr.set_element(Int(index as i32), Value::Int(Int(*ch as i32)));
+        }
 
-        let chars_field = Arc::new(Field { value: Value::Reference(Reference(0)) });
-        chars_field.set_value(Value::Reference(arr_ref));
+        let arr_ref = Heap::insert(values, HeapValue::Array(Arc::new(arr)));
 
-        let obj = HeapValue::Object(Arc::new(Object {
-            class_name: "java.lang.String".to_string(),
-            fields: vec![chars_field],
-        }));
-        let obj_ref = Heap::insert(values, obj);
+        let string_class = self.inner.add_class(string_class);
+        let string_obj = self.inner.allocator.new_object(string_class);
+
+        let chars_field = const_pool::Field {
+            name: "chars".to_string(),
+            descriptor: FieldType::Array(Box::new(FieldType::Char)),
+            class: Arc::new(const_pool::Class { name: "java.lang.String".to_string() }),
+        };
+
+        string_obj.set_field(&chars_field, Value::Reference(arr_ref));
+
+        let obj_ref = Heap::insert(values, HeapValue::Object(Arc::new(string_obj)));
 
         strings.insert(string.to_string(), obj_ref);
 
         obj_ref
     }
 
-    pub fn insert_string_const(self: &Arc<Self>, string_const: &str) -> Reference {
+    pub fn insert_string_const(self: &Arc<Self>, runtime: Arc<Runtime>, string_const: &str) -> Reference {
         let mut string_consts = self.string_consts.write().unwrap();
         let mut values = self.values.write().unwrap();
 
-        Heap::insert_string_const_inner(&mut string_consts, &mut values, string_const)
+        self.insert_string_const_inner(
+            runtime.method_area.insert(runtime.clone(), "java.lang.String").0.clone(),
+            &mut string_consts, &mut values, string_const)
     }
 }
 
 pub enum HeapValue {
     Array(Arc<Array>),
     Object(Arc<Object>),
-}
-
-/// An array represented in the heap is one of the vectors defined in the enum.
-pub enum Array {
-    Char(Vec<u16>),
-}
-
-impl Array {
-    pub fn length(&self) -> Int {
-        match self {
-            Array::Char(vec) => Int(vec.len() as i32)
-        }
-    }
-    pub fn chars(&self) -> &Vec<u16> {
-        match self {
-            Array::Char(vec) => vec,
-        }
-    }
-    pub fn chars_set(&self, index: Int, value: Value) {
-        match self {
-            Array::Char(vec) => {
-                unsafe {
-                    let vec: *const u16 = vec.as_ptr();
-                    let vec: *mut u16 = vec.cast_mut();
-                    vec.offset(index.0 as isize).write(value.int().0 as u16)
-                }
-            }
-        }
-    }
-
-}
-
-/// An object represented in the heap is a reference to the class file and the field values.
-pub struct Object {
-    /// The class name is the key into the class.
-    pub class_name: String,
-    /// The set of fields, in definition order from superclass to leaf class.
-    pub fields: Vec<Arc<Field>>,
-}
-
-pub struct Field {
-    value: Value,
-}
-
-impl Field {
-    pub fn get_value(&self) -> Value {
-        self.value
-    }
-
-    /// This method uses unsafe rust to set the value without any multi-threading safety,
-    /// to match the behaviour of the JVM.
-    pub fn set_value(&self, value: Value) {
-        unsafe {
-            let v: *const Value = &self.value;
-            let v = v as *mut Value;
-            *v = value;
-        }
-    }
 }

@@ -22,7 +22,7 @@ pub fn char_array_load(thread: &mut Thread) {
 
     let arr_ref = frame.operand_stack.pop().reference();
     let arr = thread.runtime.heap.load_array(arr_ref);
-    let char_array = arr.chars();
+    let char_array = arr.as_chars_slice();
 
     let char = char_array[index.0 as usize];
     let char_int = Int(char as i32);
@@ -38,5 +38,6 @@ pub fn char_array_store(thread: &mut Thread) {
     let arr_ref = frame.operand_stack.pop().reference();
 
     let arr = thread.runtime.heap.load_array(arr_ref);
-    arr.chars_set(index, value);
+
+    arr.set_element(index, value);
 }

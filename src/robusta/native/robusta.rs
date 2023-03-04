@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use crate::java::{MethodType, Value};
+use crate::java::{FieldType, MethodType, Value};
 use crate::native::{Method, Plugin};
 use crate::native::stateless::stateless;
-use crate::runtime::heap::Array;
-use crate::runtime::Runtime;
+use crate::runtime::{const_pool, Runtime};
 
 pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
@@ -46,16 +45,19 @@ fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<V
     };
     let str_obj = runtime.heap.load_object(str_ref);
 
-    let chars_ref = match str_obj.fields.get(0).unwrap().get_value() {
-        Value::Reference(reference) => reference,
-        _ => panic!("unexpected")
-    };
-    let chars_arr = runtime.heap.load_array(chars_ref);
-    let chars_arr = match chars_arr.as_ref() {
-        Array::Char(chars) => chars.clone(),
+    let chars_field = const_pool::Field {
+        name: "chars".to_string(),
+        descriptor: FieldType::from_descriptor("[C").unwrap(),
+        class: Arc::new(const_pool::Class { name: "java.lang.String".to_string() })
     };
 
-    let string = String::from_utf16(&chars_arr).unwrap();
+    let chars_field = str_obj.get_field(&chars_field);
+    let chars_ref = chars_field.reference();
+
+    let chars_arr = runtime.heap.load_array(chars_ref);
+    let chars_arr = chars_arr.as_chars_slice();
+
+    let string = String::from_utf16(chars_arr).unwrap();
     println!("{}", string);
 
     None
