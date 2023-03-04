@@ -178,7 +178,7 @@ impl Object {
     pub fn set_field(&self, field: &Field, value: Value) {
         let field = self.find_field(field);
 
-        write_value(self.data, field.offset, value)
+        write_value(self.data, field.offset, &field.descriptor, value)
     }
 }
 
@@ -220,40 +220,7 @@ impl Array {
     pub fn set_element(&self, index: Int, value: Value) {
         let header = self.header();
         let index = index.0 as usize;
-        match &header.component {
-            ArrayType::BooleanOrByte => {
-                let value = value.int().0 as i8;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Char => {
-                let value = value.int().0 as u16;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Short => {
-                let value = value.int().0 as i16;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Int => {
-                let value = value.int().0;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Long => {
-                let value = value.long().0;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Float => {
-                let value = value.float().0;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Double => {
-                let value = value.double().0;
-                write_value(self.data, index, value)
-            }
-            ArrayType::Reference => {
-                let value = value.reference().0;
-                write_value(self.data, index, value)
-            }
-        }
+        write_value(self.data, index, &header.component.to_field(), value)
     }
 
     pub fn get_element(&self, index: Int) -> Value {
@@ -404,10 +371,43 @@ impl Allocator {
     }
 }
 
-fn write_value<V>(data_start: *mut u8, offset: usize, value: V) {
+fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
     unsafe {
-        let pointer: *mut V = data_start.add(offset).cast();
-        pointer.write(value)
+        let pointer: *mut u8 = data_start.add(offset);
+        match field {
+            FieldType::Boolean | FieldType::Byte => {
+                let pointer: *mut i8 = pointer.cast();
+                pointer.write(value.int().0 as i8)
+            }
+            FieldType::Char => {
+                let pointer: *mut u16 = pointer.cast();
+                pointer.write(value.int().0 as u16)
+            }
+            FieldType::Short => {
+                let pointer: *mut i16 = pointer.cast();
+                pointer.write(value.int().0 as i16)
+            }
+            FieldType::Int => {
+                let pointer: *mut i32 = pointer.cast();
+                pointer.write(value.int().0)
+            }
+            FieldType::Long => {
+                let pointer: *mut i64 = pointer.cast();
+                pointer.write(value.long().0 as i64)
+            }
+            FieldType::Float => {
+                let pointer: *mut f32 = pointer.cast();
+                pointer.write(value.float().0 as f32)
+            }
+            FieldType::Double => {
+                let pointer: *mut f64 = pointer.cast();
+                pointer.write(value.double().0 as f64)
+            }
+            FieldType::Reference(_) | FieldType::Array(_) => {
+                let pointer: *mut u32 = pointer.cast();
+                pointer.write(value.reference().0 as u32)
+            }
+        }
     }
 }
 

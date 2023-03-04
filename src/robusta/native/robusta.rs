@@ -39,10 +39,7 @@ fn robusta_println_int(_: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
 }
 
 fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
-    let str_ref = match values[0] {
-        Value::Reference(reference) => reference,
-        _ => panic!("unexpected")
-    };
+    let str_ref = values[0].reference();
     let str_obj = runtime.heap.load_object(str_ref);
 
     let chars_field = const_pool::Field {

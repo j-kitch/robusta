@@ -112,9 +112,9 @@ impl Heap {
             return strings.get(string).unwrap().clone();
         }
 
-        let bytes: Vec<u16> = string.to_string().encode_utf16().collect();
-        let arr = self.inner.allocator.new_array(ArrayType::Char, Int(bytes.len() as i32));
-        for (index, ch) in bytes.iter().enumerate() {
+        let utf16_chars: Vec<u16> = string.to_string().encode_utf16().collect();
+        let arr = self.inner.allocator.new_array(ArrayType::Char, Int(utf16_chars.len() as i32));
+        for (index, ch) in utf16_chars.iter().enumerate() {
             arr.set_element(Int(index as i32), Value::Int(Int(*ch as i32)));
         }
 
