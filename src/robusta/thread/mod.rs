@@ -31,6 +31,10 @@ pub struct Thread {
 }
 
 impl Thread {
+    pub fn empty(runtime: Arc<Runtime>) -> Self {
+        Thread { group: "thread".to_string(), runtime, stack: Vec::new() }
+    }
+
     pub fn new(runtime: Arc<Runtime>, class: String, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
         Thread {
             group: "MainThread".to_string(),
@@ -46,6 +50,17 @@ impl Thread {
                 }
             ],
         }
+    }
+
+    pub fn add_frame(&mut self, class: String, pool: Arc<ConstPool>, method: Arc<Method>) {
+        self.stack.push(Frame {
+            class,
+            const_pool: pool,
+            operand_stack: OperandStack::new(),
+            local_vars: LocalVars::new(),
+            method,
+            pc: 0
+        })
     }
 
     /// Create a thread who's job is to run all the <clinit> methods of the given classes in order.

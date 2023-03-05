@@ -190,6 +190,16 @@ impl Heap {
             string_ref
         }
     }
+
+    pub fn intern_class(&self, name: &str, object_ref: Reference) -> Reference {
+        let mut class_objects = self.class_objects.write().unwrap();
+        if let Some(old_ref) = class_objects.get(name) {
+            *old_ref
+        } else {
+            class_objects.insert(name.to_string(), object_ref);
+            object_ref
+        }
+    }
 }
 
 pub enum HeapValue {

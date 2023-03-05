@@ -1,3 +1,5 @@
+import com.jkitch.robusta.Robusta;
+
 public class Inheritance {
 
     static {

@@ -1,3 +1,5 @@
+import com.jkitch.robusta.Robusta;
+
 public class HashCode {
 
     public static void main(String[] args) {
