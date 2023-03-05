@@ -1,5 +1,5 @@
 use std::mem::size_of;
-use std::slice::from_raw_parts;
+use std::slice::{from_raw_parts, from_raw_parts_mut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -260,6 +260,18 @@ impl Array {
         let pointer: *mut u16 = self.data.cast();
         unsafe {
             from_raw_parts(pointer.cast_const(), length)
+        }
+    }
+
+    pub fn as_chars_mut(&self) -> &mut [u16] {
+        let header = self.header();
+        if header.component.ne(&ArrayType::Char) {
+            panic!("cannot export as chars slice")
+        }
+        let length = header.length / header.component.width();
+        let pointer: *mut u16 = self.data.cast();
+        unsafe {
+            from_raw_parts_mut(pointer, length)
         }
     }
 }

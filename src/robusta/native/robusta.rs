@@ -13,7 +13,7 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
                 name: "println".to_string(),
                 descriptor: MethodType::from_descriptor("(I)V").unwrap(),
             },
-            Arc::new(robusta_println_int)
+            Arc::new(robusta_println_int),
         ),
         stateless(
             Method {
@@ -21,7 +21,7 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
                 name: "println".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/String;)V").unwrap(),
             },
-            Arc::new(robusta_println_string)
+            Arc::new(robusta_println_string),
         )
     ]
 }
@@ -45,7 +45,7 @@ fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<V
     let chars_field = const_pool::Field {
         name: "chars".to_string(),
         descriptor: FieldType::from_descriptor("[C").unwrap(),
-        class: Arc::new(const_pool::Class { name: "java.lang.String".to_string() })
+        class: Arc::new(const_pool::Class { name: "java.lang.String".to_string() }),
     };
 
     let chars_field = str_obj.get_field(&chars_field);

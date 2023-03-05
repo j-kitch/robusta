@@ -80,7 +80,7 @@ impl Value {
         }
     }
 
-    pub fn width(&self) -> usize {
+    pub fn category(&self) -> usize {
         match self {
             Value::Long(_) | Value::Double(_) => 2,
             _ => 1,

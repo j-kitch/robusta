@@ -8,7 +8,10 @@ public class String {
         this.chars = "".toCharArray();
     }
     public String(char[] chars) {
-        this.chars = chars.clone();
+        this.chars = new char[chars.length];
+        for (int i = 0; i < chars.length; i++) {
+            this.chars[i] = chars[i];
+        }
     }
 
     public int length() {

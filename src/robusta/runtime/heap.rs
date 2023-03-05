@@ -6,6 +6,7 @@ use rand::{RngCore, thread_rng};
 use crate::java::{FieldType, Int, Reference, Value};
 pub use crate::runtime::heap3::{Array, ArrayType, HeapInner, Object};
 use crate::runtime::{const_pool, Runtime};
+use crate::runtime::const_pool::Field;
 use crate::runtime::method_area::Class;
 
 pub struct Heap {
@@ -67,6 +68,13 @@ impl Heap {
         let arr_ref = Heap::insert(&mut values, HeapValue::Array(Arc::new(char_arr)));
 
         arr_ref
+    }
+
+    pub fn insert_char_arr(self: &Arc<Self>, chars: &[u16]) -> Reference {
+        let char_arr = self.inner.allocator.new_array(ArrayType::Char, Int(chars.len() as i32));
+        let char_slice = char_arr.as_chars_mut();
+        char_slice.copy_from_slice(chars);
+        Heap::insert(&mut self.values.write().unwrap(), HeapValue::Array(Arc::new(char_arr)))
     }
 
     pub fn insert_new(self: &Arc<Self>, class: &Arc<Class>) -> Reference {
@@ -144,13 +152,43 @@ impl Heap {
         obj_ref
     }
 
-    pub fn insert_string_const(self: &Arc<Self>, runtime: Arc<Runtime>, string_const: &str) -> Reference {
-        let mut string_consts = self.string_consts.write().unwrap();
-        let mut values = self.values.write().unwrap();
+    pub fn get_string(self: &Arc<Self>, string: &str) -> Reference {
+        let string_consts = self.string_consts.read().unwrap();
+        string_consts.get(string).unwrap().clone()
+    }
 
-        self.insert_string_const_inner(
-            runtime.method_area.insert(runtime.clone(), "java.lang.String").0.clone(),
-            &mut string_consts, &mut values, string_const)
+    pub fn intern_string(self: &Arc<Self>, string_ref: Reference) -> Reference {
+        let values = self.values.read().unwrap();
+        let string_obj = values.get(&string_ref).unwrap();
+        let string_obj = if let HeapValue::Object(obj) = string_obj {
+            obj
+        } else {
+            panic!()
+        };
+
+        let chars_ref = string_obj.get_field(&Field {
+            name: "chars".to_string(),
+            descriptor: FieldType::Array(Box::new(FieldType::Char)),
+            class: Arc::new(const_pool::Class { name: "java.lang.String".to_string() }),
+        }).reference();
+
+        let chars_arr = values.get(&chars_ref).unwrap();
+        let chars_arr = if let HeapValue::Array(arr) = chars_arr {
+            arr
+        } else {
+            panic!()
+        };
+
+        let chars = chars_arr.as_chars_slice();
+        let string = String::from_utf16(chars).unwrap();
+
+        let mut interned_strings = self.string_consts.write().unwrap();
+        if interned_strings.contains_key(string.as_str()) {
+            interned_strings.get(string.as_str()).unwrap().clone()
+        } else {
+            interned_strings.insert(string, string_ref);
+            string_ref
+        }
     }
 }
 

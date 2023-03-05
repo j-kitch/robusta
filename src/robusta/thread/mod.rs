@@ -12,8 +12,11 @@ use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
+use crate::instruction::stack::pop;
 use crate::java::{Int, Reference, Value};
 use crate::runtime::{ConstPool, Method, Runtime};
+
+pub mod shim;
 
 /// A single Java thread in the running program.
 pub struct Thread {
@@ -115,6 +118,7 @@ impl Thread {
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
             0x55 => char_array_store(self),
+            0x57 => pop(self),
             0x59 => dup(self),
             0x60 => i_add(self),
             0x84 => i_inc(self),
@@ -132,13 +136,12 @@ impl Thread {
             0xBB => new(self),
             0xBC => new_array(self),
             0xBE => array_length(self),
-            _ => panic!("not implemented opcode {:0x?}", opcode)
+            _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), curr_frame.method.name.as_str(), curr_frame.method.descriptor.descriptor(), opcode)
         }
     }
 
     /// Push a new frame onto the top of the stack.
     pub fn push_frame(&mut self, class: String, const_pool: Arc<ConstPool>, method: Arc<Method>, args: Vec<Value>) {
-
         let mut frame = Frame {
             class,
             const_pool,
@@ -151,7 +154,7 @@ impl Thread {
         let mut idx = 0;
         for arg in args {
             frame.local_vars.store_value(idx, arg);
-            idx += arg.width() as u16;
+            idx += arg.category() as u16;
         }
 
         self.stack.push(frame);
@@ -185,14 +188,14 @@ impl Frame {
     }
 
     pub fn read_u16(&mut self) -> u16 {
-        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc+2];
+        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc + 2];
         let u16 = u16::from_be_bytes(bytes.try_into().unwrap());
         self.pc += 2;
         u16
     }
 
     pub fn read_i16(&mut self) -> i16 {
-        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc+2];
+        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc + 2];
         let i16 = i16::from_be_bytes(bytes.try_into().unwrap());
         self.pc += 2;
         i16

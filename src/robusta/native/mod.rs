@@ -3,11 +3,13 @@ use std::sync::Arc;
 use crate::java::{MethodType, Value};
 use crate::native::hash_code::hash_code_plugins;
 use crate::native::robusta::robusta_plugins;
+use crate::native::string::string_plugins;
 use crate::runtime::Runtime;
 
 mod hash_code;
 mod robusta;
 mod stateless;
+mod string;
 
 pub struct NativeMethods {
     plugins: Vec<Box<dyn Plugin>>,
@@ -21,6 +23,7 @@ impl NativeMethods {
         let mut plugins = Vec::new();
         plugins.append(&mut hash_code_plugins());
         plugins.append(&mut robusta_plugins());
+        plugins.append(&mut string_plugins());
         NativeMethods { plugins }
     }
 

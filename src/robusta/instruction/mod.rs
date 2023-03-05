@@ -1,9 +1,11 @@
+use std::thread::spawn;
 pub use new::new;
 
 use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
 use crate::native::{Args, Method};
 use crate::runtime::Const;
+use crate::thread::shim::intern_string;
 use crate::thread::Thread;
 
 pub mod new;
@@ -16,6 +18,7 @@ pub mod array;
 pub mod math;
 pub mod branch;
 pub mod locals;
+pub mod stack;
 
 /// Instruction `ldc`
 ///
@@ -29,7 +32,12 @@ pub fn load_constant(thread: &mut Thread) {
 
     match cur_frame.const_pool.get_const(index) {
         Const::String(string) => {
-            let string_ref = thread.runtime.heap.insert_string_const(thread.runtime.clone(), string.string.as_str());
+
+            let mut intern_string_thread = intern_string(thread.runtime.clone(), string.string.as_str());
+            let handle = spawn(move || intern_string_thread.run());
+            handle.join().unwrap();
+
+            let string_ref = thread.runtime.heap.get_string(string.string.as_str());
             cur_frame.operand_stack.push(Value::Reference(string_ref));
         }
         Const::Integer(int) => {
