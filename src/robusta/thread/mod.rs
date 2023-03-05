@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::io;
+use std::io::Write;
 use std::sync::Arc;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
@@ -59,7 +61,7 @@ impl Thread {
             operand_stack: OperandStack::new(),
             local_vars: LocalVars::new(),
             method,
-            pc: 0
+            pc: 0,
         })
     }
 
@@ -92,17 +94,24 @@ impl Thread {
     }
 
     fn next(&mut self) {
+
+        let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
         let bytecode = &curr_frame.method.code.as_ref().unwrap().code;
-        let opcode = bytecode[curr_frame.pc];
-        curr_frame.pc += 1;
-
-        // println!("{} {}.{}{} {:00x}",
-        //          self.group.as_str(),
+        //
+        // print!("{:?} {}.{}{}",
+        //          std::thread::current().id() ,
         //          curr_frame.class.as_str(),
         //          curr_frame.method.name.as_str(),
-        //          curr_frame.method.descriptor.descriptor(),
-        //         opcode);
+        //          curr_frame.method.descriptor.descriptor());
+        io::stdout().flush().unwrap();
+
+        let opcode = bytecode[curr_frame.pc];
+
+        curr_frame.pc += 1;
+        //
+        // println!(" 0x{:00x}",
+        //          opcode);
 
         match opcode {
             0x02 => iconst_n(self, -1),

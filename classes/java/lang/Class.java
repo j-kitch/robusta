@@ -13,9 +13,4 @@ public final class Class<T> {
     public String getName() {
         return name;
     }
-
-    public static Class<?> forName(String className) {
-        Robusta.loadClass(className);
-        return new Class(className);
-    }
 }

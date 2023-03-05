@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::java::{FieldType, MethodType, Value};
 use crate::native::{Method, Plugin};
+use crate::native::java_lang::intern_class;
 use crate::native::stateless::stateless;
 use crate::runtime::{const_pool, Runtime};
 use crate::runtime::const_pool::Class;
@@ -28,7 +29,7 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
             Method {
                 class: "com.jkitch.robusta.Robusta".to_string(),
                 name: "loadClass".to_string(),
-                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)V").unwrap(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/Class;").unwrap(),
             },
             Arc::new(load_class),
         ),
@@ -81,7 +82,5 @@ fn load_class(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
 
     let name = String::from_utf16(chars.as_chars_slice()).unwrap();
 
-    runtime.method_area.insert(runtime.clone(), &name);
-
-    None
+    intern_class(runtime, &name)
 }

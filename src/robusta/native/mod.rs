@@ -28,10 +28,13 @@ impl NativeMethods {
     }
 
     pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
+        // println!("Looking for {}.{}{}", method.class.as_str(), method.name.as_str(), method.descriptor.descriptor());
         let plugin = self.plugins.iter()
             .find(|p| p.supports(method))
             .unwrap();
-        plugin.call(method, args)
+        let result = plugin.call(method, args);
+        // println!("Return");
+        return result;
     }
 }
 

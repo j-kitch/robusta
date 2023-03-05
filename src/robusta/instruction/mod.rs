@@ -5,7 +5,7 @@ use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::Value;
 use crate::native::{Args, Method};
 use crate::runtime::Const;
-use crate::thread::shim::intern_string;
+use crate::thread::shim::{intern_class, intern_string};
 use crate::thread::Thread;
 
 pub mod new;
@@ -45,11 +45,12 @@ pub fn load_constant(thread: &mut Thread) {
         }
         Const::Class(class) => {
             resolve_class(thread.runtime.clone(), class.name.as_str());
-            let class_ref = thread.runtime.heap.get_class_object(
-                thread.runtime.clone(),
-                class.name.as_str(),
-                &thread.runtime.method_area.insert(thread.runtime.clone(), "java.lang.Class").0.clone()
-            );
+
+            let mut intern_class_thread = intern_class(thread.runtime.clone(), class.name.as_ref());
+            let handle = spawn(move || intern_class_thread.run());
+            handle.join().unwrap();
+            // println!("Finished interning class");
+            let class_ref = thread.runtime.heap.get_class(class.name.as_ref());
             cur_frame.operand_stack.push(Value::Reference(class_ref));
         }
         other => panic!("Not supported const {:?}", other)
@@ -156,6 +157,12 @@ pub fn invoke_static(thread: &mut Thread) {
             cur_frame.operand_stack.push(result);
         }
     } else {
-        panic!("not implemented");
+        thread.add_frame(class.name.clone(), class.const_pool.clone(), method);
+        let frame = thread.stack.last_mut().unwrap();
+        let mut idx = 0;
+        for param in &args {
+            frame.local_vars.store_value(idx, param.clone());
+            idx += param.category() as u16;
+        }
     }
 }
