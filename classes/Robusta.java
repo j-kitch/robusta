@@ -1,8 +1,8 @@
 public class Robusta {
 
-    public static void internString(char[] chars) {
+    public static String internString(char[] chars) {
         String string = new String(chars);
-        string.intern();
+        return string.intern();
     }
 
     public static native void println(String string);

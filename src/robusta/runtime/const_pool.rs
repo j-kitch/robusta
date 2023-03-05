@@ -9,7 +9,7 @@ use crate::runtime::Runtime;
 /// The runtime constant pool is a per type, runtime data structure that serves the purpose of
 /// the symbol table in a conventional programming language.
 pub struct ConstPool {
-    pool: HashMap<u16, Const>,
+    pub pool: HashMap<u16, Const>,
 }
 
 impl ConstPool {
