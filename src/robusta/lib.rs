@@ -18,6 +18,7 @@ pub mod thread;
 mod instruction;
 mod loader;
 mod method_area;
+mod heap;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 #[allow(dead_code)]

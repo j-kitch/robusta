@@ -9,7 +9,7 @@ use crate::loader::{ClassFileLoader, Loader};
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
 use crate::runtime::heap::Heap;
 
-mod const_pool;
+pub mod const_pool;
 
 struct MethodArea {
     loader: ClassFileLoader,
@@ -83,15 +83,29 @@ impl MethodArea {
                 Some(*super_class)
             };
 
-            let fields: Vec<Field> = class_file.fields.iter()
+            let mut fields: Vec<Field> = class_file.fields.iter()
                 .map(|f| {
                     let is_static = (ACCESS_FLAG_STATIC & f.access_flags) != 0;
                     let name = class_file.get_const_utf8(f.name);
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { is_static, name, descriptor }
+                    Field { is_static, name, width: descriptor.width(), descriptor, offset: 0 }
                 }).collect();
+
+            // Sort to get a better order for object packing.
+            fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
+            let mut offset = 0;
+            for field in &mut fields {
+                field.offset = offset;
+                offset += field.width;
+            }
+
+            const ALIGN: usize = 4;
+
+            // Get our final padded width.
+            let padding = ALIGN - (offset % ALIGN);
+            let width = offset + padding;
 
             let methods: Vec<Method> = class_file.methods.iter()
                 .map(|m| {
@@ -113,7 +127,8 @@ impl MethodArea {
                 interfaces: vec![], // TODO: Implement
                 fields,
                 methods,
-                attributes: vec![], // TODO: Implement
+                attributes: vec![], // TODO: Implement,
+                width
             };
             class
         })
@@ -128,18 +143,19 @@ impl MethodArea {
     }
 }
 
-struct Class {
-    name: String,
-    flags: ClassFlags,
-    const_pool: ConstPool,
-    super_class: Option<*const Class>,
-    interfaces: Vec<*const Class>,
-    fields: Vec<Field>,
-    methods: Vec<Method>,
-    attributes: Vec<Attribute>,
+pub struct Class {
+    pub name: String,
+    pub flags: ClassFlags,
+    pub const_pool: ConstPool,
+    pub super_class: Option<*const Class>,
+    pub interfaces: Vec<*const Class>,
+    pub fields: Vec<Field>,
+    pub methods: Vec<Method>,
+    pub attributes: Vec<Attribute>,
+    pub width: usize,
 }
 
-struct Hierarchy {
+pub struct Hierarchy {
     current: Option<*const Class>,
 }
 
@@ -158,14 +174,14 @@ impl Class {
         Hierarchy { current: Some(self as *const Class) }
     }
 
-    fn find_field(&self, key: &FieldKey) -> &Field {
+    pub fn find_field(&self, key: &FieldKey) -> &Field {
         self.parents()
             .flat_map(|class| unsafe { (*class).fields.iter() })
             .find(|fld| fld.name.eq(&key.name) && fld.descriptor.eq(&key.descriptor))
             .unwrap()
     }
 
-    fn find_method(&self, key: &MethodKey) -> &Method {
+    pub fn find_method(&self, key: &MethodKey) -> &Method {
         self.parents()
             .flat_map(|class| unsafe { (*class).methods.iter() })
             .find(|mthd| mthd.name.eq(&key.name) && mthd.descriptor.eq(&key.descriptor))
@@ -173,22 +189,24 @@ impl Class {
     }
 }
 
-struct ClassFlags {
+pub struct ClassFlags {
     bits: u16,
 }
 
-struct Field {
+pub struct Field {
     pub is_static: bool,
     pub name: String,
     pub descriptor: FieldType,
+    pub offset: usize,
+    pub width: usize,
 }
 
-struct Method {
+pub struct Method {
     pub is_static: bool,
     pub is_native: bool,
-    name: String,
-    descriptor: MethodType,
-    code: Option<Code>,
+    pub name: String,
+    pub descriptor: MethodType,
+    pub code: Option<Code>,
 }
 
-struct Attribute {}
+pub struct Attribute {}
