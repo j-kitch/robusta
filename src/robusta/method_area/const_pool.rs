@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::pin::Pin;
 use std::ptr::NonNull;
+use crate::class_file::ClassFile;
 
 use crate::collection::once::{Once, OnceMap};
 use crate::java::{FieldType, MethodType, Reference};
@@ -14,6 +15,10 @@ pub struct ConstPool {
 }
 
 impl ConstPool {
+    pub fn new(class_file: &ClassFile) -> Self {
+        todo!()
+    }
+
     pub fn get_const(&self, index: u16) -> &Const {
         self.pool.get(&index).unwrap()
     }

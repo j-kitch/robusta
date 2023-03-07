@@ -1,6 +1,7 @@
 use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::ptr::NonNull;
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 
 use crate::collection::once::OnceMap;
 use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, MethodType, Reference};
@@ -72,7 +73,50 @@ impl MethodArea {
     }
 
     pub fn load_class(&self, class_name: &str) -> &Class {
-        todo!()
+        self.classes.get_or_init(class_name.to_string(), |name| {
+            let class_file = self.loader.find(name).unwrap();
+            let pool = ConstPool::new(&class_file);
+
+            let super_class = if class_file.super_class == 0 { None } else {
+                let super_class = pool.get_class(class_file.super_class);
+                let super_class = super_class.resolve(|key| self.load_class(&key.name));
+                Some(*super_class)
+            };
+
+            let fields: Vec<Field> = class_file.fields.iter()
+                .map(|f| {
+                    let is_static = (ACCESS_FLAG_STATIC & f.access_flags) != 0;
+                    let name = class_file.get_const_utf8(f.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = class_file.get_const_utf8(f.descriptor);
+                    let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    Field { is_static, name, descriptor }
+                }).collect();
+
+            let methods: Vec<Method> = class_file.methods.iter()
+                .map(|m| {
+                    let is_static = (m.access_flags & ACCESS_FLAG_STATIC) != 0;
+                    let is_native = (m.access_flags & ACCESS_FLAG_NATIVE) != 0;
+                    let name = class_file.get_const_utf8(m.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+
+                    let descriptor = class_file.get_const_utf8(m.descriptor);
+                    let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    Method { is_static, is_native, name, descriptor, code: m.code.clone() }
+                }).collect();
+
+            let class = Class {
+                name: name.to_string(),
+                flags: ClassFlags { bits: class_file.access_flags },
+                const_pool: pool,
+                super_class,
+                interfaces: vec![], // TODO: Implement
+                fields,
+                methods,
+                attributes: vec![] // TODO: Implement
+            };
+            class
+        })
     }
 
     pub fn load_string(&self, string: &str) -> Reference {
@@ -88,8 +132,8 @@ struct Class {
     name: String,
     flags: ClassFlags,
     const_pool: ConstPool,
-    super_class: Option<Pin<NonNull<Class>>>,
-    interfaces: Vec<Pin<NonNull<Class>>>,
+    super_class: Option<*const Class>,
+    interfaces: Vec<*const Class>,
     fields: Vec<Field>,
     methods: Vec<Method>,
     attributes: Vec<Attribute>,
@@ -110,13 +154,17 @@ struct ClassFlags {
 }
 
 struct Field {
+    pub is_static: bool,
     pub name: String,
     pub descriptor: FieldType,
 }
 
 struct Method {
+    pub is_static: bool,
+    pub is_native: bool,
     name: String,
     descriptor: MethodType,
+    code: Option<Code>
 }
 
 struct Attribute {}

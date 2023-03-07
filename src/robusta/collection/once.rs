@@ -11,11 +11,11 @@ use std::thread;
 /// There is a common pattern in the JVM to require values that are only computed once, using
 /// potentially slow expensive operations, that are readable and awaitable in a thread safe
 /// manor.
-pub struct Once<T: Unpin> {
+pub struct Once<T> {
     value: RwLock<Option<T>>,
 }
 
-impl<T: Unpin> Once<T> {
+impl<T> Once<T> {
     pub fn new() -> Self {
         Once {
             value: RwLock::new(None),
@@ -39,25 +39,25 @@ impl<T: Unpin> Once<T> {
 /// If you have one value to synchronize, [`Once<T>`] can be used, but if you have a collection
 /// of values to have their initialization synchronized, based on a given key,
 /// then [`OnceMap<K, V>`] provides the correct abstraction.
-pub struct OnceMap<K: Eq + Hash + Clone, V: Unpin> {
-    map: RwLock<HashMap<K, Once<Pin<Box<V>>>>>,
+pub struct OnceMap<K: Eq + Hash + Clone, V> {
+    map: RwLock<HashMap<K, Once<Box<V>>>>,
 }
 
-impl<K: Eq + Hash + Clone, V: Unpin> OnceMap<K, V> {
+impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
     pub fn new() -> Self {
         OnceMap { map: RwLock::new(HashMap::new()) }
     }
 
-    pub fn get_or_init<F>(&self, key: K, f: F) -> Pin<&V>
+    pub fn get_or_init<F>(&self, key: K, f: F) -> &V
         where F: FnOnce(&K) -> V
     {
         self.ensure_value(&key);
         let mut map = self.map.read().unwrap();
         let once = map.get(&key).unwrap();
-        let value = once.get_or_init(|| Pin::new(Box::new(f(&key))));
-        let pointer = value.as_ref().get_ref() as *const V;
+        let value = once.get_or_init(|| Box::new(f(&key)));
+        let pointer = value.as_ref() as *const V;
 
-        unsafe { Pin::new(pointer.as_ref().unwrap()) }
+        unsafe { pointer.as_ref().unwrap() }
     }
 
     fn ensure_value(&self, key: &K) {
