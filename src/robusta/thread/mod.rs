@@ -16,7 +16,7 @@ use crate::instruction::stack::pop;
 use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
-use crate::runtime2::Runtime;
+use crate::runtime::Runtime;
 
 /// A single Java thread in the running program.
 pub struct Thread {

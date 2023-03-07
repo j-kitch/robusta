@@ -8,20 +8,19 @@ use std::sync::Arc;
 use crate::java::MethodType;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::method_area::Method;
-use crate::runtime2::Runtime;
+use crate::runtime::Runtime;
 use crate::thread::Thread;
 
 pub mod java;
 pub mod class_file;
 pub mod collection;
 pub mod native;
-pub mod runtime;
 pub mod thread;
 mod instruction;
 mod loader;
 mod method_area;
 mod heap;
-mod runtime2;
+mod runtime;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 #[allow(dead_code)]

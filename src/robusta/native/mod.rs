@@ -49,7 +49,7 @@ impl NativeMethods {
 // }
 
 pub struct Args {
-    pub runtime: Arc<crate::runtime2::Runtime>,
+    pub runtime: Arc<crate::runtime::Runtime>,
     pub params: Vec<CategoryOne>,
 }
 

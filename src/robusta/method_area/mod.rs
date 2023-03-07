@@ -10,7 +10,7 @@ use crate::heap::Heap;
 use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
-use crate::runtime2::Runtime;
+use crate::runtime::Runtime;
 use crate::thread::Thread;
 
 pub mod const_pool;

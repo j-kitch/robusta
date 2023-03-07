@@ -4,7 +4,7 @@ use tracing::info;
 use crate::java::{CategoryOne, MethodType, Value};
 use crate::method_area;
 use crate::native::{Args, Plugin};
-use crate::runtime2::Runtime;
+use crate::runtime::Runtime;
 
 type Function = Arc<dyn Fn(Arc<Runtime>, Vec<CategoryOne>) -> Option<Value> + Sync + Send>;
 
