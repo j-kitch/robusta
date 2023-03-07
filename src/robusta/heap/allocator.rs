@@ -2,7 +2,7 @@ use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use tracing::trace;
+use tracing::{debug, trace};
 
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
@@ -242,6 +242,13 @@ impl Allocator {
         }
     }
 
+    pub fn print_stats(&self) {
+        let used = self.used.load(Ordering::SeqCst);
+        let max = HEAP_SIZE;
+        let percentage = 100.0 * (used as f64) / (max as f64);
+        debug!(target: log::HEAP, used, percentage);
+    }
+
     pub fn new_object(&self, class: &Class) -> Object {
         trace!(target: log::HEAP, class=class.name.as_str(), "Allocating object");
         let header_size = size_of::<ObjectHeader>();
@@ -260,6 +267,8 @@ impl Allocator {
 
             object.header.write(ObjectHeader { class: class_ptr, hash_code: self.hash_code.next() });
             object.data.write_bytes(0, class.instance_width);
+
+            self.print_stats();
 
             object
         }
@@ -284,6 +293,8 @@ impl Allocator {
             object.header.write(ObjectHeader { class: class_ptr, hash_code: Int(0) });
             object.data.write_bytes(0, class.static_width);
 
+            self.print_stats();
+
             object
         }
     }
@@ -304,6 +315,8 @@ impl Allocator {
 
             array.header.write(ArrayHeader { component, length: data_size, hash_code: self.hash_code.next() });
             array.data.write_bytes(0, size);
+
+            self.print_stats();
 
             array
         }
