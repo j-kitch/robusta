@@ -1,12 +1,10 @@
-use std::thread::spawn;
 pub use new::new;
 
 // use crate::instruction::new::{resolve_class, resolve_method};
-use crate::java::{CategoryOne, Value};
+use crate::java::{CategoryOne};
 use crate::method_area::const_pool::ConstPool;
 use crate::method_area::Method;
 use crate::native::{Args};
-use crate::runtime::Const;
 use crate::thread::Thread;
 
 pub mod new;
@@ -89,7 +87,7 @@ pub fn invoke_static(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
     let method_idx = cur_frame.read_u16();
-    let method = thread.runtime.method_area.resolve_method(cur_frame.const_pool, method_idx);
+    let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
     let method = unsafe { method.as_ref().unwrap() };
     let class = unsafe { method.class.as_ref().unwrap() };
 

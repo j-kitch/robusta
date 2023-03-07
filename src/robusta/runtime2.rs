@@ -8,6 +8,8 @@ pub struct Runtime {
     pub native: Box<NativeMethods>,
 }
 
+unsafe impl Send for Runtime {}
+
 impl Runtime {
     pub fn new() -> Self {
         let heap = Box::new(Heap::new());

@@ -1,12 +1,11 @@
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
 use std::sync::RwLock;
-use rand::prelude::ThreadRng;
+
 use rand::{RngCore, thread_rng};
 
 use crate::collection::once::OnceMap;
 use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
-use crate::java::{CategoryOne, FieldType, Int, Reference, Value};
+use crate::java::{CategoryOne, FieldType, Int, Reference};
 use crate::method_area::Class;
 use crate::method_area::const_pool::FieldKey;
 
@@ -20,6 +19,8 @@ pub struct Heap {
     string_constants: OnceMap<String, Reference>,
     static_objects: OnceMap<String, Reference>,
 }
+
+unsafe impl Send for Heap {}
 
 impl Heap {
     pub fn new() -> Self {
@@ -38,7 +39,7 @@ impl Heap {
     }
 
     pub fn get_static(&self, class: &Class) -> Reference {
-        self.static_objects.get_or_init(class.name.clone(), |class_name| {
+        self.static_objects.get_or_init(class.name.clone(), |_| {
             let object = self.allocator.new_static_object(class);
             self.insert(Heaped::Object(object))
         }).clone()
@@ -70,8 +71,8 @@ impl Heap {
             // Chars
             let chars: Vec<u16> = string.encode_utf16().collect();
             let chars_ref = self.new_array(ArrayType::Char, Int(chars.len() as i32));
-            let mut char_array = self.get_array(chars_ref);
-            let mut char_array = char_array.as_chars_mut();
+            let char_array = self.get_array(chars_ref);
+            let char_array = char_array.as_chars_mut();
             char_array.copy_from_slice(&chars);
 
             // String
@@ -89,7 +90,7 @@ impl Heap {
     }
 
     pub fn insert_class_object(&self, class: &Class, class_class: &Class, string_class: &Class) -> Reference {
-        self.class_objects.get_or_init(class.name.clone(), |class_name| {
+        self.class_objects.get_or_init(class.name.clone(), |_| {
             // Name
             let name_ref = self.insert_string_const(&class.name, string_class);
 

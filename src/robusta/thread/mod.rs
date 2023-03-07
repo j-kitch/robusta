@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::io;
-use std::io::Write;
 use std::sync::Arc;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
@@ -15,7 +13,7 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
 use crate::instruction::stack::pop;
-use crate::java::{CategoryOne, Int, MethodType, Reference, Value};
+use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::runtime2::Runtime;
@@ -82,7 +80,7 @@ impl Thread {
                     class: class.name.clone(),
                     name: "<clinit>".to_string(),
                     descriptor: MethodType::from_descriptor("()V").unwrap(),
-                }),
+                }).unwrap(),
                 pc: 0,
             });
         }
@@ -201,6 +199,8 @@ pub struct Frame {
     /// The program counter within the current method.
     pub pc: usize,
 }
+
+unsafe impl Send for Frame {}
 
 impl Frame {
     fn code(&self) -> &[u8] {

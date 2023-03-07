@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{CategoryOne, Int};
 use crate::thread::Thread;
 
 pub fn array_length(thread: &mut Thread) {

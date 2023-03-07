@@ -1,12 +1,6 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::hash::Hash;
-use std::pin::Pin;
 use std::sync::RwLock;
-use std::thread;
 use chashmap::CHashMap;
-use parking_lot::ReentrantMutex;
-use tracing::info;
 
 /// A value of [`Once<T>`] will have it's internal value initialized once, only one call to
 /// initialize the value will succeed, and all other calls will wait for that value to be set
@@ -72,6 +66,7 @@ impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
     use super::*;
 
     #[test]

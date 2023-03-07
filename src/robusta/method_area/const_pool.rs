@@ -1,12 +1,8 @@
 use std::collections::HashMap;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::ptr::NonNull;
-use std::sync::Arc;
+
 use crate::class_file::ClassFile;
 use crate::class_file::const_pool as cp;
-
-use crate::collection::once::{Once, OnceMap};
+use crate::collection::once::Once;
 use crate::java::{FieldType, MethodType, Reference};
 use crate::method_area::{Class, Field, Method};
 
@@ -15,6 +11,8 @@ use crate::method_area::{Class, Field, Method};
 pub struct ConstPool {
     pool: HashMap<u16, Const>,
 }
+
+unsafe impl Send for ConstPool {}
 
 impl ConstPool {
     pub fn new(file: &ClassFile) -> Self {
@@ -61,7 +59,7 @@ impl ConstPool {
                         const_key: FieldKey {
                             class: String::from_utf8(class_name.bytes.clone()).unwrap().replace("/", "."),
                             name,
-                            descriptor
+                            descriptor,
                         },
                         resolved: Once::new(),
                     }));
@@ -78,7 +76,7 @@ impl ConstPool {
                         const_key: MethodKey {
                             class: String::from_utf8(class_name.bytes.clone()).unwrap().replace("/", "."),
                             name,
-                            descriptor
+                            descriptor,
                         },
                         resolved: Once::new(),
                     }));

@@ -1,11 +1,12 @@
 use std::sync::Arc;
+
 use tracing::info;
 
-use crate::java::{CategoryOne, MethodType, Value};
-use crate::method_area::const_pool::MethodKey;
+use crate::java::{CategoryOne, Value};
 use crate::method_area::Method;
-use crate::native::robusta::robusta_plugins;
 use crate::native::java_lang::java_lang_plugins;
+use crate::native::robusta::robusta_plugins;
+
 // use crate::runtime::Runtime;
 
 mod robusta;
@@ -17,6 +18,7 @@ pub struct NativeMethods {
 }
 
 unsafe impl Send for NativeMethods {}
+
 unsafe impl Sync for NativeMethods {}
 
 impl NativeMethods {

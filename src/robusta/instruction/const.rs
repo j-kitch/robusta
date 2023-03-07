@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{CategoryOne, Int};
 use crate::thread::Thread;
 
 pub fn iconst_n(thread: &mut Thread, int: i32) {

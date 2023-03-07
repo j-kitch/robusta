@@ -1,4 +1,3 @@
-use crate::java::Value;
 use crate::method_area::const_pool::FieldKey;
 use crate::thread::Thread;
 
@@ -6,7 +5,7 @@ pub fn get_field(thread: &mut Thread) {
     let curr_frame = thread.stack.last_mut().unwrap();
 
     let field_idx = curr_frame.read_u16();
-    let field = thread.runtime.method_area.resolve_field(curr_frame.const_pool, field_idx);
+    let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), curr_frame.const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
@@ -26,7 +25,7 @@ pub fn put_field(thread: &mut Thread) {
     let curr_frame = thread.stack.last_mut().unwrap();
 
     let field_idx = curr_frame.read_u16();
-    let field = thread.runtime.method_area.resolve_field(curr_frame.const_pool, field_idx);
+    let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), curr_frame.const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 

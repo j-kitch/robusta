@@ -1,15 +1,11 @@
 use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::collection::AppendMap;
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
-use crate::method_area::{Class, Field};
-use crate::method_area::const_pool::{FieldKey, MethodKey};
-
-const ALIGN: usize = 4;
+use crate::method_area::Class;
+use crate::method_area::const_pool::FieldKey;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -317,45 +313,45 @@ fn write_value_2(data_start: *mut u8, offset: usize, value: CategoryOne) {
     }
 }
 
-fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
-    unsafe {
-        let pointer: *mut u8 = data_start.add(offset);
-        match field {
-            FieldType::Boolean | FieldType::Byte => {
-                let pointer: *mut i8 = pointer.cast();
-                pointer.write(value.int().0 as i8)
-            }
-            FieldType::Char => {
-                let pointer: *mut u16 = pointer.cast();
-                pointer.write(value.int().0 as u16)
-            }
-            FieldType::Short => {
-                let pointer: *mut i16 = pointer.cast();
-                pointer.write(value.int().0 as i16)
-            }
-            FieldType::Int => {
-                let pointer: *mut i32 = pointer.cast();
-                pointer.write(value.int().0)
-            }
-            FieldType::Long => {
-                let pointer: *mut i64 = pointer.cast();
-                pointer.write(value.long().0 as i64)
-            }
-            FieldType::Float => {
-                let pointer: *mut f32 = pointer.cast();
-                pointer.write(value.float().0 as f32)
-            }
-            FieldType::Double => {
-                let pointer: *mut f64 = pointer.cast();
-                pointer.write(value.double().0 as f64)
-            }
-            FieldType::Reference(_) | FieldType::Array(_) => {
-                let pointer: *mut u32 = pointer.cast();
-                pointer.write(value.reference().0 as u32)
-            }
-        }
-    }
-}
+// fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
+//     unsafe {
+//         let pointer: *mut u8 = data_start.add(offset);
+//         match field {
+//             FieldType::Boolean | FieldType::Byte => {
+//                 let pointer: *mut i8 = pointer.cast();
+//                 pointer.write(value.int().0 as i8)
+//             }
+//             FieldType::Char => {
+//                 let pointer: *mut u16 = pointer.cast();
+//                 pointer.write(value.int().0 as u16)
+//             }
+//             FieldType::Short => {
+//                 let pointer: *mut i16 = pointer.cast();
+//                 pointer.write(value.int().0 as i16)
+//             }
+//             FieldType::Int => {
+//                 let pointer: *mut i32 = pointer.cast();
+//                 pointer.write(value.int().0)
+//             }
+//             FieldType::Long => {
+//                 let pointer: *mut i64 = pointer.cast();
+//                 pointer.write(value.long().0 as i64)
+//             }
+//             FieldType::Float => {
+//                 let pointer: *mut f32 = pointer.cast();
+//                 pointer.write(value.float().0 as f32)
+//             }
+//             FieldType::Double => {
+//                 let pointer: *mut f64 = pointer.cast();
+//                 pointer.write(value.double().0 as f64)
+//             }
+//             FieldType::Reference(_) | FieldType::Array(_) => {
+//                 let pointer: *mut u32 = pointer.cast();
+//                 pointer.write(value.reference().0 as u32)
+//             }
+//         }
+//     }
+// }
 
 fn read_value(data_start: *mut u8, offset: usize, field: &FieldType) -> Value {
     unsafe {

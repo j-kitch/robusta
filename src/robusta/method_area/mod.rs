@@ -1,15 +1,17 @@
-use std::marker::PhantomPinned;
 use std::path::PathBuf;
-use std::pin::Pin;
-use std::ptr::NonNull;
-use tracing::{info, info_span};
+use std::sync::Arc;
+use std::thread;
+
+use tracing::info;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
-use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, MethodType, Reference};
+use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
+use crate::runtime2::Runtime;
+use crate::thread::Thread;
 
 pub mod const_pool;
 
@@ -17,7 +19,12 @@ pub struct MethodArea {
     loader: ClassFileLoader,
     heap: *const Heap,
     classes: OnceMap<String, Class>,
+    initialized: OnceMap<String, ()>,
 }
+
+unsafe impl Send for MethodArea {}
+
+unsafe impl Sync for MethodArea {}
 
 impl MethodArea {
     pub fn new(heap: *const Heap) -> Self {
@@ -28,6 +35,7 @@ impl MethodArea {
             ]),
             heap,
             classes: OnceMap::new(),
+            initialized: OnceMap::new(),
         }
     }
 
@@ -48,10 +56,6 @@ impl MethodArea {
         }
     }
 
-    pub fn resolve_category_two(&self, pool: *const ConstPool, index: u16) -> CategoryTwo {
-        todo!()
-    }
-
     /// Resolve a class symbolic reference in the constant pool, and return a reference to the
     /// class.
     pub fn resolve_class(&self, pool: *const ConstPool, index: u16) -> *const Class {
@@ -65,22 +69,24 @@ impl MethodArea {
         *class
     }
 
-    pub fn resolve_method(&self, pool: *const ConstPool, index: u16) -> *const Method {
+    pub fn resolve_method(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Method {
         let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {
             let class = self.load_class(&method_key.class);
-            let method = class.find_method(method_key);
+            self.initialize(rt, class);
+            let method = class.find_method(method_key).unwrap();
             method as *const Method
         });
         *method
     }
 
-    pub fn resolve_field(&self, pool: *const ConstPool, index: u16) -> *const Field {
+    pub fn resolve_field(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
         let pool = unsafe { pool.as_ref().unwrap() };
         let field_const = pool.get_field(index);
         let field = field_const.resolve(|field_key| {
             let class = self.load_class(&field_key.class);
+            self.initialize(rt, class);
             let field = class.find_field(field_key);
             field as *const Field
         });
@@ -192,6 +198,33 @@ impl MethodArea {
         let class_class = self.load_class("java.lang.Class");
         heap.insert_class_object(class, class_class, string_class)
     }
+
+    fn initialize(&self, rt: Arc<Runtime>, class: &Class) {
+        self.initialized.get_or_init(class.name.clone(), |class_name| {
+            if let Some(parent) = class.super_class {
+                let parent = unsafe { parent.as_ref().unwrap() };
+                self.initialize(rt.clone(), parent);
+            }
+
+            let clinit = class.find_method(&MethodKey {
+                class: class_name.to_string(),
+                name: "<clinit>".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            });
+
+            if let Some(clinit) = clinit {
+                let mut thread = Thread::new(
+                    rt.clone(),
+                    class_name.to_string(),
+                    &class.const_pool as *const ConstPool,
+                    clinit as *const Method);
+
+                thread::scope(move |scope| {
+                    scope.spawn(move || thread.run());
+                });
+            }
+        });
+    }
 }
 
 pub struct Class {
@@ -256,11 +289,10 @@ impl Class {
             .unwrap()
     }
 
-    pub fn find_method(&self, key: &MethodKey) -> &Method {
+    pub fn find_method(&self, key: &MethodKey) -> Option<&Method> {
         self.parents()
             .flat_map(|class| unsafe { (*class).methods.iter() })
             .find(|mthd| mthd.name.eq(&key.name) && mthd.descriptor.eq(&key.descriptor))
-            .unwrap()
     }
 }
 

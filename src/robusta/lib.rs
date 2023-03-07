@@ -4,7 +4,6 @@
 extern crate core;
 
 use std::sync::Arc;
-use tracing::info;
 
 use crate::java::MethodType;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -48,7 +47,7 @@ impl VirtualMachine {
             class: main_class.name.clone(),
             name: "main".to_string(),
             descriptor: MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap(),
-        });
+        }).unwrap();
 
         let main_thread = Thread::new(runtime.clone(), main_class.name.clone(), &main_class.const_pool as *const ConstPool, method as *const Method);
 

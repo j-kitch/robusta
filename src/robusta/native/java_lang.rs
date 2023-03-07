@@ -1,15 +1,11 @@
-use std::collections::HashMap;
 use std::sync::Arc;
-use std::thread::spawn;
 use tracing::info;
 
-use crate::class_file::Code;
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
 use crate::method_area::const_pool::FieldKey;
 use crate::native::{ Plugin};
 use crate::native::stateless::{Method, stateless};
 use crate::runtime2::Runtime;
-use crate::thread::Thread;
 
 pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
     vec![

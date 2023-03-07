@@ -1,4 +1,3 @@
-use crate::java::Value;
 use crate::thread::Thread;
 
 pub fn dup(thread: &mut Thread) {

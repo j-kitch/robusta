@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
-use crate::method_area::const_pool;
 use crate::method_area::const_pool::FieldKey;
 use crate::native::{Plugin};
 use crate::native::stateless::{Method, stateless};

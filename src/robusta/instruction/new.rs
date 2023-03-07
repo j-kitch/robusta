@@ -1,10 +1,5 @@
-use std::sync::Arc;
-use std::thread::spawn;
 
-use crate::java::{CategoryOne, Value};
-use crate::runtime::{heap, Method, Runtime};
-use crate::runtime::heap3::ArrayType;
-use crate::runtime::method_area::Field;
+use crate::java::{CategoryOne};
 use crate::thread::Thread;
 
 // /// Many instructions involve resolving class types, which follows a strict algorithm to ensure that
