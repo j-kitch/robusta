@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::trace;
 
 use crate::java::{CategoryOne, Value};
+use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
 use crate::native::robusta::robusta_plugins;
-
-// use crate::runtime::Runtime;
 
 mod robusta;
 mod stateless;
@@ -30,8 +29,12 @@ impl NativeMethods {
     }
 
     pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
-        info!(name=&method.name, descriptor=method.descriptor.descriptor(), "Calling native method");
-        // println!("Looking for {}.{}{}", method.class.as_str(), method.name.as_str(), method.descriptor.descriptor());
+        let class = unsafe { method.class.as_ref().unwrap() };
+        trace!(
+            target: log::THREAD,
+            method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()),
+            "Invoking native method"
+        );
         let plugin = self.plugins.iter()
             .find(|p| p.supports(method))
             .unwrap();

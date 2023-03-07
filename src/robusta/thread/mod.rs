@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use tracing::debug;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{array_length, char_array_load, char_array_store};
@@ -14,6 +15,7 @@ use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
 use crate::instruction::stack::pop;
 use crate::java::{CategoryOne, Int, MethodType, Value};
+use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::runtime::Runtime;
@@ -89,6 +91,10 @@ impl Thread {
     }
 
     pub fn run(&mut self) {
+        let class_name = self.stack.last().unwrap().class.as_str();
+        let method = unsafe { self.stack.last().unwrap().method.as_ref().unwrap() };
+        let method_name = format!("{}.{}{}", class_name, method.name.as_str(), method.descriptor.descriptor());
+        debug!(target: log::THREAD, method=method_name, "Starting thread");
         while !self.stack.is_empty() {
             // self.runtime.heap.print_stats();
             self.next();

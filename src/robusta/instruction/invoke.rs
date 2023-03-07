@@ -1,4 +1,6 @@
+use tracing::debug;
 use crate::java::CategoryOne;
+use crate::log;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::method_area::Method;
 use crate::native::Args;
@@ -20,19 +22,13 @@ pub fn invoke_virtual(thread: &mut Thread) {
     let object_ref = args[0].reference();
     let object = thread.runtime.heap.get_object(object_ref);
 
-    // resolve_class(thread.runtime.clone(), object.class_name.as_str());
-    // let (object_class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), object.class().as_ref().name.as_str());
-
-    // Find method
-    // let (class, method) = object_class.find_instance_method(&method);
-    // resolve_method(thread.runtime.clone(), &method.clone());
-
     let method = object.class().find_method(&MethodKey {
         class: object.class().name.clone(),
         name: method.name.clone(),
         descriptor: method.descriptor.clone(),
     }).unwrap();
     let class = unsafe { method.class.as_ref().unwrap() };
+
 
     if method.is_native {
         let result = thread.runtime.native.call(
@@ -43,11 +39,11 @@ pub fn invoke_virtual(thread: &mut Thread) {
             },
         );
 
-
         if let Some(result) = result {
             cur_frame.operand_stack.push_value(result);
         }
     } else {
+        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking virtual method");
         thread.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args);
     }
 }
@@ -79,6 +75,7 @@ pub fn invoke_special(thread: &mut Thread) {
             cur_frame.operand_stack.push_value(result);
         }
     } else {
+        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking special method");
         thread.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args);
     }
 }

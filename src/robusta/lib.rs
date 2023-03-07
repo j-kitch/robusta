@@ -3,7 +3,14 @@
 
 extern crate core;
 
+use std::env::args;
 use std::sync::Arc;
+
+use tracing::debug;
+use tracing::metadata::LevelFilter;
+use tracing::subscriber::set_global_default;
+use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::java::MethodType;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -21,6 +28,7 @@ mod loader;
 mod method_area;
 mod heap;
 mod runtime;
+mod log;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 #[allow(dead_code)]
@@ -31,6 +39,33 @@ pub struct VirtualMachine {
 
 impl VirtualMachine {
     pub fn new(main_class: &str) -> Self {
+        let is_debug = args().any(|arg| arg.eq("-d"));
+        let is_trace = args().any(|arg| arg.eq("-t"));
+
+        let mut filter = EnvFilter::builder()
+            .with_default_directive(LevelFilter::OFF.into());
+
+        if is_debug {
+            filter = filter.with_default_directive(LevelFilter::DEBUG.into());
+        }
+        if is_trace {
+            filter = filter.with_default_directive(LevelFilter::TRACE.into());
+        }
+
+        let filter: EnvFilter = filter.parse("").unwrap();
+
+        let subscriber = fmt()
+            .without_time()
+            .with_span_events(FmtSpan::FULL)
+            .with_target(true)
+            .with_level(true)
+            .with_thread_names(true)
+            .with_env_filter(filter)
+            .finish();
+        set_global_default(subscriber).unwrap();
+
+        debug!(target: log::JVM, "Starting Robusta");
+
         let runtime = Arc::new(Runtime::new());
 
         for class in [

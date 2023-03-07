@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use tracing::info;
 
 use crate::java::{CategoryOne, MethodType, Value};
 use crate::method_area;
@@ -29,7 +28,6 @@ pub fn stateless(method: Method, function: Function) -> Box<dyn Plugin> {
 impl Plugin for StatelessPlugin {
     fn supports(&self, method: &method_area::Method) -> bool {
         let class = unsafe { method.class.as_ref().unwrap() };
-        info!(class=class.name.as_str(),name=method.name.as_str(),descriptor=method.descriptor.descriptor(), "Looking for native method");
 
         self.method.class.eq(&class.name) &&
             self.method.name.eq(&method.name) &&

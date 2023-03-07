@@ -2,13 +2,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 
-use tracing::info;
+use tracing::debug;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
 use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
+use crate::log;
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
 use crate::runtime::Runtime;
 use crate::thread::Thread;
@@ -62,7 +63,6 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         let class_const = pool.get_class(index);
         let class = class_const.resolve(|class_key| {
-            info!("Loading class");
             let class = self.load_class(&class_key.name);
             class as *const Class
         });
@@ -95,7 +95,7 @@ impl MethodArea {
 
     pub fn load_class(&self, class_name: &str) -> &Class {
         let class = self.classes.get_or_init(class_name.to_string(), |name| {
-            info!(name, "Loading class");
+            debug!(target: log::LOADER, class=name, "Loading class");
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);
 
@@ -177,12 +177,14 @@ impl MethodArea {
                 instance_width,
                 static_width,
             };
-            info!(name=class_name ,"Loaded class");
+            debug!(target: log::LOADER, class=name, "Loaded class");
             class
         });
         class.self_referential();
-        let heap = unsafe { self.heap.as_ref().unwrap() };
-        heap.get_static(class);
+        if !class.static_fields.is_empty() {
+            let heap = unsafe { self.heap.as_ref().unwrap() };
+            heap.get_static(class);
+        }
         class
     }
 
