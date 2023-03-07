@@ -1,8 +1,8 @@
 use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::ptr::NonNull;
-use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::once::OnceMap;
 use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
@@ -113,7 +113,7 @@ impl MethodArea {
                 interfaces: vec![], // TODO: Implement
                 fields,
                 methods,
-                attributes: vec![] // TODO: Implement
+                attributes: vec![], // TODO: Implement
             };
             class
         })
@@ -139,13 +139,37 @@ struct Class {
     attributes: Vec<Attribute>,
 }
 
+struct Hierarchy {
+    current: Option<*const Class>,
+}
+
+impl Iterator for Hierarchy {
+    type Item = *const Class;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let class = self.current;
+        self.current = self.current.and_then(|class| unsafe { (*class).super_class });
+        class
+    }
+}
+
 impl Class {
+    fn parents(&self) -> Hierarchy {
+        Hierarchy { current: Some(self as *const Class) }
+    }
+
     fn find_field(&self, key: &FieldKey) -> &Field {
-        todo!()
+        self.parents()
+            .flat_map(|class| unsafe { (*class).fields.iter() })
+            .find(|fld| fld.name.eq(&key.name) && fld.descriptor.eq(&key.descriptor))
+            .unwrap()
     }
 
     fn find_method(&self, key: &MethodKey) -> &Method {
-        todo!()
+        self.parents()
+            .flat_map(|class| unsafe { (*class).methods.iter() })
+            .find(|mthd| mthd.name.eq(&key.name) && mthd.descriptor.eq(&key.descriptor))
+            .unwrap()
     }
 }
 
@@ -164,7 +188,7 @@ struct Method {
     pub is_native: bool,
     name: String,
     descriptor: MethodType,
-    code: Option<Code>
+    code: Option<Code>,
 }
 
 struct Attribute {}
