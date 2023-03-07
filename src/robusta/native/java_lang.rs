@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread::spawn;
+use tracing::info;
 
 use crate::class_file::Code;
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
@@ -69,6 +70,7 @@ fn object_get_class(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<V
 }
 
 fn object_hash_code(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
+    info!("Object.hashCode()");
     let object_ref = values[0].reference();
     let object_obj = runtime.heap.get_object(object_ref);
 

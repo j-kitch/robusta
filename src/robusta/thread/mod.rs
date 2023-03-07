@@ -256,7 +256,7 @@ impl OperandStack {
 
     pub fn push_value(&mut self, value: Value) {
         if value.category() == 1 {
-            self.push_cat_one(value.cat_one());
+            return self.push_cat_one(value.cat_one());
         }
         panic!("Not implemented")
     }
@@ -290,18 +290,10 @@ impl LocalVars {
     }
 
     /// Load an int from the local vars.
-    pub fn load_int(&mut self, index: u16) -> Int {
+    pub fn load_cat_one(&mut self, index: u16) -> CategoryOne {
         match self.map.get(&index).unwrap() {
-            Value::Int(int) => int.clone(),
+            Value::Int(int) => CategoryOne { int: *int },
             _ => panic!("expected to load int")
-        }
-    }
-
-    /// Load a ref from the local vars.
-    pub fn load_ref(&mut self, index: u16) -> Reference {
-        match self.map.get(&index).unwrap() {
-            Value::Reference(reference) => reference.clone(),
-            _ => panic!("expected to load reference")
         }
     }
 }

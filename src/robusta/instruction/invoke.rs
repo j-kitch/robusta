@@ -1,3 +1,4 @@
+use tracing::info;
 // use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::{CategoryOne, CategoryTwo, Value};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -43,6 +44,7 @@ pub fn invoke_virtual(thread: &mut Thread) {
                 runtime: thread.runtime.clone(),
             }
         );
+
 
         if let Some(result) = result {
             cur_frame.operand_stack.push_value(result);

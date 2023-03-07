@@ -1,8 +1,12 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::RwLock;
 use std::thread;
+use chashmap::CHashMap;
+use parking_lot::ReentrantMutex;
+use tracing::info;
 
 /// A value of [`Once<T>`] will have it's internal value initialized once, only one call to
 /// initialize the value will succeed, and all other calls will wait for that value to be set
@@ -40,31 +44,29 @@ impl<T> Once<T> {
 /// of values to have their initialization synchronized, based on a given key,
 /// then [`OnceMap<K, V>`] provides the correct abstraction.
 pub struct OnceMap<K: Eq + Hash + Clone, V> {
-    map: RwLock<HashMap<K, Once<Box<V>>>>,
+    map: CHashMap<K, Once<Box<V>>>,
 }
 
 impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
     pub fn new() -> Self {
-        OnceMap { map: RwLock::new(HashMap::new()) }
+        OnceMap { map: CHashMap::new() }
     }
 
     pub fn get_or_init<F>(&self, key: K, f: F) -> &V
         where F: FnOnce(&K) -> V
     {
         self.ensure_value(&key);
-        let mut map = self.map.read().unwrap();
-        let once = map.get(&key).unwrap();
+        let once = self.map.get(&key).unwrap();
         let value = once.get_or_init(|| Box::new(f(&key)));
         let pointer = value.as_ref() as *const V;
-
         unsafe { pointer.as_ref().unwrap() }
     }
 
     fn ensure_value(&self, key: &K) {
-        let mut map = self.map.write().unwrap();
-        if !map.contains_key(key) {
-            map.insert(key.clone(), Once::new());
-        }
+        self.map.upsert(key.clone(),
+        || Once::new(),
+            |_| {}
+        )
     }
 }
 

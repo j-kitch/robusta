@@ -17,7 +17,7 @@ pub fn i_inc(thread: &mut Thread) {
     let index = frame.read_u8();
     let constant = frame.read_i8();
 
-    let value = frame.local_vars.load_int(index as u16);
+    let value = frame.local_vars.load_cat_one(index as u16).int();
     let (value, _) = value.0.overflowing_add(constant as i32);
 
     frame.local_vars.store_value(index as u16, Value::Int(Int(value)))

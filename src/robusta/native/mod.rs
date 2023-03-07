@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use tracing::info;
 
 use crate::java::{CategoryOne, MethodType, Value};
 use crate::method_area::const_pool::MethodKey;
@@ -27,6 +28,7 @@ impl NativeMethods {
     }
 
     pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
+        info!(name=&method.name, descriptor=method.descriptor.descriptor(), "Calling native method");
         // println!("Looking for {}.{}{}", method.class.as_str(), method.name.as_str(), method.descriptor.descriptor());
         let plugin = self.plugins.iter()
             .find(|p| p.supports(method))

@@ -59,7 +59,7 @@ pub fn istore_n(thread: &mut Thread, n: u16) {
 pub fn iload_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    let int = cur_frame.local_vars.load_int(n);
+    let int = cur_frame.local_vars.load_cat_one(n).int();
 
     cur_frame.operand_stack.push_cat_one(CategoryOne { int });
 }
@@ -70,7 +70,7 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
 pub fn aload_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    let reference = cur_frame.local_vars.load_ref(n);
+    let reference = cur_frame.local_vars.load_cat_one(n).reference();
 
     cur_frame.operand_stack.push_cat_one(CategoryOne { reference });
 }

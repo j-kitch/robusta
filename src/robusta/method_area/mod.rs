@@ -2,6 +2,7 @@ use std::marker::PhantomPinned;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::ptr::NonNull;
+use tracing::{info, info_span};
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::once::OnceMap;
@@ -57,6 +58,7 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         let class_const = pool.get_class(index);
         let class = class_const.resolve(|class_key| {
+            info!("Loading class");
             let class = self.load_class(&class_key.name);
             class as *const Class
         });
@@ -87,6 +89,7 @@ impl MethodArea {
 
     pub fn load_class(&self, class_name: &str) -> &Class {
         let class = self.classes.get_or_init(class_name.to_string(), |name| {
+            info!(name, "Loading class");
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);
 
@@ -143,6 +146,7 @@ impl MethodArea {
                 attributes: vec![], // TODO: Implement,
                 width
             };
+            info!(name=class_name ,"Loaded class");
             class
         });
         class.self_referential();

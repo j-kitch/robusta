@@ -4,6 +4,7 @@
 extern crate core;
 
 use std::sync::Arc;
+use tracing::info;
 
 use crate::java::MethodType;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
