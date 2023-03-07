@@ -8,6 +8,7 @@ name = "robusta"
 path = "src/robusta/lib.rs"
 
 [dependencies]
+crossbeam = "0.8.2"
 maplit = "1.0.2"
 rand = "0.8.5"
 zip = "0.6.4"
