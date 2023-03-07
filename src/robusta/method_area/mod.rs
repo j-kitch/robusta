@@ -296,6 +296,13 @@ impl Class {
             .flat_map(|class| unsafe { (*class).methods.iter() })
             .find(|mthd| mthd.name.eq(&key.name) && mthd.descriptor.eq(&key.descriptor))
     }
+
+    pub fn is_instance_of(&self, other: &Class) -> bool {
+        self.parents().any(|c| {
+            let c = unsafe { c.as_ref().unwrap() };
+            c.name.eq(&other.name)
+        })
+    }
 }
 
 pub struct ClassFlags {

@@ -12,7 +12,7 @@ use crate::instruction::locals::{astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
-use crate::instruction::r#return::{a_return, i_return};
+use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{pop, sipush};
 use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::log;
@@ -170,6 +170,7 @@ impl Thread {
             0xBB => new(self),
             0xBC => new_array(self),
             0xBE => array_length(self),
+            0xBF => a_throw(self),
             _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
         }
     }

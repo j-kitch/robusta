@@ -144,4 +144,13 @@ pub struct Code {
     pub max_locals: u16,
     /// The Java Virtual Machine code executed in this method.
     pub code: Vec<u8>,
+    pub ex_table: Vec<ExHandler>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExHandler {
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: u16,
 }

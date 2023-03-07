@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 
-use crate::class_file::{ClassFile, Code, const_pool, Field, MAGIC, Method};
+use crate::class_file::{ClassFile, Code, const_pool, ExHandler, Field, MAGIC, Method};
 use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, MethodRef, NameAndType, Utf8};
 
 /// Parse a class file structure from a reader.
@@ -165,6 +165,7 @@ impl<'a> Parser<'a> {
             max_stack: 0,
             max_locals: 0,
             code: vec![],
+            ex_table: vec![]
         };
 
         code.max_stack = self.read_u16()?;
@@ -173,7 +174,17 @@ impl<'a> Parser<'a> {
         let code_length = self.read_u32()?;
         code.code = self.read_length(code_length as usize)?;
 
-        let skip_bytes = length - 2 - 2 - 4 - code_length as usize;
+        let ex_table_len = self.read_u16()?;
+        for _ in 0..ex_table_len {
+            code.ex_table.push(ExHandler {
+                start_pc: self.read_u16()?,
+                end_pc: self.read_u16()?,
+                handler_pc: self.read_u16()?,
+                catch_type: self.read_u16()?,
+            });
+        }
+
+        let skip_bytes = length - 2 - 2 - 4 - code_length as usize - 2 - (ex_table_len as usize * 8);
         self.read_length(skip_bytes)?;
 
         Ok(code)
