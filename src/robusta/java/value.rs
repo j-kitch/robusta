@@ -86,14 +86,34 @@ impl Value {
             _ => 1,
         }
     }
+
+    pub fn cat_one(&self) -> CategoryOne {
+        match self {
+            Value::Int(int) => CategoryOne { int: *int },
+            Value::Float(float) => CategoryOne { float: *float },
+            Value::Reference(reference) => CategoryOne { reference: *reference },
+            _ => panic!("Not a category one type")
+        }
+    }
 }
 
+#[derive(Clone, Copy)]
 /// A union of category one types in the JVM.
 pub union CategoryOne {
     pub int: Int,
     pub float: Float,
     pub reference: Reference,
     pub return_address: ReturnAddress,
+}
+
+impl CategoryOne {
+    pub fn int(&self) -> Int {
+        unsafe { self.int }
+    }
+
+    pub fn reference(&self) -> Reference {
+        unsafe { self.reference }
+    }
 }
 
 /// A union of category two types in the JVM.

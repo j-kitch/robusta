@@ -5,8 +5,8 @@ pub fn if_int_cmp_ge(thread: &mut Thread) {
 
     let offset = frame.read_i16();
 
-    let value2 = frame.operand_stack.pop().int();
-    let value1 = frame.operand_stack.pop().int();
+    let value2 = frame.operand_stack.pop_cat_one().int();
+    let value1 = frame.operand_stack.pop_cat_one().int();
 
     if value1.0 >= value2.0 {
         let mut pc = frame.pc as i64;
@@ -21,8 +21,8 @@ pub fn if_int_cmp_le(thread: &mut Thread) {
 
     let offset = frame.read_i16();
 
-    let value2 = frame.operand_stack.pop().int();
-    let value1 = frame.operand_stack.pop().int();
+    let value2 = frame.operand_stack.pop_cat_one().int();
+    let value1 = frame.operand_stack.pop_cat_one().int();
 
     if value1.0 <= value2.0 {
         let mut pc = frame.pc as i64;

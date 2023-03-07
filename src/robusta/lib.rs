@@ -6,7 +6,9 @@ extern crate core;
 use std::sync::Arc;
 
 use crate::java::MethodType;
-use crate::runtime::Runtime;
+use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::method_area::Method;
+use crate::runtime2::Runtime;
 use crate::thread::Thread;
 
 pub mod java;
@@ -19,6 +21,7 @@ mod instruction;
 mod loader;
 mod method_area;
 mod heap;
+mod runtime2;
 
 /// A single instance of a Java Virtual Machine, capable of running a Java program.
 #[allow(dead_code)]
@@ -29,22 +32,24 @@ pub struct VirtualMachine {
 
 impl VirtualMachine {
     pub fn new(main_class: &str) -> Self {
-        let runtime = Runtime::new();
+        let runtime = Arc::new(Runtime::new());
 
         for class in [
             "java.lang.Object",
             "java.lang.Class",
             "java.lang.String"
         ] {
-            runtime.method_area.insert(runtime.clone(), class);
+            runtime.method_area.load_class(class);
         }
 
-        runtime.method_area.insert(runtime.clone(), main_class);
+        let main_class = runtime.method_area.load_class(main_class);
+        let method = main_class.find_method(&MethodKey {
+            class: main_class.name.clone(),
+            name: "main".to_string(),
+            descriptor: MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap(),
+        });
 
-        let pool = runtime.method_area.find_const_pool(main_class);
-        let method = runtime.method_area.find_method(main_class, "main", &MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap());
-
-        let main_thread = Thread::new(runtime.clone(), main_class.to_string(), pool, method);
+        let main_thread = Thread::new(runtime.clone(), main_class.name.clone(), &main_class.const_pool as *const ConstPool, method as *const Method);
 
         VirtualMachine { runtime, main_thread }
     }

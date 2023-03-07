@@ -1,24 +1,37 @@
 use std::marker::PhantomPinned;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::ptr::NonNull;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
 use crate::collection::once::OnceMap;
+use crate::heap::Heap;
 use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
-use crate::runtime::heap::Heap;
 
 pub mod const_pool;
 
-struct MethodArea {
+pub struct MethodArea {
     loader: ClassFileLoader,
+    heap: *const Heap,
     classes: OnceMap<String, Class>,
 }
 
 impl MethodArea {
-    pub fn resolve_category_one(&self, pool: NonNull<ConstPool>, index: u16) -> CategoryOne {
-        let pool = unsafe { pool.as_ref() };
+    pub fn new(heap: *const Heap) -> Self {
+        MethodArea {
+            loader: ClassFileLoader::new(vec![
+                PathBuf::from("./classes"),
+                PathBuf::from("./classes/EmptyMain.jar"),
+            ]),
+            heap,
+            classes: OnceMap::new(),
+        }
+    }
+
+    pub fn resolve_category_one(&self, pool: *const ConstPool, index: u16) -> CategoryOne {
+        let pool = unsafe { pool.as_ref().unwrap() };
         match pool.get_const(index) {
             Const::Integer(int) => CategoryOne { int: Int(*int) },
             Const::String(reference) => {
@@ -34,14 +47,14 @@ impl MethodArea {
         }
     }
 
-    pub fn resolve_category_two(&self, pool: NonNull<ConstPool>, index: u16) -> CategoryTwo {
+    pub fn resolve_category_two(&self, pool: *const ConstPool, index: u16) -> CategoryTwo {
         todo!()
     }
 
     /// Resolve a class symbolic reference in the constant pool, and return a reference to the
     /// class.
-    pub fn resolve_class(&self, pool: NonNull<ConstPool>, index: u16) -> *const Class {
-        let pool = unsafe { pool.as_ref() };
+    pub fn resolve_class(&self, pool: *const ConstPool, index: u16) -> *const Class {
+        let pool = unsafe { pool.as_ref().unwrap() };
         let class_const = pool.get_class(index);
         let class = class_const.resolve(|class_key| {
             let class = self.load_class(&class_key.name);
@@ -50,8 +63,8 @@ impl MethodArea {
         *class
     }
 
-    pub fn resolve_method(&self, pool: NonNull<ConstPool>, index: u16) -> *const Method {
-        let pool = unsafe { pool.as_ref() };
+    pub fn resolve_method(&self, pool: *const ConstPool, index: u16) -> *const Method {
+        let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {
             let class = self.load_class(&method_key.class);
@@ -61,8 +74,8 @@ impl MethodArea {
         *method
     }
 
-    pub fn resolve_field(&self, pool: NonNull<ConstPool>, index: u16) -> *const Field {
-        let pool = unsafe { pool.as_ref() };
+    pub fn resolve_field(&self, pool: *const ConstPool, index: u16) -> *const Field {
+        let pool = unsafe { pool.as_ref().unwrap() };
         let field_const = pool.get_field(index);
         let field = field_const.resolve(|field_key| {
             let class = self.load_class(&field_key.class);
@@ -73,7 +86,7 @@ impl MethodArea {
     }
 
     pub fn load_class(&self, class_name: &str) -> &Class {
-        self.classes.get_or_init(class_name.to_string(), |name| {
+        let class = self.classes.get_or_init(class_name.to_string(), |name| {
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);
 
@@ -90,12 +103,12 @@ impl MethodArea {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                    Field { class: 0 as *const Class, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
                 }).collect();
 
             // Sort to get a better order for object packing.
             fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
-            let mut offset = 0;
+            let mut offset = unsafe { super_class.map_or(0, |c| (*c).width) };
             for field in &mut fields {
                 field.offset = offset;
                 offset += field.width;
@@ -116,7 +129,7 @@ impl MethodArea {
 
                     let descriptor = class_file.get_const_utf8(m.descriptor);
                     let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Method { is_static, is_native, name, descriptor, code: m.code.clone() }
+                    Method { class: 0 as *const Class, is_static, is_native, name, descriptor, code: m.code.clone() }
                 }).collect();
 
             let class = Class {
@@ -131,15 +144,22 @@ impl MethodArea {
                 width
             };
             class
-        })
+        });
+        class.self_referential();
+        class
     }
 
     pub fn load_string(&self, string: &str) -> Reference {
-        todo!()
+        let heap = unsafe { self.heap.as_ref().unwrap() };
+        let string_class = self.load_class("java.lang.String");
+        heap.insert_string_const(string, string_class)
     }
 
     pub fn load_class_object(&self, class: &Class) -> Reference {
-        todo!()
+        let heap = unsafe { self.heap.as_ref().unwrap() };
+        let string_class = self.load_class("java.lang.String");
+        let class_class = self.load_class("java.lang.Class");
+        heap.insert_class_object(class, class_class, string_class)
     }
 }
 
@@ -170,6 +190,22 @@ impl Iterator for Hierarchy {
 }
 
 impl Class {
+    fn self_referential(&self) {
+        let class = self as *const Class;
+        for field in &self.fields {
+            let mut_ptr = (field as *const Field).cast_mut();
+            unsafe {
+                (*mut_ptr).class = class;
+            }
+        }
+        for method in &self.methods {
+            let mut_ptr = (method as *const Method).cast_mut();
+            unsafe {
+                (*mut_ptr).class = class;
+            }
+        }
+    }
+
     fn parents(&self) -> Hierarchy {
         Hierarchy { current: Some(self as *const Class) }
     }
@@ -190,10 +226,11 @@ impl Class {
 }
 
 pub struct ClassFlags {
-    bits: u16,
+    pub bits: u16,
 }
 
 pub struct Field {
+    pub class: *const Class,
     pub is_static: bool,
     pub name: String,
     pub descriptor: FieldType,
@@ -202,6 +239,7 @@ pub struct Field {
 }
 
 pub struct Method {
+    pub class: *const Class,
     pub is_static: bool,
     pub is_native: bool,
     pub name: String,

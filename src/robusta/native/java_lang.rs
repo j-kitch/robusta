@@ -3,11 +3,11 @@ use std::sync::Arc;
 use std::thread::spawn;
 
 use crate::class_file::Code;
-use crate::java::{MethodType, Value};
-use crate::native::{Method, Plugin};
-use crate::native::stateless::stateless;
-use crate::runtime;
-use crate::runtime::{ConstPool, Runtime};
+use crate::java::{CategoryOne, FieldType, MethodType, Value};
+use crate::method_area::const_pool::FieldKey;
+use crate::native::{ Plugin};
+use crate::native::stateless::{Method, stateless};
+use crate::runtime2::Runtime;
 use crate::thread::Thread;
 
 pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
@@ -27,57 +27,52 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
             },
             Arc::new(object_get_class),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
+                name: "hashCode".to_string(),
+                descriptor: MethodType::from_descriptor("()I").unwrap(),
+            },
+            Arc::new(object_hash_code),
         )
     ]
 }
 
 
-fn string_intern(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
+fn string_intern(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
     let string_ref = values[0].reference();
+    let string_obj = runtime.heap.get_object(string_ref);
 
-    let interned_string_ref = runtime.heap.intern_string(string_ref);
+    let chars_ref = string_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "chars".to_string(),
+        descriptor: FieldType::from_descriptor("[C").unwrap(),
+    }).reference();
 
-    Some(Value::Reference(interned_string_ref))
+    let chars = runtime.heap.get_array(chars_ref);
+    let chars = chars.as_chars_slice();
+
+    let string = String::from_utf16(chars).unwrap();
+    let string_ref = runtime.heap.insert_string_const(&string, string_obj.class());
+
+    Some(Value::Reference(string_ref))
 }
 
-fn object_get_class(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
+fn object_get_class(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
     let object_ref = values[0].reference();
-    let object_obj = runtime.heap.load_object(object_ref);
+    let object_obj = runtime.heap.get_object(object_ref);
 
-    let class_name = &object_obj.class().name;
+    let class_ref = runtime.method_area.load_class_object(object_obj.class());
 
-    intern_class(runtime, class_name)
+    Some(Value::Reference(class_ref))
 }
 
-pub fn intern_class(runtime: Arc<Runtime>, class_name: &str) -> Option<Value> {
-    let (class_class, _) = runtime.method_area.insert(runtime.clone(), "java.lang.Class");
-    let init_method = runtime.method_area.find_method("java.lang.Class", "<init>", &MethodType::from_descriptor("(Ljava/lang/String;)V").unwrap());
+fn object_hash_code(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
+    let object_ref = values[0].reference();
+    let object_obj = runtime.heap.get_object(object_ref);
 
-    let class_obj_ref = runtime.heap.insert_new(&class_class);
+    let hash_code = object_obj.hash_code();
 
-    let string_ref = runtime.heap.get_string(class_name);
-
-    let mut thread = Thread::empty(runtime.clone());
-    thread.add_frame("<robusta>".into(), Arc::new(ConstPool { pool: HashMap::new() }), Arc::new(runtime::Method {
-        is_static: true,
-        is_native: false,
-        name: "<exit>".to_string(),
-        descriptor: MethodType::from_descriptor("()V").unwrap(),
-        code: Some(Code {
-            max_stack: 0,
-            max_locals: 0,
-            code: vec![0xB1],
-        }),
-    }));
-    thread.add_frame(class_class.name.clone(), class_class.const_pool.clone(), init_method);
-    let frame = thread.stack.last_mut().unwrap();
-    frame.local_vars.store_value(0, Value::Reference(class_obj_ref));
-    frame.local_vars.store_value(1, Value::Reference(string_ref));
-
-    spawn(move || thread.run()).join().unwrap();
-    // println!("Foo");
-    let class_obj_ref = runtime.heap.intern_class(class_name, class_obj_ref);
-    // println!("Boo");
-
-    Some(Value::Reference(class_obj_ref))
+    Some(Value::Int(hash_code))
 }

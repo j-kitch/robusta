@@ -15,10 +15,10 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
 use crate::instruction::stack::pop;
-use crate::java::{Int, Reference, Value};
-use crate::runtime::{ConstPool, Method, Runtime};
-
-pub mod shim;
+use crate::java::{CategoryOne, Int, MethodType, Reference, Value};
+use crate::method_area::{Class, Method};
+use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::runtime2::Runtime;
 
 /// A single Java thread in the running program.
 pub struct Thread {
@@ -37,7 +37,7 @@ impl Thread {
         Thread { group: "thread".to_string(), runtime, stack: Vec::new() }
     }
 
-    pub fn new(runtime: Arc<Runtime>, class: String, pool: Arc<ConstPool>, method: Arc<Method>) -> Self {
+    pub fn new(runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
         Thread {
             group: "MainThread".to_string(),
             runtime,
@@ -54,7 +54,7 @@ impl Thread {
         }
     }
 
-    pub fn add_frame(&mut self, class: String, pool: Arc<ConstPool>, method: Arc<Method>) {
+    pub fn add_frame(&mut self, class: String, pool: *const ConstPool, method: *const Method) {
         self.stack.push(Frame {
             class,
             const_pool: pool,
@@ -66,7 +66,7 @@ impl Thread {
     }
 
     /// Create a thread who's job is to run all the <clinit> methods of the given classes in order.
-    pub fn clinit(runtime: Arc<Runtime>, classes: Vec<Arc<crate::runtime::method_area::Class>>) -> Self {
+    pub fn clinit(runtime: Arc<Runtime>, classes: Vec<Arc<Class>>) -> Self {
         // Reverse the classes order (want first inserted last into the stack).
         let mut classes = classes;
         classes.reverse();
@@ -75,10 +75,14 @@ impl Thread {
         for class in classes.iter() {
             thread.stack.push(Frame {
                 class: class.name.clone(),
-                const_pool: class.const_pool.clone(),
+                const_pool: &class.const_pool as *const ConstPool,
                 operand_stack: OperandStack::new(),
                 local_vars: LocalVars::new(),
-                method: class.methods.iter().find(|m| m.name.eq("<clinit>")).unwrap().clone(),
+                method: class.find_method(&MethodKey {
+                    class: class.name.clone(),
+                    name: "<clinit>".to_string(),
+                    descriptor: MethodType::from_descriptor("()V").unwrap(),
+                }),
                 pc: 0,
             });
         }
@@ -94,17 +98,17 @@ impl Thread {
     }
 
     fn next(&mut self) {
-
         let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
-        let bytecode = &curr_frame.method.code.as_ref().unwrap().code;
+        let method = unsafe { curr_frame.method.as_ref().unwrap() };
+        let bytecode = &method.code.as_ref().unwrap().code;
         //
         // print!("{:?} {}.{}{}",
         //          std::thread::current().id() ,
         //          curr_frame.class.as_str(),
         //          curr_frame.method.name.as_str(),
         //          curr_frame.method.descriptor.descriptor());
-        io::stdout().flush().unwrap();
+        // io::stdout().flush().unwrap();
 
         let opcode = bytecode[curr_frame.pc];
 
@@ -160,12 +164,12 @@ impl Thread {
             0xBB => new(self),
             0xBC => new_array(self),
             0xBE => array_length(self),
-            _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), curr_frame.method.name.as_str(), curr_frame.method.descriptor.descriptor(), opcode)
+            _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
         }
     }
 
     /// Push a new frame onto the top of the stack.
-    pub fn push_frame(&mut self, class: String, const_pool: Arc<ConstPool>, method: Arc<Method>, args: Vec<Value>) {
+    pub fn push_frame(&mut self, class: String, const_pool: *const ConstPool, method: *const Method, args: Vec<CategoryOne>) {
         let mut frame = Frame {
             class,
             const_pool,
@@ -177,8 +181,8 @@ impl Thread {
 
         let mut idx = 0;
         for arg in args {
-            frame.local_vars.store_value(idx, arg);
-            idx += arg.category() as u16;
+            frame.local_vars.store_cat_one(idx, arg);
+            idx += 1;
         }
 
         self.stack.push(frame);
@@ -189,9 +193,9 @@ impl Thread {
 pub struct Frame {
     pub class: String,
     /// A reference to the related class's constant pool.
-    pub const_pool: Arc<ConstPool>,
+    pub const_pool: *const ConstPool,
     /// A reference to the related method.
-    pub method: Arc<Method>,
+    pub method: *const Method,
     pub operand_stack: OperandStack,
     pub local_vars: LocalVars,
     /// The program counter within the current method.
@@ -199,27 +203,32 @@ pub struct Frame {
 }
 
 impl Frame {
+    fn code(&self) -> &[u8] {
+        let method = unsafe { self.method.as_ref().unwrap() };
+        &method.code.as_ref().unwrap().code
+    }
+
     pub fn read_u8(&mut self) -> u8 {
-        let byte = self.method.code.as_ref().unwrap().code[self.pc];
+        let byte = self.code()[self.pc];
         self.pc += 1;
         byte
     }
 
     pub fn read_i8(&mut self) -> i8 {
-        let byte = self.method.code.as_ref().unwrap().code[self.pc];
+        let byte = self.code()[self.pc];
         self.pc += 1;
         i8::from_be_bytes([byte])
     }
 
     pub fn read_u16(&mut self) -> u16 {
-        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc + 2];
+        let bytes = &self.code()[self.pc..self.pc + 2];
         let u16 = u16::from_be_bytes(bytes.try_into().unwrap());
         self.pc += 2;
         u16
     }
 
     pub fn read_i16(&mut self) -> i16 {
-        let bytes = &self.method.code.as_ref().unwrap().code[self.pc..self.pc + 2];
+        let bytes = &self.code()[self.pc..self.pc + 2];
         let i16 = i16::from_be_bytes(bytes.try_into().unwrap());
         self.pc += 2;
         i16
@@ -230,7 +239,7 @@ impl Frame {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2).
 pub struct OperandStack {
-    stack: Vec<Value>,
+    stack: Vec<u8>
 }
 
 impl OperandStack {
@@ -238,12 +247,24 @@ impl OperandStack {
         OperandStack { stack: vec![] }
     }
 
-    pub fn push(&mut self, value: Value) {
-        self.stack.push(value);
+    pub fn push_cat_one(&mut self, cat_one: CategoryOne) {
+        let i32 = unsafe { cat_one.int.0 };
+        for byte in i32.to_be_bytes() {
+            self.stack.push(byte);
+        }
     }
 
-    pub fn pop(&mut self) -> Value {
-        self.stack.pop().unwrap()
+    pub fn push_value(&mut self, value: Value) {
+        if value.category() == 1 {
+            self.push_cat_one(value.cat_one());
+        }
+        panic!("Not implemented")
+    }
+
+    pub fn pop_cat_one(&mut self) -> CategoryOne {
+        let new_len = self.stack.len() - 4;
+        let bytes = self.stack.drain(new_len..);
+        CategoryOne { int: Int(i32::from_be_bytes(bytes.as_slice().try_into().unwrap())) }
     }
 }
 
@@ -262,6 +283,10 @@ impl LocalVars {
     /// Store a value in the local vars.
     pub fn store_value(&mut self, index: u16, value: Value) {
         self.map.insert(index, value);
+    }
+
+    pub fn store_cat_one(&mut self, index: u16, value: CategoryOne) {
+        self.store_value(index, Value::Int(value.int()));
     }
 
     /// Load an int from the local vars.

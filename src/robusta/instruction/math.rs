@@ -1,15 +1,15 @@
-use crate::java::{Int, Value};
+use crate::java::{CategoryOne, Int, Value};
 use crate::thread::Thread;
 
 pub fn i_add(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
-    let value2 = frame.operand_stack.pop().int();
-    let value1 = frame.operand_stack.pop().int();
+    let value2 = frame.operand_stack.pop_cat_one().int();
+    let value1 = frame.operand_stack.pop_cat_one().int();
 
     let (result, _) = value1.0.overflowing_add(value2.0);
 
-    frame.operand_stack.push(Value::Int(Int(result)))
+    frame.operand_stack.push_cat_one(CategoryOne { int: Int(result) });
 }
 
 pub fn i_inc(thread: &mut Thread) {

@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::collection::AppendMap;
-use crate::java::{Double, FieldType, Float, Int, Long, Reference, Value};
+use crate::heap::hash_code::HashCode;
+use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::method_area::{Class, Field};
 use crate::method_area::const_pool::{FieldKey, MethodKey};
 
@@ -61,10 +62,14 @@ impl Object {
         read_value(self.data, field.offset, &field.descriptor)
     }
 
-    pub fn set_field(&self, field: &FieldKey, value: Value) {
+    pub fn set_field(&self, field: &FieldKey, value: CategoryOne) {
         let field = self.class().find_field(field);
 
-        write_value(self.data, field.offset, &field.descriptor, value)
+        write_value_2(self.data, field.offset, value)
+    }
+
+    pub fn hash_code(&self) -> Int {
+        unsafe { (*self.header).hash_code }
     }
 }
 
@@ -76,6 +81,7 @@ impl Object {
 struct ObjectHeader {
     /// The class of this object
     class: *const Class,
+    hash_code: Int,
 }
 
 #[repr(C)]
@@ -103,10 +109,10 @@ impl Array {
         Int(length as i32)
     }
 
-    pub fn set_element(&self, index: Int, value: Value) {
+    pub fn set_element(&self, index: Int, value: CategoryOne) {
         let header = self.header();
         let index = index.0 as usize * header.component.width();
-        write_value(self.data, index, &header.component.to_field(), value)
+        write_value_2(self.data, index, value)
     }
 
     pub fn get_element(&self, index: Int) -> Value {
@@ -149,6 +155,7 @@ struct ArrayHeader {
     component: ArrayType,
     /// The length (in bytes) of the array data.
     length: usize,
+    hash_code: Int,
 }
 
 unsafe impl Send for ArrayHeader {}
@@ -211,6 +218,7 @@ const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 pub struct Allocator {
     data: Box<[u8]>,
     used: AtomicUsize,
+    hash_code: HashCode,
 }
 
 impl Allocator {
@@ -218,6 +226,7 @@ impl Allocator {
         Allocator {
             data: vec![0; HEAP_SIZE].into_boxed_slice(),
             used: AtomicUsize::new(0),
+            hash_code: HashCode::new(),
         }
     }
 
@@ -236,7 +245,7 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            object.header.write(ObjectHeader { class: class_ptr });
+            object.header.write(ObjectHeader { class: class_ptr, hash_code: self.hash_code.next() });
             object.data.write_bytes(0, class.width);
 
             object
@@ -256,7 +265,7 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            array.header.write(ArrayHeader { component, length: data_size });
+            array.header.write(ArrayHeader { component, length: data_size, hash_code: self.hash_code.next() });
             array.data.write_bytes(0, size);
 
             array
@@ -275,6 +284,14 @@ impl Allocator {
         unsafe {
             self.data.as_ptr().add(start_of_memory).cast_mut()
         }
+    }
+}
+
+fn write_value_2(data_start: *mut u8, offset: usize, value: CategoryOne) {
+    unsafe {
+        let pointer: *mut u8 = data_start.add(offset);
+        let pointer: *mut i32 = pointer.cast();
+        pointer.write(value.int().0)
     }
 }
 
