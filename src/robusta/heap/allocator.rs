@@ -232,7 +232,7 @@ impl Allocator {
 
     pub fn new_object(&self, class: &Class) -> Object {
         let header_size = size_of::<ObjectHeader>();
-        let data_size = class.width;
+        let data_size = class.instance_width;
         let size = header_size + data_size;
 
         let start_ptr = self.allocate(size);
@@ -246,7 +246,29 @@ impl Allocator {
             };
 
             object.header.write(ObjectHeader { class: class_ptr, hash_code: self.hash_code.next() });
-            object.data.write_bytes(0, class.width);
+            object.data.write_bytes(0, class.instance_width);
+
+            object
+        }
+    }
+
+    pub fn new_static_object(&self, class: &Class) -> Object {
+        let header_size = size_of::<ObjectHeader>();
+        let data_size = class.static_width;
+        let size = header_size + data_size;
+
+        let start_ptr = self.allocate(size);
+
+        let class_ptr = class as *const Class;
+
+        unsafe {
+            let object = Object {
+                header: start_ptr.cast(),
+                data: start_ptr.add(header_size),
+            };
+
+            object.header.write(ObjectHeader { class: class_ptr, hash_code: Int(0) });
+            object.data.write_bytes(0, class.static_width);
 
             object
         }

@@ -99,9 +99,10 @@ impl MethodArea {
                 Some(*super_class)
             };
 
-            let mut fields: Vec<Field> = class_file.fields.iter()
+            let mut instance_fields: Vec<Field> = class_file.fields.iter()
+                .filter(|f| (f.access_flags & ACCESS_FLAG_STATIC) == 0)
                 .map(|f| {
-                    let is_static = (ACCESS_FLAG_STATIC & f.access_flags) != 0;
+                    let is_static = false;
                     let name = class_file.get_const_utf8(f.name);
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
@@ -110,18 +111,40 @@ impl MethodArea {
                 }).collect();
 
             // Sort to get a better order for object packing.
-            fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
-            let mut offset = unsafe { super_class.map_or(0, |c| (*c).width) };
-            for field in &mut fields {
-                field.offset = offset;
-                offset += field.width;
+            instance_fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
+            let mut instance_offset = unsafe { super_class.map_or(0, |c| (*c).instance_width) };
+            for field in &mut instance_fields {
+                field.offset = instance_offset;
+                instance_offset += field.width;
+            }
+
+            let mut static_fields: Vec<Field> = class_file.fields.iter()
+                .filter(|f| (f.access_flags & ACCESS_FLAG_STATIC) != 0)
+                .map(|f| {
+                    let is_static = true;
+                    let name = class_file.get_const_utf8(f.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = class_file.get_const_utf8(f.descriptor);
+                    let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    Field { class: 0 as *const Class, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                }).collect();
+
+            // Sort to get a better order for object packing.
+            static_fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
+            let mut static_offset = 0; // parent fields arent included.
+            for field in &mut static_fields {
+                field.offset = static_offset;
+                static_offset += field.width;
             }
 
             const ALIGN: usize = 4;
 
             // Get our final padded width.
-            let padding = ALIGN - (offset % ALIGN);
-            let width = offset + padding;
+            let instance_pad = ALIGN - (instance_offset % ALIGN);
+            let instance_width = instance_offset + instance_pad;
+
+            let static_pad = ALIGN - (static_offset % ALIGN);
+            let static_width = static_offset + static_pad;
 
             let methods: Vec<Method> = class_file.methods.iter()
                 .map(|m| {
@@ -141,15 +164,19 @@ impl MethodArea {
                 const_pool: pool,
                 super_class,
                 interfaces: vec![], // TODO: Implement
-                fields,
+                instance_fields,
+                static_fields,
                 methods,
                 attributes: vec![], // TODO: Implement,
-                width
+                instance_width,
+                static_width,
             };
             info!(name=class_name ,"Loaded class");
             class
         });
         class.self_referential();
+        let heap = unsafe { self.heap.as_ref().unwrap() };
+        heap.get_static(class);
         class
     }
 
@@ -173,10 +200,12 @@ pub struct Class {
     pub const_pool: ConstPool,
     pub super_class: Option<*const Class>,
     pub interfaces: Vec<*const Class>,
-    pub fields: Vec<Field>,
+    pub instance_fields: Vec<Field>,
+    pub static_fields: Vec<Field>,
     pub methods: Vec<Method>,
     pub attributes: Vec<Attribute>,
-    pub width: usize,
+    pub instance_width: usize,
+    pub static_width: usize,
 }
 
 pub struct Hierarchy {
@@ -196,7 +225,7 @@ impl Iterator for Hierarchy {
 impl Class {
     fn self_referential(&self) {
         let class = self as *const Class;
-        for field in &self.fields {
+        for field in &self.instance_fields {
             let mut_ptr = (field as *const Field).cast_mut();
             unsafe {
                 (*mut_ptr).class = class;
@@ -216,8 +245,14 @@ impl Class {
 
     pub fn find_field(&self, key: &FieldKey) -> &Field {
         self.parents()
-            .flat_map(|class| unsafe { (*class).fields.iter() })
+            .flat_map(|class| unsafe { (*class).instance_fields.iter() })
             .find(|fld| fld.name.eq(&key.name) && fld.descriptor.eq(&key.descriptor))
+            .unwrap()
+    }
+
+    pub fn find_static(&self, key: &FieldKey) -> &Field {
+        self.static_fields.iter()
+            .find(|f| f.name.eq(&key.name) && f.descriptor.eq(&key.descriptor))
             .unwrap()
     }
 

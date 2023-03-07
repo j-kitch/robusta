@@ -18,6 +18,7 @@ pub struct Heap {
     references: RwLock<HashMap<Reference, Heaped>>,
     class_objects: OnceMap<String, Reference>,
     string_constants: OnceMap<String, Reference>,
+    static_objects: OnceMap<String, Reference>,
 }
 
 impl Heap {
@@ -27,12 +28,20 @@ impl Heap {
             references: RwLock::new(HashMap::new()),
             class_objects: OnceMap::new(),
             string_constants: OnceMap::new(),
+            static_objects: OnceMap::new(),
         }
     }
 
     pub fn new_object(&self, class: &Class) -> Reference {
         let object = self.allocator.new_object(class);
         self.insert(Heaped::Object(object))
+    }
+
+    pub fn get_static(&self, class: &Class) -> Reference {
+        self.static_objects.get_or_init(class.name.clone(), |class_name| {
+            let object = self.allocator.new_static_object(class);
+            self.insert(Heaped::Object(object))
+        }).clone()
     }
 
     pub fn new_array(&self, arr_type: ArrayType, length: Int) -> Reference {
