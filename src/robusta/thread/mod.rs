@@ -8,12 +8,12 @@ use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
-use crate::instruction::locals::{iload, istore};
+use crate::instruction::locals::{astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::iconst_n;
 use crate::instruction::r#return::{a_return, i_return};
-use crate::instruction::stack::pop;
+use crate::instruction::stack::{pop, sipush};
 use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
@@ -129,6 +129,7 @@ impl Thread {
             0x06 => iconst_n(self, 3),
             0x07 => iconst_n(self, 4),
             0x08 => iconst_n(self, 5),
+            0x11 => sipush(self),
             0x12 => load_constant(self),
             0x15 => iload(self),
             0x1A => iload_n(self, 0),
@@ -141,6 +142,7 @@ impl Thread {
             0x2D => aload_n(self, 3),
             0x34 => char_array_load(self),
             0x36 => istore(self),
+            0x3A => astore(self),
             0x3B => istore_n(self, 0),
             0x3C => istore_n(self, 1),
             0x3D => istore_n(self, 2),

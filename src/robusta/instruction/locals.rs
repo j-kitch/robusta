@@ -8,6 +8,13 @@ pub fn istore(thread: &mut Thread) {
     frame.local_vars.store_value(index as u16, Value::Int(value));
 }
 
+pub fn astore(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.operand_stack.pop_cat_one().reference();
+    frame.local_vars.store_value(index as u16, Value::Reference(value));
+}
+
 pub fn iload(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let index = frame.read_u8();
