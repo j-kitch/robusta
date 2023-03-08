@@ -161,7 +161,7 @@ impl MethodArea {
 
                     let descriptor = class_file.get_const_utf8(m.descriptor);
                     let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Method { class: 0 as *const Class, is_static, is_native, name, descriptor, code: m.code.clone() }
+                    Method { class: 0 as *const Class, is_static, is_native, name, descriptor, code: m.code().map(|c| c.clone()) }
                 }).collect();
 
             let class = Class {

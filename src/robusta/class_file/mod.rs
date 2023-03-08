@@ -43,6 +43,7 @@ pub struct ClassFile {
     pub fields: Vec<Field>,
     /// The methods supplied in the class file.
     pub methods: Vec<Method>,
+    pub attributes: Vec<ClassAttribute>,
 }
 
 impl ClassFile {
@@ -131,8 +132,19 @@ pub struct Method {
     /// A valid index into `const_pool`, which must be a valid `Const::Utf8` value, the descriptor
     /// of this method signature.
     pub descriptor: u16,
-    /// The code of the method, if the method is not native or abstract.
-    pub code: Option<Code>,
+    pub attributes: Vec<MethodAttribute>,
+}
+
+impl Method {
+    pub fn code(&self) -> Option<&Code> {
+        for attr in &self.attributes {
+            match attr {
+                MethodAttribute::Code(code) => return Some(code),
+                _ => {},
+            }
+        }
+        return None
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -145,6 +157,7 @@ pub struct Code {
     /// The Java Virtual Machine code executed in this method.
     pub code: Vec<u8>,
     pub ex_table: Vec<ExHandler>,
+    pub attributes: Vec<CodeAttribute>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -153,4 +166,45 @@ pub struct ExHandler {
     pub end_pc: u16,
     pub handler_pc: u16,
     pub catch_type: u16,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ClassAttribute {
+    SourceFile(SourceFile),
+    Unknown(UnknownAttribute),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum MethodAttribute {
+    Code(Code),
+    Unknown(UnknownAttribute),
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CodeAttribute {
+    LineNumberTable(LineNumberTable),
+    Unknown(UnknownAttribute),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SourceFile {
+    pub source_file: u16,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnknownAttribute {
+    pub name_idx: u16,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LineNumberTable {
+    pub table: Vec<LineNumber>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LineNumber {
+    pub start_pc: u16,
+    pub line_number: u16,
 }
