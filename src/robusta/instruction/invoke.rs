@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use tracing::debug;
 use crate::java::CategoryOne;
 use crate::log;
@@ -29,17 +30,14 @@ pub fn invoke_virtual(thread: &mut Thread) {
     }).unwrap();
     let class = unsafe { method.class.as_ref().unwrap() };
 
-
     if method.is_native {
-        let result = thread.runtime.native.call(
+        let result = thread.call_native(
             method,
-            &Args {
-                params: args,
-                runtime: thread.runtime.clone(),
-            },
+            args
         );
 
         if let Some(result) = result {
+            let cur_frame = thread.stack.last_mut().unwrap();
             cur_frame.operand_stack.push_value(result);
         }
     } else {
@@ -63,15 +61,13 @@ pub fn invoke_special(thread: &mut Thread) {
     args.reverse();
 
     if method.is_native {
-        let result = thread.runtime.native.call(
+        let result = thread.call_native(
             method,
-            &Args {
-                params: args,
-                runtime: thread.runtime.clone(),
-            },
+               args
         );
 
         if let Some(result) = result {
+            let cur_frame = thread.stack.last_mut().unwrap();
             cur_frame.operand_stack.push_value(result);
         }
     } else {

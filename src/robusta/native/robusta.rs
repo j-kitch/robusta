@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
 use crate::method_area::const_pool::FieldKey;
-use crate::native::{Plugin};
+use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
 use crate::runtime::Runtime;
 
@@ -35,17 +35,17 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
     ]
 }
 
-fn robusta_println_int(_: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
-    let value = values[0].int();
+fn robusta_println_int(args: &Args) -> Option<Value> {
+    let value = args.params[0].int();
 
     println!("{}", value.0);
 
     None
 }
 
-fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
-    let str_ref = values[0].reference();
-    let str_obj = runtime.heap.get_object(str_ref);
+fn robusta_println_string(args: &Args) -> Option<Value> {
+    let str_ref = args.params[0].reference();
+    let str_obj = args.runtime.heap.get_object(str_ref);
 
     let chars_field = str_obj.get_field(&FieldKey {
         class: "java.lang.String".to_string(),
@@ -53,7 +53,7 @@ fn robusta_println_string(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Op
         descriptor: FieldType::from_descriptor("[C").unwrap(),
     }).reference();
 
-    let chars_arr = runtime.heap.get_array(chars_field);
+    let chars_arr = args.runtime.heap.get_array(chars_field);
     let chars_arr = chars_arr.as_chars_slice();
 
     let string = String::from_utf16(chars_arr).unwrap();

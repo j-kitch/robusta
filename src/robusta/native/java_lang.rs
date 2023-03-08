@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
 use crate::method_area::const_pool::FieldKey;
-use crate::native::{ Plugin};
+use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
 use crate::runtime::Runtime;
 
@@ -36,9 +36,9 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
 }
 
 
-fn string_intern(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
-    let string_ref = values[0].reference();
-    let string_obj = runtime.heap.get_object(string_ref);
+fn string_intern(args: &Args) -> Option<Value> {
+    let string_ref = args.params[0].reference();
+    let string_obj = args.runtime.heap.get_object(string_ref);
 
     let chars_ref = string_obj.get_field(&FieldKey {
         class: "java.lang.String".to_string(),
@@ -46,29 +46,33 @@ fn string_intern(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Valu
         descriptor: FieldType::from_descriptor("[C").unwrap(),
     }).reference();
 
-    let chars = runtime.heap.get_array(chars_ref);
+    let chars = args.runtime.heap.get_array(chars_ref);
     let chars = chars.as_chars_slice();
 
     let string = String::from_utf16(chars).unwrap();
-    let string_ref = runtime.heap.insert_string_const(&string, string_obj.class());
+    let string_ref = args.runtime.heap.insert_string_const(&string, string_obj.class());
 
     Some(Value::Reference(string_ref))
 }
 
-fn object_get_class(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
-    let object_ref = values[0].reference();
-    let object_obj = runtime.heap.get_object(object_ref);
+fn object_get_class(args: &Args) -> Option<Value> {
+    let object_ref = args.params[0].reference();
+    let object_obj = args.runtime.heap.get_object(object_ref);
 
-    let class_ref = runtime.method_area.load_class_object(object_obj.class());
+    let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
 
     Some(Value::Reference(class_ref))
 }
 
-fn object_hash_code(runtime: Arc<Runtime>, values: Vec<CategoryOne>) -> Option<Value> {
-    let object_ref = values[0].reference();
-    let object_obj = runtime.heap.get_object(object_ref);
+fn object_hash_code(args: &Args) -> Option<Value> {
+    let object_ref = args.params[0].reference();
+    let object_obj = args.runtime.heap.get_object(object_ref);
 
     let hash_code = object_obj.hash_code();
 
     Some(Value::Int(hash_code))
+}
+
+fn fill_in_stack_trace(args: &Args) -> Option<Value> {
+    todo!()
 }

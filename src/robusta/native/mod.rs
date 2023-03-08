@@ -7,6 +7,7 @@ use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
 use crate::native::robusta::robusta_plugins;
+use crate::thread::Thread;
 
 mod robusta;
 mod stateless;
@@ -52,6 +53,7 @@ impl NativeMethods {
 // }
 
 pub struct Args {
+    pub thread: *const Thread,
     pub runtime: Arc<crate::runtime::Runtime>,
     pub params: Vec<CategoryOne>,
 }

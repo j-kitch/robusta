@@ -149,15 +149,13 @@ pub fn invoke_static(thread: &mut Thread) {
         .collect();
 
     if method.is_native {
-        let result = thread.runtime.native.call(
+        let result = thread.call_native(
             method,
-            &Args {
-                params: args,
-                runtime: thread.runtime.clone(),
-            }
+           args
         );
 
         if let Some(result) = result {
+            let cur_frame = thread.stack.last_mut().unwrap();
             cur_frame.operand_stack.push_value(result);
         }
     } else {

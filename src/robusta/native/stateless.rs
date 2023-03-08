@@ -5,7 +5,7 @@ use crate::method_area;
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 
-type Function = Arc<dyn Fn(Arc<Runtime>, Vec<CategoryOne>) -> Option<Value> + Sync + Send>;
+type Function = Arc<dyn Fn(&Args) -> Option<Value> + Sync + Send>;
 
 /// Some native method implementations require no state, so there's no need to create separate
 /// internal types for those specific to their implementations.
@@ -35,6 +35,6 @@ impl Plugin for StatelessPlugin {
     }
 
     fn call(&self, _: &method_area::Method, args: &Args) -> Option<Value> {
-        (self.function)(args.runtime.clone(), args.params.clone())
+        (self.function)(args)
     }
 }

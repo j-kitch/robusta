@@ -10,6 +10,7 @@ public class Throwable {
     }
 
     public Throwable(String detailMessage) {
+        this();
         this.detailMessage = detailMessage;
     }
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
-use crate::instruction::array::{array_length, char_array_load, char_array_store};
+use crate::instruction::array::{a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
@@ -18,6 +18,7 @@ use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::native::Args;
 use crate::runtime::Runtime;
 
 /// A single Java thread in the running program.
@@ -33,6 +34,17 @@ pub struct Thread {
 }
 
 impl Thread {
+    pub fn call_native(&self, method: &Method, args: Vec<CategoryOne>) -> Option<Value> {
+        self.runtime.native.call(
+            method,
+            &Args {
+                thread: self as *const Thread,
+                params: args,
+                runtime: self.runtime.clone()
+            }
+        )
+    }
+
     pub fn empty(runtime: Arc<Runtime>) -> Self {
         Thread { group: "thread".to_string(), runtime, stack: Vec::new() }
     }
@@ -169,6 +181,7 @@ impl Thread {
             0xB8 => invoke_static(self),
             0xBB => new(self),
             0xBC => new_array(self),
+            0xBD => a_new_array(self),
             0xBE => array_length(self),
             0xBF => a_throw(self),
             _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
