@@ -29,6 +29,10 @@ public final class StringBuilder {
         return this;
     }
 
+    public StringBuilder append(int i) {
+        return append(Integer.toString(i));
+    }
+
     public String toString() {
         char[] result = new char[count];
         for (int i = 0; i < result.length; i++) {
