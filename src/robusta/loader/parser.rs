@@ -3,8 +3,6 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 
-use crossbeam::channel::at;
-
 use crate::class_file::{ClassAttribute, ClassFile, Code, CodeAttribute, const_pool, ExHandler, Field, LineNumber, LineNumberTable, MAGIC, Method, MethodAttribute, SourceFile, UnknownAttribute};
 use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, MethodRef, NameAndType, Utf8};
 
@@ -112,8 +110,8 @@ impl<'a> Parser<'a> {
 
         match name.as_str() {
             "Code" => {
-                let length = self.read_u32()?;
-                Ok(MethodAttribute::Code(self.read_code(file, length as usize)?))
+                let _ = self.read_u32()?;
+                Ok(MethodAttribute::Code(self.read_code(file)?))
             }
             _ => {
                 let length = self.read_u32()?;
@@ -132,7 +130,7 @@ impl<'a> Parser<'a> {
 
         match name.as_str() {
             "LineNumberTable" => {
-                let length = self.read_u32()?;
+                let _ = self.read_u32()?;
                 let line_number_table_len = self.read_u16()?;
                 let mut line_number_table = Vec::new();
                 for _ in 0..line_number_table_len {
@@ -231,7 +229,7 @@ impl<'a> Parser<'a> {
         Ok(method)
     }
 
-    fn read_code(&mut self, file: &ClassFile, length: usize) -> Result<Code, LoadError> {
+    fn read_code(&mut self, file: &ClassFile) -> Result<Code, LoadError> {
         let mut code = Code {
             max_stack: 0,
             max_locals: 0,

@@ -4,7 +4,7 @@ use std::thread;
 
 use tracing::debug;
 
-use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, Code};
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
 use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference};
@@ -164,6 +164,18 @@ impl MethodArea {
                     Method { class: 0 as *const Class, is_static, is_native, name, descriptor, code: m.code().map(|c| c.clone()) }
                 }).collect();
 
+            let source_file = class_file.attributes.iter()
+                .find_map(|attr| {
+                    match attr {
+                        ClassAttribute::SourceFile(source_file) => {
+                            let file_name = class_file.get_const_utf8(source_file.source_file);
+                            let file_name = String::from_utf8(file_name.bytes.clone()).unwrap();
+                            Some(file_name)
+                        }
+                        _ => None
+                    }
+                });
+
             let class = Class {
                 name: name.to_string(),
                 flags: ClassFlags { bits: class_file.access_flags },
@@ -176,6 +188,7 @@ impl MethodArea {
                 attributes: vec![], // TODO: Implement,
                 instance_width,
                 static_width,
+                source_file,
             };
             debug!(target: log::LOADER, class=name, "Loaded class");
             class
@@ -241,6 +254,7 @@ pub struct Class {
     pub attributes: Vec<Attribute>,
     pub instance_width: usize,
     pub static_width: usize,
+    pub source_file: Option<String>,
 }
 
 pub struct Hierarchy {
