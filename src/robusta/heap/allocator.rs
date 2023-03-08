@@ -244,9 +244,10 @@ impl Allocator {
 
     pub fn print_stats(&self) {
         let used = self.used.load(Ordering::SeqCst);
+        let used_mbs = (used / 1024)  / 1024;
         let max = HEAP_SIZE;
         let percentage = 100.0 * (used as f64) / (max as f64);
-        debug!(target: log::HEAP, used, percentage);
+        debug!(target: log::HEAP, used=format!("{}mb {:.2}%", used_mbs, percentage));
     }
 
     pub fn new_object(&self, class: &Class) -> Object {
@@ -330,6 +331,10 @@ impl Allocator {
 
         // TODO: Need to add GC.
         let start_of_memory = result.expect("Heap is too full");
+
+        if start_of_memory + size > HEAP_SIZE {
+            panic!("Out Of Memory");
+        }
 
         unsafe {
             self.data.as_ptr().add(start_of_memory).cast_mut()

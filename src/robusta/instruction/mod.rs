@@ -30,7 +30,7 @@ pub fn load_constant(thread: &mut Thread) {
 
     trace!(
         target: log::INSTR,
-        pc=frame.pc-3,
+        pc=frame.pc.overflowing_sub(3).0,
         opcode="ldc",
         index
     );

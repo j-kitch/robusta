@@ -68,13 +68,13 @@ impl VirtualMachine {
 
         let runtime = Arc::new(Runtime::new());
 
-        for class in [
-            "java.lang.Object",
-            "java.lang.Class",
-            "java.lang.String"
-        ] {
-            runtime.method_area.load_class(class);
-        }
+        // for class in [
+        //     "java.lang.Object",
+        //     "java.lang.Class",
+        //     "java.lang.String"
+        // ] {
+        //     runtime.method_area.load_class(class);
+        // }
 
         let main_class = runtime.method_area.load_class(main_class);
         let method = main_class.find_method(&MethodKey {
