@@ -1,5 +1,3 @@
-use std::process::exit;
-use crate::class_file::Method;
 use crate::java::{CategoryOne, MethodType};
 use crate::method_area;
 use crate::method_area::const_pool::{ConstPool, MethodKey};

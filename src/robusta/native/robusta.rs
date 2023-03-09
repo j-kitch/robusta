@@ -32,7 +32,7 @@ pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
                 name: "printerr".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/String;)V").unwrap(),
             },
-            Arc::new(robusta_println_string),
+            Arc::new(robusta_printerr_string),
         ),
         stateless(
             Method {

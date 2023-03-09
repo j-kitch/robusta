@@ -103,11 +103,20 @@ fn object_hash_code(args: &Args) -> Option<Value> {
 }
 
 fn fill_in_stack_trace(args: &Args) -> Option<Value> {
+    let throwable_class = args.runtime.method_area.load_class("java.lang.Throwable");
+
     let throwable_ref = args.params[0].reference();
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
-    let elems: Vec<StackElem> = thread.stack.iter()
-        .map(|frame| {
+
+    let stack = thread.stack.iter()
+        .take_while(|f| {
+            let method = unsafe { f.method.as_ref().unwrap() };
+            let class = unsafe { method.class.as_ref().unwrap() };
+            !class.is_instance_of(throwable_class) && method.name.eq("<init>")
+        });
+
+    let elems: Vec<StackElem> = stack.map(|frame| {
             let method = unsafe { frame.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
             StackElem {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::java::{CategoryOne, Value};
 use crate::log;
