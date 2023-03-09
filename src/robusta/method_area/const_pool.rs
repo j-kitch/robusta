@@ -30,6 +30,9 @@ impl ConstPool {
                 cp::Const::Integer(integer) => {
                     pool.pool.insert(*key, Const::Integer(integer.int));
                 }
+                cp::Const::Long(long) => {
+                    pool.pool.insert(*key, Const::Long(long.long));
+                }
                 cp::Const::String(string) => {
                     let string = file.get_const_utf8(string.string);
                     let string = String::from_utf8(string.bytes.clone()).unwrap();
@@ -119,6 +122,7 @@ pub enum Const {
     Method(SymbolicReference<MethodKey, *const Method>),
     String(SymbolicReference<String, Reference>),
     Integer(i32),
+    Long(i64),
 }
 
 pub struct ClassKey {

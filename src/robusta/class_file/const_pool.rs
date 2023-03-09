@@ -14,6 +14,13 @@ pub struct Integer {
 }
 
 #[derive(Debug, PartialEq)]
+/// The `CONSTANT_Long_info` structure is used to represent an long constant.
+pub struct Long {
+    /// The long constant.
+    pub long: i64,
+}
+
+#[derive(Debug, PartialEq)]
 /// The `CONSTANT_Class_info` structure, used to represent a class or an interface.
 pub struct Class {
     /// An index into the `const_pool`, a valid `Const::Utf8`, representing a valid
@@ -70,6 +77,7 @@ pub struct NameAndType {
 pub enum Const {
     Utf8(Utf8),
     Integer(Integer),
+    Long(Long),
     Class(Class),
     String(String),
     FieldRef(FieldRef),
@@ -80,6 +88,7 @@ pub enum Const {
 impl Const {
     pub fn width(&self) -> u16 {
         match self {
+            Const::Long(_) => 2,
             _ => 1
         }
     }
@@ -91,7 +100,7 @@ impl Const {
     /// inserted first.
     pub fn order(&self) -> usize {
         match self {
-            Const::String(_) | Const::Integer(_) => 0,
+            Const::String(_) | Const::Integer(_) | Const::Long(_) => 0,
             Const::Class(_) => 1,
             Const::FieldRef(_) | Const::MethodRef(_) => 2,
             _ => 3
