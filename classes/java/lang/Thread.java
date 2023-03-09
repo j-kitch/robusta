@@ -24,6 +24,10 @@ public class Thread {
         this.name = name;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public void run() {
 
     }
@@ -41,4 +45,10 @@ public class Thread {
     private native void nativeStart();
 
     public final native void join();
+
+    public final native void join(long millis);
+
+    public static native void sleep(long millis);
+
+    public static native Thread currentThread();
 }
