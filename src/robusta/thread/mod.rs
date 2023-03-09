@@ -3,17 +3,17 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
-use crate::instruction::array::{a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
+use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
+use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_null};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
-use crate::instruction::locals::{astore, iload, istore};
+use crate::instruction::locals::{aload, astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
-use crate::instruction::stack::{pop, sipush};
+use crate::instruction::stack::{bipush, pop, sipush};
 use crate::java::{CategoryOne, Int, MethodType, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
@@ -178,10 +178,12 @@ impl Thread {
             0x06 => iconst_n(self, 3),
             0x07 => iconst_n(self, 4),
             0x08 => iconst_n(self, 5),
+            0x10 => bipush(self),
             0x11 => sipush(self),
             0x12 => load_constant(self),
             0x13 => load_constant_wide(self),
             0x15 => iload(self),
+            0x19 => aload(self),
             0x1A => iload_n(self, 0),
             0x1B => iload_n(self, 1),
             0x1C => iload_n(self, 2),
@@ -190,6 +192,7 @@ impl Thread {
             0x2B => aload_n(self, 1),
             0x2C => aload_n(self, 2),
             0x2D => aload_n(self, 3),
+            0x32 => a_array_load(self),
             0x34 => char_array_load(self),
             0x36 => istore(self),
             0x3A => astore(self),
@@ -207,6 +210,9 @@ impl Thread {
             0x59 => dup(self),
             0x60 => i_add(self),
             0x84 => i_inc(self),
+            0x9B => if_lt(self),
+            0x99 => if_eq(self),
+            0xA0 => if_int_cmp_ne(self),
             0xA2 => if_int_cmp_ge(self),
             0xA4 => if_int_cmp_le(self),
             0xA7 => goto(self),
@@ -223,6 +229,7 @@ impl Thread {
             0xBD => a_new_array(self),
             0xBE => array_length(self),
             0xBF => a_throw(self),
+            0xC6 => if_null(self),
             _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
         }
     }
@@ -354,7 +361,8 @@ impl LocalVars {
     pub fn load_cat_one(&mut self, index: u16) -> CategoryOne {
         match self.map.get(&index).unwrap() {
             Value::Int(int) => CategoryOne { int: *int },
-            _ => panic!("expected to load int")
+            Value::Reference(reference) => CategoryOne { reference: *reference },
+            _ => panic!("expected to load cat one")
         }
     }
 }

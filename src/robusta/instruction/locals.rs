@@ -21,3 +21,10 @@ pub fn iload(thread: &mut Thread) {
     let value = frame.local_vars.load_cat_one(index as u16).int();
     frame.operand_stack.push_cat_one(CategoryOne { int: value });
 }
+
+pub fn aload(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.local_vars.load_cat_one(index as u16);
+    frame.operand_stack.push_cat_one(value);
+}

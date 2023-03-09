@@ -45,9 +45,25 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
             },
             Arc::new(fill_in_stack_trace),
         ),
+        stateless(
+            Method {
+                class: "java.lang.Integer".to_string(),
+                name: "toString".to_string(),
+                descriptor: MethodType::from_descriptor("(I)Ljava/lang/String;").unwrap(),
+            },
+            Arc::new(integer_to_string),
+        )
     ]
 }
 
+fn integer_to_string(args: &Args) -> Option<Value> {
+    let int = args.params[0].int();
+
+    let string_rep = format!("{}", int.0);
+    let string_ref = args.runtime.heap.insert_string_const(&string_rep, args.runtime.method_area.load_class("java.lang.String"));
+
+    Some(Value::Reference(string_ref))
+}
 
 fn string_intern(args: &Args) -> Option<Value> {
     let string_ref = args.params[0].reference();

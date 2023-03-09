@@ -48,6 +48,29 @@ pub fn if_int_cmp_le(thread: &mut Thread) {
     }
 }
 
+pub fn if_int_cmp_ne(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="if_icmpne",
+        offset
+    );
+
+    let value2 = frame.operand_stack.pop_cat_one().int();
+    let value1 = frame.operand_stack.pop_cat_one().int();
+
+    if value1.0 != value2.0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
 pub fn goto(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let offset = frame.read_i16();
@@ -63,4 +86,70 @@ pub fn goto(thread: &mut Thread) {
     pc -= 3;
     pc += offset as i64;
     frame.pc = pc as usize;
+}
+
+pub fn if_eq(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="ifeq",
+        offset
+    );
+
+    let value = frame.operand_stack.pop_cat_one().int();
+
+    if value.0 == 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
+pub fn if_lt(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="iflt",
+        offset
+    );
+
+    let value = frame.operand_stack.pop_cat_one().int();
+
+    if value.0 < 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
+pub fn if_null(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="ifnull",
+        offset
+    );
+
+    let value = frame.operand_stack.pop_cat_one().reference();
+
+    if value.0 == 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
 }

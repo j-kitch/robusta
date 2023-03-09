@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tracing::trace;
+use tracing::{debug, trace};
 
 use crate::java::{CategoryOne, Value};
 use crate::log;
@@ -31,7 +31,7 @@ impl NativeMethods {
 
     pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
         let class = unsafe { method.class.as_ref().unwrap() };
-        trace!(
+        debug!(
             target: log::THREAD,
             method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()),
             "Invoking native method"
