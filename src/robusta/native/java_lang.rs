@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::thread::Builder;
+use std::thread::{Builder, sleep};
+use std::time::Duration;
+
 use rand::{RngCore, thread_rng};
-use tracing::debug;
+
+use crate::method_area;
 use crate::class_file::Code;
 use crate::collection::once::Once;
-
+use crate::collection::wait::ThreadWait;
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
-use crate::{log, method_area};
 use crate::method_area::{Class, ClassFlags};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
@@ -63,7 +65,31 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(thread_start),
-        )
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "sleep".to_string(),
+                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
+            },
+            Arc::new(thread_sleep),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "join".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(thread_join),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "join".to_string(),
+                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
+            },
+            Arc::new(thread_join_millis),
+        ),
     ]
 }
 
@@ -128,27 +154,27 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
         });
 
     let elems: Vec<StackElem> = stack.map(|frame| {
-            let method = unsafe { frame.method.as_ref().unwrap() };
-            let class = unsafe { method.class.as_ref().unwrap() };
-            StackElem {
-                class: frame.class.clone(),
-                method: method.name.clone(),
-                file: class.source_file.clone(),
-                line: {
-                    let line_numbers = method.code.as_ref().and_then(|code| code.line_number_table())
-                        .map(|table| &table.table);
-                    if let Some(table) = line_numbers {
-                        table.iter()
-                            .filter(|ln| ln.start_pc as usize <= frame.pc)
-                            .last()
-                            .map(|ln| ln.line_number)
-                            .unwrap() as i32
-                    } else {
-                        -2
-                    }
+        let method = unsafe { frame.method.as_ref().unwrap() };
+        let class = unsafe { method.class.as_ref().unwrap() };
+        StackElem {
+            class: frame.class.clone(),
+            method: method.name.clone(),
+            file: class.source_file.clone(),
+            line: {
+                let line_numbers = method.code.as_ref().and_then(|code| code.line_number_table())
+                    .map(|table| &table.table);
+                if let Some(table) = line_numbers {
+                    table.iter()
+                        .filter(|ln| ln.start_pc as usize <= frame.pc)
+                        .last()
+                        .map(|ln| ln.line_number)
+                        .unwrap() as i32
+                } else {
+                    -2
                 }
-            }
-        }).collect();
+            },
+        }
+    }).collect();
 
     // Can we create a class that delegates to all our methods for us?
     let mut class = Class {
@@ -325,7 +351,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     throwable.set_field(&FieldKey {
         class: "java.lang.Throwable".to_string(),
         name: "stackTrace".to_string(),
-        descriptor: FieldType::from_descriptor("[Ljava.lang.StackTraceElement;").unwrap()
+        descriptor: FieldType::from_descriptor("[Ljava.lang.StackTraceElement;").unwrap(),
     }, CategoryOne { reference: array_reference });
 
     None
@@ -352,6 +378,7 @@ fn thread_start(args: &Args) -> Option<Value> {
     let runtime = args.runtime.clone();
     let class = thread_obj.class().name.clone();
 
+    runtime.threads.insert(class.clone(), ThreadWait::new(runtime.clone(), thread_ref));
 
     Builder::new().name(name.clone()).spawn(move || {
         let const_pool = &thread_obj.class().const_pool as *const ConstPool;
@@ -361,9 +388,49 @@ fn thread_start(args: &Args) -> Option<Value> {
             descriptor: MethodType::from_descriptor("()V").unwrap(),
         }).unwrap() as *const method_area::Method;
 
-        let mut thread = Thread::new(Some(thread_ref.clone()), runtime, class, const_pool, method);
+        let mut thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method);
         thread.run();
     }).unwrap();
+
+    None
+}
+
+pub fn thread_sleep(args: &Args) -> Option<Value> {
+    let millis = args.params[0].long().0;
+    sleep(Duration::from_millis(millis as u64));
+    None
+}
+
+pub fn thread_join(args: &Args) -> Option<Value> {
+    let thread_ref = args.params[0].reference();
+    let thread_obj = args.runtime.heap.get_object(thread_ref);
+
+    let name_ref = thread_obj.get_field(&FieldKey {
+        class: "java.lang.Thread".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    args.runtime.threads.get(&name).unwrap().join();
+
+    None
+}
+
+pub fn thread_join_millis(args: &Args) -> Option<Value> {
+    let thread_ref = args.params[0].reference();
+    let thread_obj = args.runtime.heap.get_object(thread_ref);
+
+    let millis = args.params[1].long();
+
+    let name_ref = thread_obj.get_field(&FieldKey {
+        class: "java.lang.Thread".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
 
     None
 }

@@ -142,10 +142,7 @@ pub fn invoke_static(thread: &mut Thread) {
         panic!("Expected a static method");
     }
 
-    let args: Vec<CategoryOne> = (0..method.descriptor.parameters.len())
-        .map(|_| cur_frame.operand_stack.pop_cat_one())
-        .rev()
-        .collect();
+    let args = cur_frame.pop_args(true, &method.descriptor);
 
     if method.is_native {
         let result = thread.call_native(
@@ -163,8 +160,8 @@ pub fn invoke_static(thread: &mut Thread) {
         let frame = thread.stack.last_mut().unwrap();
         let mut idx = 0;
         for param in &args {
-            frame.local_vars.store_cat_one(idx, param.clone());
-            idx += 1 as u16;
+            frame.local_vars.store_value(idx, param.clone());
+            idx += param.category() as u16;
         }
     }
 }

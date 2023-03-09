@@ -254,6 +254,7 @@ impl MethodArea {
 
             if let Some(clinit) = clinit {
                 let mut thread = Thread::new(
+                    "".to_string(),
                     None,
                     rt.clone(),
                     class_name.to_string(),

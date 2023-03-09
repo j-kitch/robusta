@@ -84,6 +84,7 @@ impl VirtualMachine {
         }).unwrap();
 
         let main_thread = Thread::new(
+            "".to_string(),
             None,
             runtime.clone(),
             main_class.name.clone(),

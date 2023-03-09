@@ -121,3 +121,9 @@ pub union CategoryTwo {
     pub long: Long,
     pub double: Double,
 }
+
+impl CategoryTwo {
+    pub fn long(&self) -> Long {
+        unsafe { self.long }
+    }
+}

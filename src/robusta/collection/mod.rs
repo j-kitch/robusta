@@ -5,6 +5,7 @@ use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread::spawn;
 
 pub mod once;
+pub mod wait;
 
 /// The `AppendMap` is a concurrent, thread safe map that doesn't allow removal, or updating
 /// a value in the map.  It is intended to be *"appended"*, allowing thread safe concurrent access

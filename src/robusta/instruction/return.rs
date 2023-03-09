@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, MethodType};
+use crate::java::{CategoryOne, MethodType, Value};
 use crate::method_area;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;
@@ -70,5 +70,5 @@ pub fn a_throw(thread: &mut Thread) {
         method_class.name.clone(),
         &method_class.const_pool as *const ConstPool,
         throwable_method as *const method_area::Method,
-        vec![CategoryOne { reference: throwable_ref }]);
+        vec![Value::Reference(throwable_ref)]);
 }

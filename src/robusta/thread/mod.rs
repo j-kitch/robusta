@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::i64;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicIsize, Ordering};
-use std::thread::JoinHandle;
+
 use tracing::debug;
+use crate::collection::wait::ThreadWait;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
@@ -16,15 +17,16 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{bipush, pop, sipush};
-use crate::java::{CategoryOne, CategoryTwo, Int, MethodType, Reference, Value};
+use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, Long, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
-use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::method_area::const_pool::ConstPool;
 use crate::native::Args;
 use crate::runtime::Runtime;
 
 /// A single Java thread in the running program.
 pub struct Thread {
+    pub name: String,
     pub reference: Option<Reference>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
@@ -36,14 +38,14 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn call_native(&self, method: &Method, args: Vec<CategoryOne>) -> Option<Value> {
+    pub fn call_native(&self, method: &Method, args: Vec<Value>) -> Option<Value> {
         self.runtime.native.call(
             method,
             &Args {
                 thread: self as *const Thread,
                 params: args,
-                runtime: self.runtime.clone()
-            }
+                runtime: self.runtime.clone(),
+            },
         )
     }
 
@@ -84,8 +86,12 @@ impl Thread {
         result
     }
 
-    pub fn new(reference: Option<Reference>, runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
+    pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
+        reference.map(|reference| {
+            runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
+        });
         Thread {
+            name,
             reference,
             runtime,
             stack: vec![
@@ -117,12 +123,17 @@ impl Thread {
         let class_name = self.stack.last().unwrap().class.as_str();
         let method = unsafe { self.stack.last().unwrap().method.as_ref().unwrap() };
         let method_name = format!("{}.{}{}", class_name, method.name.as_str(), method.descriptor.descriptor());
+
         debug!(target: log::THREAD, method=method_name, "Starting thread");
         while !self.stack.is_empty() {
             // self.runtime.heap.print_stats();
             self.next();
         }
-        self.reference.map(|r| self.runtime.heap.end_thread(r));
+
+        self.reference.map(|r| {
+            self.runtime.heap.end_thread(r);
+            self.runtime.threads.get(&self.name).unwrap().end();
+        });
     }
 
     fn next(&mut self) {
@@ -213,7 +224,7 @@ impl Thread {
     }
 
     /// Push a new frame onto the top of the stack.
-    pub fn push_frame(&mut self, class: String, const_pool: *const ConstPool, method: *const Method, args: Vec<CategoryOne>) {
+    pub fn push_frame(&mut self, class: String, const_pool: *const ConstPool, method: *const Method, args: Vec<Value>) {
         let mut frame = Frame {
             class,
             const_pool,
@@ -225,8 +236,8 @@ impl Thread {
 
         let mut idx = 0;
         for arg in args {
-            frame.local_vars.store_cat_one(idx, arg);
-            idx += 1;
+            frame.local_vars.store_value(idx, arg);
+            idx += arg.category() as u16;
         }
 
         self.stack.push(frame);
@@ -279,13 +290,24 @@ impl Frame {
         self.pc += 2;
         i16
     }
+
+    pub fn pop_args(&mut self, is_static: bool, descriptor: &MethodType) -> Vec<Value> {
+        let mut values: Vec<Value> = descriptor.parameters.iter().rev().map(|param| {
+            self.operand_stack.pop(param)
+        }).collect();
+        if !is_static {
+            values.push(Value::Reference(self.operand_stack.pop_cat_one().reference()));
+        }
+        values.reverse();
+        values
+    }
 }
 
 /// An operand stack is used to push and pop temporary results in a frame.
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2).
 pub struct OperandStack {
-    stack: Vec<u8>
+    stack: Vec<u8>,
 }
 
 impl OperandStack {
@@ -318,6 +340,21 @@ impl OperandStack {
         let new_len = self.stack.len() - 4;
         let bytes = self.stack.drain(new_len..);
         CategoryOne { int: Int(i32::from_be_bytes(bytes.as_slice().try_into().unwrap())) }
+    }
+
+    pub fn pop_cat_two(&mut self) -> CategoryTwo {
+        let new_len = self.stack.len() - 8;
+        let bytes = self.stack.drain(new_len..);
+        CategoryTwo { long: Long(i64::from_be_bytes(bytes.as_slice().try_into().unwrap())) }
+    }
+
+    pub fn pop(&mut self, field: &FieldType) -> Value {
+        match field {
+            FieldType::Int => Value::Int(self.pop_cat_one().int()),
+            FieldType::Reference(_) | FieldType::Array(_) => Value::Reference(self.pop_cat_one().reference()),
+            FieldType::Long => Value::Long(self.pop_cat_two().long()),
+            _ => panic!("Not implemented pop {} yet", field.descriptor())
+        }
     }
 }
 

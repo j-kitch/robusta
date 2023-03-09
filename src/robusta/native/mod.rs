@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tracing::debug;
 
-use crate::java::{CategoryOne, Value};
+use crate::java::Value;
 use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
@@ -55,7 +55,7 @@ impl NativeMethods {
 pub struct Args {
     pub thread: *const Thread,
     pub runtime: Arc<crate::runtime::Runtime>,
-    pub params: Vec<CategoryOne>,
+    pub params: Vec<Value>,
 }
 
 pub trait Plugin {
