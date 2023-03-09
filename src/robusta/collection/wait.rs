@@ -25,8 +25,8 @@ impl ThreadWait {
 
     pub fn join(&self) {
         let thread_ref = self.thread_ref.lock().unwrap();
-        self.cond_var.wait_while(thread_ref, |x| {
-            self.runtime.heap.get_thread_alive(*x)
+        self.cond_var.wait_while(thread_ref, |reference| {
+            self.runtime.heap.get_thread_alive(*reference)
         }).unwrap().0;
     }
 
