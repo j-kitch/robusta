@@ -6,7 +6,6 @@ use crate::java::{CategoryOne};
 use crate::log;
 use crate::method_area::const_pool::ConstPool;
 use crate::method_area::Method;
-use crate::native::{Args};
 use crate::thread::Thread;
 
 pub mod new;

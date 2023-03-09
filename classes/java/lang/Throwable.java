@@ -1,5 +1,7 @@
 package java.lang;
 
+import com.jkitch.robusta.Robusta;
+
 public class Throwable {
 
     private String detailMessage;
@@ -20,5 +22,18 @@ public class Throwable {
 
     private native void fillInStackTrace();
 
-    public native void printStackTrace();
+    public void stackTraceAndExit() {
+        printStackTrace();
+        Robusta.exit(1);
+    }
+
+    public void printStackTrace() {
+        StringBuilder message = new StringBuilder();
+        message.append("Exception in thread \"?\" " + getClass().getName() + ": " + getMessage() + "\n");
+        for (StackTraceElement element : stackTrace) {
+            message.append("\t" + element.toString() + "\n");
+        }
+        String result = message.toString();
+        Robusta.printerr(result);
+    }
 }

@@ -1,5 +1,8 @@
 use std::process::exit;
-use crate::java::CategoryOne;
+use crate::class_file::Method;
+use crate::java::{CategoryOne, MethodType};
+use crate::method_area;
+use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;
 
 pub fn a_return(thread: &mut Thread) {
@@ -56,6 +59,18 @@ pub fn a_throw(thread: &mut Thread) {
         frame = thread.stack.last_mut();
     }
 
-    println!("Exception {}", throw_class.name.as_str());
-    exit(1);
+    // Invoke throwable printStackTrace
+    let throwable_method = throw_class.find_method(&MethodKey {
+        class: "java.lang.Throwable".to_string(),
+        name: "stackTraceAndExit".to_string(),
+        descriptor: MethodType::from_descriptor("()V").unwrap(),
+    }).unwrap();
+
+    let method_class = unsafe { throwable_method.class.as_ref().unwrap() };
+
+    thread.push_frame(
+        method_class.name.clone(),
+        &method_class.const_pool as *const ConstPool,
+        throwable_method as *const method_area::Method,
+        vec![CategoryOne { reference: throwable_ref }]);
 }

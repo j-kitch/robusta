@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
-use crate::instruction::array::{a_new_array, array_length, char_array_load, char_array_store};
+use crate::instruction::array::{a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_int_cmp_ge, if_int_cmp_le};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, put_field};
@@ -11,7 +11,7 @@ use crate::instruction::invoke::{invoke_special, invoke_virtual};
 use crate::instruction::locals::{astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
-use crate::instruction::r#const::iconst_n;
+use crate::instruction::r#const::{iconst_n, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{pop, sipush};
 use crate::java::{CategoryOne, Int, MethodType, Value};
@@ -48,8 +48,10 @@ impl Thread {
     /// A native method needs to be able to invoke the thread stack again to get a result.
     pub fn native_invoke(&mut self, class: *const Class, method: *const Method) -> Option<CategoryOne> {
         let class = unsafe { class.as_ref().unwrap() };
+        let method2 = unsafe { method.as_ref().unwrap() };
         let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };
 
+        debug!(target: log::THREAD, method=format!("{}.{}{}", &class.name, &method2.name, method2.descriptor.descriptor()), "Native function invoking JVM method");
         self.stack.push(Frame {
             class: "<native-callback>".to_string(),
             const_pool: 0 as *const ConstPool,
@@ -178,6 +180,7 @@ impl Thread {
             0x08 => iconst_n(self, 5),
             0x11 => sipush(self),
             0x12 => load_constant(self),
+            0x13 => load_constant_wide(self),
             0x15 => iload(self),
             0x1A => iload_n(self, 0),
             0x1B => iload_n(self, 1),
@@ -198,6 +201,7 @@ impl Thread {
             0x4C => astore_n(self, 1),
             0x4D => astore_n(self, 2),
             0x4E => astore_n(self, 3),
+            0x53 => a_array_store(self),
             0x55 => char_array_store(self),
             0x57 => pop(self),
             0x59 => dup(self),

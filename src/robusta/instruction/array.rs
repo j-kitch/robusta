@@ -67,3 +67,21 @@ pub fn char_array_store(thread: &mut Thread) {
 
     arr.set_element(index, value);
 }
+
+pub fn a_array_store(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-1,
+        opcode="aastore"
+    );
+
+    let value = frame.operand_stack.pop_cat_one();
+    let index = frame.operand_stack.pop_cat_one().int();
+    let arr_ref = frame.operand_stack.pop_cat_one().reference();
+
+    let arr = thread.runtime.heap.get_array(arr_ref);
+
+    arr.set_element(index, value);
+}

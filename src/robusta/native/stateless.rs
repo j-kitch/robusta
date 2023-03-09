@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use crate::java::{CategoryOne, MethodType, Value};
+use crate::java::{MethodType, Value};
 use crate::method_area;
 use crate::native::{Args, Plugin};
-use crate::runtime::Runtime;
 
 type Function = Arc<dyn Fn(&Args) -> Option<Value> + Sync + Send>;
 

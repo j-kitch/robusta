@@ -10,7 +10,6 @@ use crate::method_area::{Class, ClassFlags};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
-use crate::runtime::Runtime;
 
 pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
@@ -250,7 +249,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     code.push(0x3); // 0 const
     code.push(0x3C); // istore_1
 
-    for idx in 0..elems.len() {
+    for _ in 0..elems.len() {
         // Pop element off stack into local var 2
         code.push(0x4d);
 

@@ -11,5 +11,9 @@ public class Robusta {
 
     public static native void println(String string);
 
+    public static native void printerr(String string);
+
     public static native void println(int i);
+
+    public static native void exit(int code);
 }

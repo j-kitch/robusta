@@ -1,10 +1,9 @@
-use std::ops::Deref;
 use tracing::debug;
+
 use crate::java::CategoryOne;
 use crate::log;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::method_area::Method;
-use crate::native::Args;
 use crate::thread::Thread;
 
 /// No difference between these two methods YET
@@ -33,7 +32,7 @@ pub fn invoke_virtual(thread: &mut Thread) {
     if method.is_native {
         let result = thread.call_native(
             method,
-            args
+            args,
         );
 
         if let Some(result) = result {
@@ -63,7 +62,7 @@ pub fn invoke_special(thread: &mut Thread) {
     if method.is_native {
         let result = thread.call_native(
             method,
-               args
+            args,
         );
 
         if let Some(result) = result {

@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use crate::java::{CategoryOne, FieldType, MethodType, Value};
+use crate::java::{FieldType, MethodType, Value};
 use crate::method_area::const_pool::FieldKey;
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
-use crate::runtime::Runtime;
 
 pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
