@@ -6,7 +6,7 @@ use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, lo
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_null};
 use crate::instruction::dup::dup;
-use crate::instruction::field::{get_field, put_field};
+use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
 use crate::instruction::locals::{aload, astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
@@ -219,6 +219,8 @@ impl Thread {
             0xAC => i_return(self),
             0xB0 => a_return(self),
             0xB1 => r#return(self),
+            0xB2 => get_static(self),
+            0xB3 => put_static(self),
             0xB4 => get_field(self),
             0xB5 => put_field(self),
             0xB6 => invoke_virtual(self),

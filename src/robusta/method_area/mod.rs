@@ -98,6 +98,18 @@ impl MethodArea {
         *field
     }
 
+    pub fn resolve_static(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
+        let pool = unsafe { pool.as_ref().unwrap() };
+        let field_const = pool.get_field(index);
+        let field = field_const.resolve(|field_key| {
+            let class = self.load_class(&field_key.class);
+            self.initialize(rt, class);
+            let field = class.find_static(field_key);
+            field as *const Field
+        });
+        *field
+    }
+
     pub fn load_class(&self, class_name: &str) -> &Class {
         let class = self.classes.get_or_init(class_name.to_string(), |name| {
             debug!(target: log::LOADER, class=name, "Loading class");
@@ -280,6 +292,12 @@ impl Class {
     fn self_referential(&self) {
         let class = self as *const Class;
         for field in &self.instance_fields {
+            let mut_ptr = (field as *const Field).cast_mut();
+            unsafe {
+                (*mut_ptr).class = class;
+            }
+        }
+        for field in &self.static_fields {
             let mut_ptr = (field as *const Field).cast_mut();
             unsafe {
                 (*mut_ptr).class = class;

@@ -67,6 +67,18 @@ impl Object {
         write_value(self.data, field.offset, value)
     }
 
+    pub fn get_static(&self, field: &FieldKey) -> Value {
+        let field = self.class().find_static(field);
+
+        read_value(self.data, field.offset, &field.descriptor)
+    }
+
+    pub fn set_static(&self, field: &FieldKey, value: CategoryOne) {
+        let field = self.class().find_static(field);
+
+        write_value(self.data, field.offset, value)
+    }
+
     pub fn hash_code(&self) -> Int {
         unsafe { (*self.header).hash_code }
     }
