@@ -45,6 +45,41 @@ impl Thread {
         )
     }
 
+    /// A native method needs to be able to invoke the thread stack again to get a result.
+    pub fn native_invoke(&mut self, class: *const Class, method: *const Method) -> Option<CategoryOne> {
+        let class = unsafe { class.as_ref().unwrap() };
+        let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };
+
+        self.stack.push(Frame {
+            class: "<native-callback>".to_string(),
+            const_pool: 0 as *const ConstPool,
+            method: 0 as *const Method,
+            operand_stack: OperandStack::new(),
+            local_vars: LocalVars::new(),
+            pc: 0,
+        });
+
+        let depth = self.stack.len();
+
+        self.stack.push(Frame {
+            class: class.name.clone(),
+            const_pool: &class.const_pool as *const ConstPool,
+            method,
+            operand_stack: OperandStack::new(),
+            local_vars: LocalVars::new(),
+            pc: 0,
+        });
+
+        while self.stack.len() > depth {
+            self.next();
+        }
+
+        // We've hit our native stub frame with the result.
+        let result = if has_return { Some(self.stack.last_mut().unwrap().operand_stack.pop_cat_one()) } else { None };
+        self.stack.pop();
+        result
+    }
+
     pub fn empty(runtime: Arc<Runtime>) -> Self {
         Thread { group: "thread".to_string(), runtime, stack: Vec::new() }
     }

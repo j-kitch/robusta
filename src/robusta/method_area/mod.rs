@@ -40,6 +40,11 @@ impl MethodArea {
         }
     }
 
+    pub fn insert_gen_class(&self, class: Class) -> *const Class {
+        let class = self.classes.get_or_init(class.name.clone(), |_| class);
+        class as *const Class
+    }
+
     pub fn resolve_category_one(&self, pool: *const ConstPool, index: u16) -> CategoryOne {
         let pool = unsafe { pool.as_ref().unwrap() };
         match pool.get_const(index) {

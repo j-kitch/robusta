@@ -9,7 +9,7 @@ use crate::method_area::{Class, Field, Method};
 /// The run-time constant pool of a class is a collection of constants and symbolic references to
 /// other data in the JVM.
 pub struct ConstPool {
-    pool: HashMap<u16, Const>,
+    pub pool: HashMap<u16, Const>,
 }
 
 unsafe impl Send for ConstPool {}
@@ -140,8 +140,8 @@ pub struct MethodKey {
 /// A symbolic reference is a resolvable reference to another object in the method area, or to a
 /// java value.
 pub struct SymbolicReference<K, V: Unpin> {
-    const_key: K,
-    resolved: Once<V>,
+    pub const_key: K,
+    pub resolved: Once<V>,
 }
 
 impl<K, V: Unpin> SymbolicReference<K, V> {

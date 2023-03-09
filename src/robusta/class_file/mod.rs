@@ -160,6 +160,17 @@ pub struct Code {
     pub attributes: Vec<CodeAttribute>,
 }
 
+impl Code {
+    pub fn line_number_table(&self) -> Option<&LineNumberTable> {
+        self.attributes.iter().find_map(|a| {
+            match a {
+                CodeAttribute::LineNumberTable(lnt) => Some(lnt),
+                _ => None
+            }
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExHandler {
     pub start_pc: u16,
