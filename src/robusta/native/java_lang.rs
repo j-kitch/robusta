@@ -1,15 +1,18 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::thread::Builder;
 use rand::{RngCore, thread_rng};
+use tracing::debug;
 use crate::class_file::Code;
 use crate::collection::once::Once;
 
 use crate::java::{CategoryOne, FieldType, MethodType, Value};
-use crate::method_area;
+use crate::{log, method_area};
 use crate::method_area::{Class, ClassFlags};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
+use crate::thread::Thread;
 
 pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
@@ -52,6 +55,14 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(I)Ljava/lang/String;").unwrap(),
             },
             Arc::new(integer_to_string),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "nativeStart".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(thread_start),
         )
     ]
 }
@@ -325,4 +336,34 @@ struct StackElem {
     method: String,
     file: Option<String>,
     line: i32,
+}
+
+fn thread_start(args: &Args) -> Option<Value> {
+    let thread_ref = args.params[0].reference();
+    let thread_obj = args.runtime.heap.get_object(thread_ref);
+
+    let name_ref = thread_obj.get_field(&FieldKey {
+        class: "java.lang.Thread".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let runtime = args.runtime.clone();
+    let class = thread_obj.class().name.clone();
+
+
+    Builder::new().name(name.clone()).spawn(move || {
+        let const_pool = &thread_obj.class().const_pool as *const ConstPool;
+        let method = thread_obj.class().find_method(&MethodKey {
+            class: class.clone(),
+            name: "run".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+        }).unwrap() as *const method_area::Method;
+
+        let mut thread = Thread::new(Some(thread_ref.clone()), runtime, class, const_pool, method);
+        thread.run();
+    }).unwrap();
+
+    None
 }

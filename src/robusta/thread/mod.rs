@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicIsize, Ordering};
+use std::thread::JoinHandle;
 use tracing::debug;
 
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
@@ -14,7 +16,7 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{bipush, pop, sipush};
-use crate::java::{CategoryOne, Int, MethodType, Value};
+use crate::java::{CategoryOne, Int, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -23,7 +25,7 @@ use crate::runtime::Runtime;
 
 /// A single Java thread in the running program.
 pub struct Thread {
-    pub group: String,
+    pub reference: Option<Reference>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
     pub runtime: Arc<Runtime>,
@@ -82,13 +84,9 @@ impl Thread {
         result
     }
 
-    pub fn empty(runtime: Arc<Runtime>) -> Self {
-        Thread { group: "thread".to_string(), runtime, stack: Vec::new() }
-    }
-
-    pub fn new(runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
+    pub fn new(reference: Option<Reference>, runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
         Thread {
-            group: "MainThread".to_string(),
+            reference,
             runtime,
             stack: vec![
                 Frame {
@@ -114,32 +112,8 @@ impl Thread {
         })
     }
 
-    /// Create a thread who's job is to run all the <clinit> methods of the given classes in order.
-    pub fn clinit(runtime: Arc<Runtime>, classes: Vec<Arc<Class>>) -> Self {
-        // Reverse the classes order (want first inserted last into the stack).
-        let mut classes = classes;
-        classes.reverse();
-
-        let mut thread = Thread { group: "<clinit>".to_string(), runtime, stack: Vec::new() };
-        for class in classes.iter() {
-            thread.stack.push(Frame {
-                class: class.name.clone(),
-                const_pool: &class.const_pool as *const ConstPool,
-                operand_stack: OperandStack::new(),
-                local_vars: LocalVars::new(),
-                method: class.find_method(&MethodKey {
-                    class: class.name.clone(),
-                    name: "<clinit>".to_string(),
-                    descriptor: MethodType::from_descriptor("()V").unwrap(),
-                }).unwrap(),
-                pc: 0,
-            });
-        }
-
-        thread
-    }
-
     pub fn run(&mut self) {
+        self.reference.map(|r| self.runtime.heap.start_thread(r));
         let class_name = self.stack.last().unwrap().class.as_str();
         let method = unsafe { self.stack.last().unwrap().method.as_ref().unwrap() };
         let method_name = format!("{}.{}{}", class_name, method.name.as_str(), method.descriptor.descriptor());
@@ -148,6 +122,7 @@ impl Thread {
             // self.runtime.heap.print_stats();
             self.next();
         }
+        self.reference.map(|r| self.runtime.heap.end_thread(r));
     }
 
     fn next(&mut self) {

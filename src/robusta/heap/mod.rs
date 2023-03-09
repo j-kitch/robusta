@@ -58,6 +58,18 @@ impl Heap {
         }
     }
 
+    pub fn get_string(&self, reference: Reference) -> String {
+        let string_obj = self.get_object(reference);
+        let chars_ref = string_obj.get_field(&FieldKey {
+            class: "java.lang.String".to_string(),
+            name: "chars".to_string(),
+            descriptor: FieldType::from_descriptor("[C").unwrap(),
+        }).reference();
+        let chars_arr = self.get_array(chars_ref);
+        let chars_arr = chars_arr.as_chars_slice();
+        String::from_utf16(chars_arr).unwrap()
+    }
+
     pub fn get_array(&self, reference: Reference) -> Array {
         let references = self.references.read().unwrap();
         match references.get(&reference).unwrap() {
@@ -124,6 +136,37 @@ impl Heap {
         references.insert(reference, heaped);
         reference
     }
+
+    pub fn get_thread_alive(&self, thread: Reference) -> bool {
+        let thread_obj = self.get_object(thread);
+
+        let value = thread_obj.get_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "threadStatus".to_string(),
+            descriptor: FieldType::Int,
+        }).int().0;
+
+        value == 1
+    }
+
+    pub fn start_thread(&self, thread: Reference) {
+        let thread_obj = self.get_object(thread);
+        thread_obj.set_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "threadStatus".to_string(),
+            descriptor: FieldType::Int,
+        }, CategoryOne { int: Int(1) });
+    }
+
+    pub fn end_thread(&self, thread: Reference) {
+        let thread_obj = self.get_object(thread);
+        thread_obj.set_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "threadStatus".to_string(),
+            descriptor: FieldType::Int,
+        }, CategoryOne { int: Int(2) });
+    }
+
 }
 
 enum Heaped {

@@ -246,6 +246,7 @@ impl MethodArea {
 
             if let Some(clinit) = clinit {
                 let mut thread = Thread::new(
+                    None,
                     rt.clone(),
                     class_name.to_string(),
                     &class.const_pool as *const ConstPool,

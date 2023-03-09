@@ -83,7 +83,12 @@ impl VirtualMachine {
             descriptor: MethodType::from_descriptor("([Ljava/lang/String;)V").unwrap(),
         }).unwrap();
 
-        let main_thread = Thread::new(runtime.clone(), main_class.name.clone(), &main_class.const_pool as *const ConstPool, method as *const Method);
+        let main_thread = Thread::new(
+            None,
+            runtime.clone(),
+            main_class.name.clone(),
+            &main_class.const_pool as *const ConstPool,
+            method as *const Method);
 
         VirtualMachine { runtime, main_thread }
     }
