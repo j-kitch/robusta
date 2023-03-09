@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::RwLock;
 
 use rand::{RngCore, thread_rng};
@@ -13,11 +14,12 @@ pub mod allocator;
 mod hash_code;
 
 pub struct Heap {
-    allocator: Allocator,
+    pub allocator: Allocator,
     references: RwLock<HashMap<Reference, Heaped>>,
     class_objects: OnceMap<String, Reference>,
     string_constants: OnceMap<String, Reference>,
     static_objects: OnceMap<String, Reference>,
+    safe_point: AtomicBool,
 }
 
 unsafe impl Send for Heap {}
@@ -30,6 +32,7 @@ impl Heap {
             class_objects: OnceMap::new(),
             string_constants: OnceMap::new(),
             static_objects: OnceMap::new(),
+            safe_point: AtomicBool::new(false),
         }
     }
 
@@ -166,7 +169,6 @@ impl Heap {
             descriptor: FieldType::Int,
         }, CategoryOne { int: Int(2) });
     }
-
 }
 
 enum Heaped {

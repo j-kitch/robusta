@@ -119,6 +119,8 @@ impl Thread {
     }
 
     pub fn run(&mut self) {
+        self.runtime.heap.allocator.safe_point.register_thread();
+
         self.reference.map(|r| self.runtime.heap.start_thread(r));
         let class_name = self.stack.last().unwrap().class.as_str();
         let method = unsafe { self.stack.last().unwrap().method.as_ref().unwrap() };
@@ -130,6 +132,8 @@ impl Thread {
             self.next();
         }
 
+        self.runtime.heap.allocator.safe_point.remove_thread();
+
         self.reference.map(|r| {
             self.runtime.heap.end_thread(r);
             self.runtime.threads.get(&self.name).unwrap().end();
@@ -137,6 +141,8 @@ impl Thread {
     }
 
     pub fn next(&mut self) {
+        self.runtime.heap.allocator.gc();
+        self.runtime.heap.allocator.safe_point.enter_safe_point();
         let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };

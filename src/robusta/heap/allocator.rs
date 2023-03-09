@@ -1,14 +1,17 @@
 use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
+use crate::collection::safe_point::SafePoint;
 
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
 use crate::method_area::Class;
 use crate::method_area::const_pool::FieldKey;
+use crate::runtime::Runtime;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -243,6 +246,7 @@ pub struct Allocator {
     data: Box<[u8]>,
     used: AtomicUsize,
     hash_code: HashCode,
+    pub safe_point: SafePoint,
 }
 
 impl Allocator {
@@ -251,6 +255,7 @@ impl Allocator {
             data: vec![0; HEAP_SIZE].into_boxed_slice(),
             used: AtomicUsize::new(0),
             hash_code: HashCode::new(),
+            safe_point: SafePoint::new(),
         }
     }
 
@@ -341,6 +346,7 @@ impl Allocator {
             Ordering::SeqCst, Ordering::SeqCst,
             |old_used| old_used.checked_add(size));
 
+
         // TODO: Need to add GC.
         let start_of_memory = result.expect("Heap is too full");
 
@@ -350,6 +356,17 @@ impl Allocator {
 
         unsafe {
             self.data.as_ptr().add(start_of_memory).cast_mut()
+        }
+    }
+
+    pub fn gc(&self) {
+        debug!("Start GC?");
+        let percentage = (100 * self.used.load(Ordering::SeqCst)) / HEAP_SIZE;
+        if percentage > 25 {
+            debug!(target: log::HEAP, "Starting garbage collection");
+            self.safe_point.start_gc();
+            info!(target: log::HEAP, "Into safe point");
+            self.safe_point.end_gc();
         }
     }
 }

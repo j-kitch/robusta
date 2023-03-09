@@ -1,4 +1,5 @@
 use chashmap::CHashMap;
+use crate::collection::safe_point::SafePoint;
 use crate::collection::wait::ThreadWait;
 
 use crate::heap::Heap;
@@ -18,6 +19,11 @@ impl Runtime {
     pub fn new() -> Self {
         let heap = Box::new(Heap::new());
         let method_area = Box::new(MethodArea::new(heap.as_ref() as *const Heap));
-        Runtime { heap, method_area, native: Box::new(NativeMethods::new()), threads: CHashMap::new() }
+        Runtime {
+            heap,
+            method_area,
+            native: Box::new(NativeMethods::new()),
+            threads: CHashMap::new(),
+        }
     }
 }
