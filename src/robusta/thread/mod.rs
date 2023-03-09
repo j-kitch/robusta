@@ -13,10 +13,10 @@ use crate::instruction::invoke::{invoke_special, invoke_virtual};
 use crate::instruction::locals::{aload, astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
-use crate::instruction::r#const::{iconst_n, load_constant_wide};
+use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{bipush, pop, sipush};
-use crate::java::{CategoryOne, Int, MethodType, Reference, Value};
+use crate::java::{CategoryOne, CategoryTwo, Int, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -157,6 +157,7 @@ impl Thread {
             0x11 => sipush(self),
             0x12 => load_constant(self),
             0x13 => load_constant_wide(self),
+            0x14 => load_constant_cat_2_wide(self),
             0x15 => iload(self),
             0x19 => aload(self),
             0x1A => iload_n(self, 0),
@@ -295,6 +296,13 @@ impl OperandStack {
     pub fn push_cat_one(&mut self, cat_one: CategoryOne) {
         let i32 = unsafe { cat_one.int.0 };
         for byte in i32.to_be_bytes() {
+            self.stack.push(byte);
+        }
+    }
+
+    pub fn push_cat_two(&mut self, cat_two: CategoryTwo) {
+        let i64 = unsafe { cat_two.long.0 };
+        for byte in i64.to_be_bytes() {
             self.stack.push(byte);
         }
     }

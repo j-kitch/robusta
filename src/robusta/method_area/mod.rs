@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
-use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference};
+use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, Long, MethodType, Reference};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::log;
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
@@ -59,6 +59,14 @@ impl MethodArea {
                 CategoryOne { reference: class_object }
             }
             _ => panic!("Expected to load a category 1 const, but not found")
+        }
+    }
+
+    pub fn resolve_category_two(&self, pool: *const ConstPool, index: u16) -> CategoryTwo {
+        let pool = unsafe { pool.as_ref().unwrap() };
+        match pool.get_const(index) {
+            Const::Long(long) => CategoryTwo { long: Long(*long) },
+            _ => panic!("Expected to load a category 2 const, but not found")
         }
     }
 

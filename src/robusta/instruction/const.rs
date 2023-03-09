@@ -8,7 +8,7 @@ pub fn load_constant_wide(thread: &mut Thread) {
     let const_idx = frame.read_u16();
     trace!(
         target: log::INSTR,
-        pc=frame.pc-1,
+        pc=frame.pc-3,
         opcode="ldc_w",
         index=const_idx,
     );
@@ -16,6 +16,21 @@ pub fn load_constant_wide(thread: &mut Thread) {
     let const_value = thread.runtime.method_area.resolve_category_one(frame.const_pool, const_idx);
 
     frame.operand_stack.push_cat_one(const_value);
+}
+
+pub fn load_constant_cat_2_wide(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let const_idx = frame.read_u16();
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="ldc2_w",
+        index=const_idx,
+    );
+
+    let const_value = thread.runtime.method_area.resolve_category_two(frame.const_pool, const_idx);
+
+    frame.operand_stack.push_cat_two(const_value);
 }
 
 pub fn iconst_n(thread: &mut Thread, int: i32) {
