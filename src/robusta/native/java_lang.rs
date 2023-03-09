@@ -90,6 +90,14 @@ pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
             },
             Arc::new(thread_join_millis),
         ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "currentThread".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/lang/Thread;").unwrap(),
+            },
+            Arc::new(current_thread),
+        ),
     ]
 }
 
@@ -433,4 +441,10 @@ pub fn thread_join_millis(args: &Args) -> Option<Value> {
     args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
 
     None
+}
+
+pub fn current_thread(args: &Args) -> Option<Value> {
+    let thread = unsafe { args.thread.as_ref().unwrap() };
+    let thread_ref = thread.reference.as_ref().unwrap();
+    Some(Value::Reference(*thread_ref))
 }

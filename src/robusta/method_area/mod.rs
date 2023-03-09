@@ -42,6 +42,7 @@ impl MethodArea {
 
     pub fn insert_gen_class(&self, class: Class) -> *const Class {
         let class = self.classes.get_or_init(class.name.clone(), |_| class);
+        class.self_referential();
         class as *const Class
     }
 

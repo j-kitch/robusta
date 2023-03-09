@@ -136,7 +136,7 @@ impl Thread {
         });
     }
 
-    fn next(&mut self) {
+    pub fn next(&mut self) {
         let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
