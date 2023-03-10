@@ -101,6 +101,13 @@ impl FieldType {
             FieldType::Reference(_) | FieldType::Array(_) => 7
         }
     }
+
+    pub fn is_reference(&self) -> bool {
+        match self {
+            FieldType::Reference(_) | FieldType::Array(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

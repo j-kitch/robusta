@@ -6,28 +6,28 @@ use crate::thread::Thread;
 pub fn a_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    let reference = cur_frame.operand_stack.pop_cat_one();
+    let reference = cur_frame.operand_stack.pop();
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    cur_frame.operand_stack.push_cat_one(reference);
+    cur_frame.operand_stack.push_value(reference);
 }
 
 pub fn i_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    let int = cur_frame.operand_stack.pop_cat_one();
+    let int = cur_frame.operand_stack.pop();
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    cur_frame.operand_stack.push_cat_one(int);
+    cur_frame.operand_stack.push_value(int);
 }
 
 pub fn a_throw(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
-    let throwable_ref = frame.operand_stack.pop_cat_one().reference();
+    let throwable_ref = frame.operand_stack.pop().reference();
     let throwable = thread.runtime.heap.get_object(throwable_ref);
     let throw_class = throwable.class();
 
@@ -48,7 +48,7 @@ pub fn a_throw(thread: &mut Thread) {
             };
             if is_handler {
                 current_frame.pc = handler.handler_pc as usize;
-                current_frame.operand_stack.push_cat_one(CategoryOne { reference: throwable_ref });
+                current_frame.operand_stack.push_value(Value::Reference(throwable_ref));
                 return;
             }
         }

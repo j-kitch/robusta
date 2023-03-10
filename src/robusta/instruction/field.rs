@@ -11,16 +11,16 @@ pub fn get_field(thread: &mut Thread) {
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
-    let obj_ref = curr_frame.operand_stack.pop_cat_one().reference();
+    let obj_ref = curr_frame.operand_stack.pop().reference();
     let object = thread.runtime.heap.get_object(obj_ref);
 
     let field_value = object.get_field(&FieldKey {
         class: class.name.clone(),
         name: field.name.clone(),
         descriptor: field.descriptor.clone(),
-    }).cat_one();
+    });
 
-    curr_frame.operand_stack.push_cat_one(field_value);
+    curr_frame.operand_stack.push_value(field_value);
 }
 
 pub fn get_static(thread: &mut Thread) {
@@ -41,9 +41,9 @@ pub fn get_static(thread: &mut Thread) {
         class: class.name.clone(),
         name: field.name.clone(),
         descriptor: field.descriptor.clone(),
-    }).cat_one();
+    });
 
-    curr_frame.operand_stack.push_cat_one(field_value);
+    curr_frame.operand_stack.push_value(field_value);
 }
 
 pub fn put_static(thread: &mut Thread) {
@@ -60,13 +60,13 @@ pub fn put_static(thread: &mut Thread) {
     let static_ref = thread.runtime.heap.get_static(class);
     let static_obj = thread.runtime.heap.get_object(static_ref);
 
-    let value = curr_frame.operand_stack.pop_cat_one();
+    let value = curr_frame.operand_stack.pop();
 
     static_obj.set_static(&FieldKey {
         class: class.name.clone(),
         name: field.name.clone(),
         descriptor: field.descriptor.clone(),
-    }, value);
+    }, value.cat_one());
 }
 
 pub fn put_field(thread: &mut Thread) {
@@ -77,9 +77,9 @@ pub fn put_field(thread: &mut Thread) {
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
-    let value = curr_frame.operand_stack.pop_cat_one();
+    let value = curr_frame.operand_stack.pop().cat_one();
 
-    let obj_ref = curr_frame.operand_stack.pop_cat_one().reference();
+    let obj_ref = curr_frame.operand_stack.pop().reference();
     let object = thread.runtime.heap.get_object(obj_ref);
 
     object.set_field(&FieldKey {

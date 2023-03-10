@@ -14,8 +14,8 @@ pub fn if_int_cmp_ge(thread: &mut Thread) {
         offset
     );
 
-    let value2 = frame.operand_stack.pop_cat_one().int();
-    let value1 = frame.operand_stack.pop_cat_one().int();
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
 
     if value1.0 >= value2.0 {
         let mut pc = frame.pc as i64;
@@ -37,8 +37,8 @@ pub fn if_int_cmp_le(thread: &mut Thread) {
         offset
     );
 
-    let value2 = frame.operand_stack.pop_cat_one().int();
-    let value1 = frame.operand_stack.pop_cat_one().int();
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
 
     if value1.0 <= value2.0 {
         let mut pc = frame.pc as i64;
@@ -60,8 +60,8 @@ pub fn if_int_cmp_ne(thread: &mut Thread) {
         offset
     );
 
-    let value2 = frame.operand_stack.pop_cat_one().int();
-    let value1 = frame.operand_stack.pop_cat_one().int();
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
 
     if value1.0 != value2.0 {
         let mut pc = frame.pc as i64;
@@ -100,7 +100,7 @@ pub fn if_eq(thread: &mut Thread) {
         offset
     );
 
-    let value = frame.operand_stack.pop_cat_one().int();
+    let value = frame.operand_stack.pop().int();
 
     if value.0 == 0 {
         let mut pc = frame.pc as i64;
@@ -122,7 +122,7 @@ pub fn if_lt(thread: &mut Thread) {
         offset
     );
 
-    let value = frame.operand_stack.pop_cat_one().int();
+    let value = frame.operand_stack.pop().int();
 
     if value.0 < 0 {
         let mut pc = frame.pc as i64;
@@ -144,7 +144,7 @@ pub fn if_null(thread: &mut Thread) {
         offset
     );
 
-    let value = frame.operand_stack.pop_cat_one().reference();
+    let value = frame.operand_stack.pop().reference();
 
     if value.0 == 0 {
         let mut pc = frame.pc as i64;

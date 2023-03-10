@@ -1,6 +1,12 @@
+use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::RwLock;
+use std::process::id;
+use std::sync::{RwLock, RwLockReadGuard};
+
 use chashmap::CHashMap;
+use tracing::Instrument;
+
+use crate::java::Reference;
 
 /// A value of [`Once<T>`] will have it's internal value initialized once, only one call to
 /// initialize the value will succeed, and all other calls will wait for that value to be set
@@ -28,6 +34,10 @@ impl<T> Once<T> {
         let mut value = self.value.write().unwrap();
         let ptr = value.get_or_insert_with(f) as *mut T;
         unsafe { ptr.as_ref().unwrap() }
+    }
+
+    pub fn current(&self) -> RwLockReadGuard<Option<T>> {
+        self.value.read().unwrap()
     }
 }
 
@@ -58,15 +68,45 @@ impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
 
     fn ensure_value(&self, key: &K) {
         self.map.upsert(key.clone(),
-        || Once::new(),
-            |_| {}
+                        || Once::new(),
+                        |_| {},
         )
+    }
+}
+
+impl OnceMap<String, Reference> {
+    pub fn current_values(&self) -> HashSet<Reference> {
+        // TODO: Only way I can see of getting all the entries?
+        let references: Vec<u32> = vec![0; self.map.len()];
+        let idx: usize = 0;
+
+        self.map.retain(|_, value| {
+            let reference = value.current();
+            let reference = reference.as_ref().unwrap().clone();
+            let reference = reference.as_ref().0;
+
+            // Not happy with this, might need to implement our own CHashMap?
+            unsafe {
+                let ptr = references.as_ptr().add(idx).cast_mut();
+                ptr.write(reference);
+                let idx_ptr = &idx as *const usize;
+                let idx_ptr = idx_ptr.cast_mut();
+                idx_ptr.write(idx_ptr.read() + 1);
+            };
+
+            true
+        });
+
+        references.iter()
+            .map(|r| Reference(*r))
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::thread;
+
     use super::*;
 
     #[test]

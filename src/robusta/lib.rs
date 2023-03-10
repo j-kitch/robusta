@@ -92,7 +92,7 @@ impl VirtualMachine {
                 jvm_init_thread.next();
             }
 
-            jvm_init_thread.stack.last_mut().unwrap().operand_stack.pop_cat_one().reference()
+            jvm_init_thread.stack.last_mut().unwrap().operand_stack.pop().reference()
         };
 
         let main_class = runtime.method_area.load_class(main_class);

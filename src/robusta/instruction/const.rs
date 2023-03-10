@@ -1,5 +1,5 @@
 use tracing::trace;
-use crate::java::{CategoryOne, Int};
+use crate::java::{CategoryOne, Int, Value};
 use crate::log;
 use crate::thread::Thread;
 
@@ -15,7 +15,7 @@ pub fn load_constant_wide(thread: &mut Thread) {
 
     let const_value = thread.runtime.method_area.resolve_category_one(frame.const_pool, const_idx);
 
-    frame.operand_stack.push_cat_one(const_value);
+    frame.operand_stack.push_value(const_value);
 }
 
 pub fn load_constant_cat_2_wide(thread: &mut Thread) {
@@ -30,7 +30,7 @@ pub fn load_constant_cat_2_wide(thread: &mut Thread) {
 
     let const_value = thread.runtime.method_area.resolve_category_two(frame.const_pool, const_idx);
 
-    frame.operand_stack.push_cat_two(const_value);
+    frame.operand_stack.push_value(const_value);
 }
 
 pub fn iconst_n(thread: &mut Thread, int: i32) {
@@ -42,5 +42,5 @@ pub fn iconst_n(thread: &mut Thread, int: i32) {
         opcode=format!("iconst_{}", int)
     );
 
-    cur_frame.operand_stack.push_cat_one(CategoryOne { int: Int(int) });
+    cur_frame.operand_stack.push_value(Value::Int(Int(int)));
 }

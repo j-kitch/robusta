@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::i64;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 
 use tracing::debug;
-use crate::collection::wait::ThreadWait;
 
+use crate::collection::wait::ThreadWait;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_null};
@@ -28,6 +29,7 @@ use crate::runtime::Runtime;
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
+    // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
     pub runtime: Arc<Runtime>,
@@ -50,7 +52,7 @@ impl Thread {
     }
 
     /// A native method needs to be able to invoke the thread stack again to get a result.
-    pub fn native_invoke(&mut self, class: *const Class, method: *const Method) -> Option<CategoryOne> {
+    pub fn native_invoke(&mut self, class: *const Class, method: *const Method) -> Option<Value> {
         let class = unsafe { class.as_ref().unwrap() };
         let method2 = unsafe { method.as_ref().unwrap() };
         let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };
@@ -81,12 +83,14 @@ impl Thread {
         }
 
         // We've hit our native stub frame with the result.
-        let result = if has_return { Some(self.stack.last_mut().unwrap().operand_stack.pop_cat_one()) } else { None };
+        let result = if has_return { Some(self.stack.last_mut().unwrap().operand_stack.pop()) } else { None };
         self.stack.pop();
         result
     }
 
-    pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>, class: String, pool: *const ConstPool, method: *const Method) -> Self {
+    pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
+               // root_sender: Sender<HashSet<Reference>>,
+               class: String, pool: *const ConstPool, method: *const Method) -> Self {
         reference.map(|reference| {
             runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
         });
@@ -141,8 +145,8 @@ impl Thread {
     }
 
     pub fn next(&mut self) {
-        self.runtime.heap.allocator.gc();
-        self.runtime.heap.allocator.safe_point.enter_safe_point();
+        self.runtime.heap.allocator.gc(&self);
+        self.runtime.heap.allocator.safe_point.enter_safe_point(&self);
         let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
@@ -298,11 +302,11 @@ impl Frame {
     }
 
     pub fn pop_args(&mut self, is_static: bool, descriptor: &MethodType) -> Vec<Value> {
-        let mut values: Vec<Value> = descriptor.parameters.iter().rev().map(|param| {
-            self.operand_stack.pop(param)
+        let mut values: Vec<Value> = descriptor.parameters.iter().rev().map(|_| {
+            self.operand_stack.pop()
         }).collect();
         if !is_static {
-            values.push(Value::Reference(self.operand_stack.pop_cat_one().reference()));
+            values.push(self.operand_stack.pop());
         }
         values.reverse();
         values
@@ -313,7 +317,7 @@ impl Frame {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.2).
 pub struct OperandStack {
-    stack: Vec<u8>,
+    stack: Vec<Value>,
 }
 
 impl OperandStack {
@@ -321,46 +325,24 @@ impl OperandStack {
         OperandStack { stack: vec![] }
     }
 
-    pub fn push_cat_one(&mut self, cat_one: CategoryOne) {
-        let i32 = unsafe { cat_one.int.0 };
-        for byte in i32.to_be_bytes() {
-            self.stack.push(byte);
-        }
-    }
-
-    pub fn push_cat_two(&mut self, cat_two: CategoryTwo) {
-        let i64 = unsafe { cat_two.long.0 };
-        for byte in i64.to_be_bytes() {
-            self.stack.push(byte);
-        }
+    /// Get the roots out of the operand stack.
+    pub fn roots(&self) -> HashSet<Reference> {
+        self.stack.iter()
+            .filter_map(|v| {
+                match v {
+                    Value::Reference(reference) => Some(*reference),
+                    _ => None
+                }
+            })
+            .collect()
     }
 
     pub fn push_value(&mut self, value: Value) {
-        if value.category() == 1 {
-            return self.push_cat_one(value.cat_one());
-        }
-        panic!("Not implemented")
+        self.stack.push(value);
     }
 
-    pub fn pop_cat_one(&mut self) -> CategoryOne {
-        let new_len = self.stack.len() - 4;
-        let bytes = self.stack.drain(new_len..);
-        CategoryOne { int: Int(i32::from_be_bytes(bytes.as_slice().try_into().unwrap())) }
-    }
-
-    pub fn pop_cat_two(&mut self) -> CategoryTwo {
-        let new_len = self.stack.len() - 8;
-        let bytes = self.stack.drain(new_len..);
-        CategoryTwo { long: Long(i64::from_be_bytes(bytes.as_slice().try_into().unwrap())) }
-    }
-
-    pub fn pop(&mut self, field: &FieldType) -> Value {
-        match field {
-            FieldType::Int => Value::Int(self.pop_cat_one().int()),
-            FieldType::Reference(_) | FieldType::Array(_) => Value::Reference(self.pop_cat_one().reference()),
-            FieldType::Long => Value::Long(self.pop_cat_two().long()),
-            _ => panic!("Not implemented pop {} yet", field.descriptor())
-        }
+    pub fn pop(&mut self) -> Value {
+        self.stack.pop().unwrap()
     }
 }
 
@@ -368,12 +350,24 @@ impl OperandStack {
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.1).
 pub struct LocalVars {
+    // Very important we track which of these are references!
     map: HashMap<u16, Value>,
 }
 
 impl LocalVars {
     pub fn new() -> Self {
         LocalVars { map: HashMap::new() }
+    }
+
+    /// Get the roots from this local vars for GC.
+    pub fn roots(&self) -> HashSet<Reference> {
+        self.map.values()
+            .filter_map(|v| {
+                match v {
+                    Value::Reference(reference) => Some(*reference),
+                    _ => None
+                }
+            }).collect()
     }
 
     /// Store a value in the local vars.

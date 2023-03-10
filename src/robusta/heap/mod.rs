@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicBool;
 use std::sync::RwLock;
 
@@ -12,7 +12,7 @@ use crate::method_area::const_pool::FieldKey;
 
 pub mod allocator;
 mod hash_code;
-mod garbage_collector;
+pub mod garbage_collector;
 
 pub struct Heap {
     pub allocator: Allocator,
@@ -26,6 +26,19 @@ pub struct Heap {
 unsafe impl Send for Heap {}
 
 impl Heap {
+    pub fn retain(&self, references: &HashSet<Reference>) {
+        let mut references = self.references.write().unwrap();
+
+        let keys_to_remove: Vec<Reference> = references.keys()
+            .filter(|r| !references.contains_key(r))
+            .map(|r| *r)
+            .collect();
+
+        for key in &keys_to_remove {
+            references.remove(key);
+        }
+    }
+
     pub fn new() -> Self {
         Heap {
             allocator: Allocator::new(),
@@ -40,6 +53,17 @@ impl Heap {
     pub fn new_object(&self, class: &Class) -> Reference {
         let object = self.allocator.new_object(class);
         self.insert(Heaped::Object(object))
+    }
+
+    pub fn get(&self, reference: Reference) -> Heaped {
+        let mut references = self.references.write().unwrap();
+        let heaped = references.get_mut(&reference);
+        heaped.unwrap().clone()
+    }
+
+    pub fn set(&self, reference: Reference, heaped: Heaped) {
+        let mut references = self.references.write().unwrap();
+        references.insert(reference, heaped);
     }
 
     pub fn get_static(&self, class: &Class) -> Reference {
@@ -172,7 +196,8 @@ impl Heap {
     }
 }
 
-enum Heaped {
+#[derive(Clone, Copy)]
+pub enum Heaped {
     Object(Object),
     Array(Array),
 }

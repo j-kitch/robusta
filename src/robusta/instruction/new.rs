@@ -1,5 +1,5 @@
 
-use crate::java::{CategoryOne};
+use crate::java::{CategoryOne, Value};
 use crate::thread::Thread;
 
 // /// Many instructions involve resolving class types, which follows a strict algorithm to ensure that
@@ -69,19 +69,19 @@ pub fn new(thread: &mut Thread) {
     // let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), class_const.name.as_str());
     let new_ref = thread.runtime.heap.new_object(class);
 
-    cur_frame.operand_stack.push_cat_one(CategoryOne { reference: new_ref });
+    cur_frame.operand_stack.push_value(Value::Reference(new_ref));
 }
 
 pub fn new_array(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let array_type = cur_frame.read_u8();
 
-    let count = cur_frame.operand_stack.pop_cat_one().int();
+    let count = cur_frame.operand_stack.pop().int();
 
     let arr_ref = match array_type {
         5 => thread.runtime.heap.new_array(crate::heap::allocator::ArrayType::Char, count),
         _ => panic!("newarray has not been implemented for array type {}", array_type)
     };
 
-    cur_frame.operand_stack.push_cat_one(CategoryOne { reference: arr_ref });
+    cur_frame.operand_stack.push_value(Value::Reference(arr_ref));
 }

@@ -1,18 +1,17 @@
 use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 
 use tracing::{debug, info, trace};
-use crate::collection::safe_point::SafePoint;
-use crate::heap::garbage_collector::CopyGeneration;
 
+use crate::collection::safe_point::SafePoint;
+use crate::heap::garbage_collector::{copy_gc, CopyGeneration};
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
-use crate::method_area::Class;
+use crate::method_area::{Class, Field};
 use crate::method_area::const_pool::FieldKey;
-use crate::runtime::Runtime;
+use crate::thread::Thread;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -24,7 +23,7 @@ use crate::runtime::Runtime;
 /// The actual layout in the heap will be `[header bytes ... ] [data bytes ... ]`
 pub struct Object {
     /// The object header.
-    header: *mut ObjectHeader,
+    pub header: *mut ObjectHeader,
     /// The internal data for fields.
     ///
     /// The layout of data in this field is as follows:
@@ -42,7 +41,7 @@ pub struct Object {
     ///
     /// This order should allow superclasses to index into the object without having to
     /// be aware of the child classes layout, and keep fairly good fragmentation avoidance.
-    data: *mut u8,
+    pub data: *mut u8,
 }
 
 unsafe impl Send for Object {}
@@ -62,6 +61,10 @@ impl Object {
     pub fn get_field(&self, field: &FieldKey) -> Value {
         let field = self.class().find_field(field);
 
+        read_value(self.data, field.offset, &field.descriptor)
+    }
+
+    pub fn field_from(&self, field: &Field) -> Value {
         read_value(self.data, field.offset, &field.descriptor)
     }
 
@@ -93,18 +96,18 @@ impl Object {
 /// The object header is used to index into an object.
 ///
 /// TODO: This will be used for GC information.
-struct ObjectHeader {
+pub struct ObjectHeader {
     /// The class of this object
-    class: *const Class,
-    hash_code: Int,
+    pub class: *const Class,
+    pub hash_code: Int,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 /// An array object in the heap.
 pub struct Array {
-    header: *mut ArrayHeader,
-    data: *mut u8,
+    pub header: *mut ArrayHeader,
+    pub data: *mut u8,
 }
 
 unsafe impl Send for Array {}
@@ -147,6 +150,15 @@ impl Array {
         }
     }
 
+    pub fn as_ref_slice(&self) -> &[u32] {
+        let header = self.header();
+        let length = header.length / 4;
+        let pointer: *mut u32 = self.data.cast();
+        unsafe {
+            from_raw_parts(pointer.cast_const(), length)
+        }
+    }
+
     pub fn as_chars_mut(&self) -> &mut [u16] {
         let header = self.header();
         if header.component.ne(&ArrayType::Char) {
@@ -165,11 +177,11 @@ impl Array {
 /// The array header is used to index into the array.
 ///
 /// TODO: This will be used for GC information.
-struct ArrayHeader {
+pub struct ArrayHeader {
     /// The type of the values in the array.
-    component: ArrayType,
+    pub component: ArrayType,
     /// The length (in bytes) of the array data.
-    length: usize,
+    pub length: usize,
     hash_code: Int,
 }
 
@@ -244,7 +256,7 @@ pub const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 
 /// The allocator is the actual heap memory that is used for storing objects.
 pub struct Allocator {
-    gen: CopyGeneration,
+    pub gen: CopyGeneration,
     hash_code: HashCode,
     pub safe_point: SafePoint,
 }
@@ -252,7 +264,7 @@ pub struct Allocator {
 impl Allocator {
     pub fn new() -> Self {
         Allocator {
-            gen:  CopyGeneration::new(),
+            gen: CopyGeneration::new(),
             hash_code: HashCode::new(),
             safe_point: SafePoint::new(),
         }
@@ -260,10 +272,10 @@ impl Allocator {
 
     pub fn print_stats(&self) {
         let used = self.gen.used();
-        let used_mbs = (used / 1024)  / 1024;
+        let used_mbs = (used / 1024) / 1024;
         let max = HEAP_SIZE;
         let percentage = 100.0 * (used as f64) / (max as f64);
-        debug!(target: log::HEAP, used=format!("{}mb {:.2}%", used_mbs, percentage));
+        trace!(target: log::HEAP, used=format!("{}mb {:.2}%", used_mbs, percentage));
     }
 
     pub fn new_object(&self, class: &Class) -> Object {
@@ -344,13 +356,16 @@ impl Allocator {
         self.gen.allocate(size)
     }
 
-    pub fn gc(&self) {
-        debug!("Start GC?");
+    pub fn gc(&self, thread: &Thread) {
         let percentage = (100 * self.gen.used()) / HEAP_SIZE;
         if percentage > 25 {
-            debug!(target: log::HEAP, "Starting garbage collection");
-            self.safe_point.start_gc();
-            info!(target: log::HEAP, "Into safe point");
+            self.safe_point.start_gc(thread);
+
+            // Actual GC occurs here!
+            {
+                copy_gc(thread.runtime.heap.as_ref());
+            }
+
             self.safe_point.end_gc();
         }
     }

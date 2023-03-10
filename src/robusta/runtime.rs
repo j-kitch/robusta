@@ -1,5 +1,4 @@
 use chashmap::CHashMap;
-use crate::collection::safe_point::SafePoint;
 use crate::collection::wait::ThreadWait;
 
 use crate::heap::Heap;

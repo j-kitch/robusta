@@ -2,7 +2,7 @@ use tracing::{debug, trace};
 pub use new::new;
 
 // use crate::instruction::new::{resolve_class, resolve_method};
-use crate::java::{CategoryOne};
+use crate::java::{CategoryOne, Value};
 use crate::log;
 use crate::method_area::const_pool::ConstPool;
 use crate::method_area::Method;
@@ -36,7 +36,7 @@ pub fn load_constant(thread: &mut Thread) {
 
     let value = thread.runtime.method_area.resolve_category_one(frame.const_pool, index);
 
-    frame.operand_stack.push_cat_one(value);
+    frame.operand_stack.push_value(value);
 }
 
 /// astore_<n>
@@ -44,7 +44,7 @@ pub fn load_constant(thread: &mut Thread) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.astore_n).
 pub fn astore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let value = cur_frame.operand_stack.pop_cat_one();
+    let value = cur_frame.operand_stack.pop();
 
     trace!(
         target: log::INSTR,
@@ -52,7 +52,7 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
         opcode=format!("astore_{}", n)
     );
 
-    cur_frame.local_vars.store_cat_one(n, value);
+    cur_frame.local_vars.store_value(n, Value::Reference(value.reference()));
 }
 
 /// istore_<n>
@@ -60,7 +60,7 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.istore_n).
 pub fn istore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let value = cur_frame.operand_stack.pop_cat_one();
+    let value = cur_frame.operand_stack.pop();
 
     trace!(
         target: log::INSTR,
@@ -68,7 +68,7 @@ pub fn istore_n(thread: &mut Thread, n: u16) {
         opcode=format!("istore_{}", n)
     );
 
-    cur_frame.local_vars.store_cat_one(n, value);
+    cur_frame.local_vars.store_value(n, value);
 }
 
 /// iload_<n>
@@ -85,7 +85,7 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
 
     let int = cur_frame.local_vars.load_cat_one(n).int();
 
-    cur_frame.operand_stack.push_cat_one(CategoryOne { int });
+    cur_frame.operand_stack.push_value(Value::Int(int));
 }
 
 /// aload_<n>
@@ -102,7 +102,7 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
 
     let reference = cur_frame.local_vars.load_cat_one(n).reference();
 
-    cur_frame.operand_stack.push_cat_one(CategoryOne { reference });
+    cur_frame.operand_stack.push_value(Value::Reference(reference));
 }
 
 /// Instruction `return`

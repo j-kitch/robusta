@@ -11,8 +11,8 @@ pub fn dup(thread: &mut Thread) {
         opcode="dup"
     );
 
-    let value = cur_frame.operand_stack.pop_cat_one();
+    let value = cur_frame.operand_stack.pop();
 
-    cur_frame.operand_stack.push_cat_one(value);
-    cur_frame.operand_stack.push_cat_one(value);
+    cur_frame.operand_stack.push_value(value);
+    cur_frame.operand_stack.push_value(value);
 }
