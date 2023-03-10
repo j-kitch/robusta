@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use tracing::{debug, info, trace};
 use crate::collection::safe_point::SafePoint;
+use crate::heap::garbage_collector::CopyGeneration;
 
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
@@ -239,12 +240,11 @@ impl ArrayType {
 }
 
 /// The default heap size of the openjdk is 1280MB
-const HEAP_SIZE: usize = 1280 * 1024 * 1024;
+pub const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 
 /// The allocator is the actual heap memory that is used for storing objects.
 pub struct Allocator {
-    data: Box<[u8]>,
-    used: AtomicUsize,
+    gen: CopyGeneration,
     hash_code: HashCode,
     pub safe_point: SafePoint,
 }
@@ -252,15 +252,14 @@ pub struct Allocator {
 impl Allocator {
     pub fn new() -> Self {
         Allocator {
-            data: vec![0; HEAP_SIZE].into_boxed_slice(),
-            used: AtomicUsize::new(0),
+            gen:  CopyGeneration::new(),
             hash_code: HashCode::new(),
             safe_point: SafePoint::new(),
         }
     }
 
     pub fn print_stats(&self) {
-        let used = self.used.load(Ordering::SeqCst);
+        let used = self.gen.used();
         let used_mbs = (used / 1024)  / 1024;
         let max = HEAP_SIZE;
         let percentage = 100.0 * (used as f64) / (max as f64);
@@ -342,26 +341,12 @@ impl Allocator {
 
     /// Allocate the given number of bytes, returning a pointer to the start.
     fn allocate(&self, size: usize) -> *mut u8 {
-        let result = self.used.fetch_update(
-            Ordering::SeqCst, Ordering::SeqCst,
-            |old_used| old_used.checked_add(size));
-
-
-        // TODO: Need to add GC.
-        let start_of_memory = result.expect("Heap is too full");
-
-        if start_of_memory + size > HEAP_SIZE {
-            panic!("Out Of Memory");
-        }
-
-        unsafe {
-            self.data.as_ptr().add(start_of_memory).cast_mut()
-        }
+        self.gen.allocate(size)
     }
 
     pub fn gc(&self) {
         debug!("Start GC?");
-        let percentage = (100 * self.used.load(Ordering::SeqCst)) / HEAP_SIZE;
+        let percentage = (100 * self.gen.used()) / HEAP_SIZE;
         if percentage > 25 {
             debug!(target: log::HEAP, "Starting garbage collection");
             self.safe_point.start_gc();
