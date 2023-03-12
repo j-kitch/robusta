@@ -10,7 +10,7 @@ pub const MAGIC: u32 = 0xCAFE_BABE;
 /// Static access flag.
 pub const ACCESS_FLAG_STATIC: u16 = 0x0008;
 pub const ACCESS_FLAG_NATIVE: u16 = 0x0100;
-pub const ACCESS_FLAG_SYNC: u16 = 0x1000;
+pub const METHOD_ACC_SYNC: u16 = 0x0020;
 
 /// The binary representation of a class file.
 ///

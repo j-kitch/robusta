@@ -4,7 +4,7 @@ use std::thread;
 
 use tracing::debug;
 
-use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ACCESS_FLAG_SYNC, ClassAttribute, Code};
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, METHOD_ACC_SYNC, ClassAttribute, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
 use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
@@ -182,7 +182,7 @@ impl MethodArea {
                 .map(|m| {
                     let is_static = (m.access_flags & ACCESS_FLAG_STATIC) != 0;
                     let is_native = (m.access_flags & ACCESS_FLAG_NATIVE) != 0;
-                    let is_synchronized = (m.access_flags & ACCESS_FLAG_SYNC) != 0;
+                    let is_synchronized = (m.access_flags & METHOD_ACC_SYNC) != 0;
                     let name = class_file.get_const_utf8(m.name);
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
 
