@@ -5,3 +5,4 @@
 - [Issues](./issues.md)
 - [Completed](./completed.md)
 - [Loading, Linking & Initialization](./loading_linking.md)
+- [Garbage Collection](./gc.md)
