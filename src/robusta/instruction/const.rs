@@ -1,5 +1,5 @@
 use tracing::trace;
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{ Int, Value};
 use crate::log;
 use crate::thread::Thread;
 

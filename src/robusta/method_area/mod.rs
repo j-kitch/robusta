@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
-use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, Long, MethodType, Reference, Value};
+use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::log;
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
@@ -254,7 +254,7 @@ impl MethodArea {
             });
 
             if let Some(clinit) = clinit {
-                let mut thread = Thread::new(
+                let thread = Thread::new(
                     "".to_string(),
                     None,
                     rt.clone(),

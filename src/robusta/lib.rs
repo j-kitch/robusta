@@ -75,7 +75,7 @@ impl VirtualMachine {
             let class_ref = unsafe { create_thread_class.as_ref().unwrap() };
             let method = &class_ref.methods[0];
 
-            let mut jvm_init_thread = Thread::new("<jvmInit>".to_string(), None, runtime.clone(),
+            let jvm_init_thread = Thread::new("<jvmInit>".to_string(), None, runtime.clone(),
                 class_ref.name.clone(), &class_ref.const_pool as *const ConstPool,
                 method as *const Method);
 

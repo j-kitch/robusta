@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::AtomicBool;
 use std::sync::RwLock;
 
 use rand::{RngCore, thread_rng};
@@ -20,13 +19,12 @@ pub struct Heap {
     class_objects: OnceMap<String, Reference>,
     string_constants: OnceMap<String, Reference>,
     static_objects: OnceMap<String, Reference>,
-    safe_point: AtomicBool,
 }
 
 unsafe impl Send for Heap {}
 
 impl Heap {
-    pub fn retain(&self, references: &HashSet<Reference>) {
+    pub fn retain(&self, _: &HashSet<Reference>) {
         let mut references = self.references.write().unwrap();
 
         let keys_to_remove: Vec<Reference> = references.keys()
@@ -46,7 +44,7 @@ impl Heap {
             class_objects: OnceMap::new(),
             string_constants: OnceMap::new(),
             static_objects: OnceMap::new(),
-            safe_point: AtomicBool::new(false),
+            // safe_point: AtomicBool::new(false),
         }
     }
 

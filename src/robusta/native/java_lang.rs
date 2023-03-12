@@ -396,7 +396,7 @@ fn thread_start(args: &Args) -> Option<Value> {
             descriptor: MethodType::from_descriptor("()V").unwrap(),
         }).unwrap() as *const method_area::Method;
 
-        let mut thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method);
+        let thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method);
 
         // hack
         unsafe {

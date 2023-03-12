@@ -1,5 +1,5 @@
 
-use crate::java::{CategoryOne, Value};
+use crate::java::{ Value};
 use crate::thread::Thread;
 
 // /// Many instructions involve resolving class types, which follows a strict algorithm to ensure that

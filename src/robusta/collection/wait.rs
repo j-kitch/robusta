@@ -1,6 +1,7 @@
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
-use tracing::{info, trace};
+
+use tracing::info;
 
 use crate::java::Reference;
 use crate::log;
@@ -36,7 +37,7 @@ impl ThreadWait {
         loop {
             let thread_ref = self.thread_ref.lock().unwrap();
             self.cond_var.wait_while(thread_ref, |reference| {
-                self.runtime.heap.get_thread_alive(*reference) && !self.runtime.heap.allocator.safe_point.is_safe_req()
+                self.runtime.heap.get_thread_alive(*reference)
             }).unwrap().0;
 
             info!(target: log::THREAD, "join broken by safe point wait");

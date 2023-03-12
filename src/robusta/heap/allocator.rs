@@ -1,17 +1,16 @@
 use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
-use std::sync::atomic::AtomicUsize;
 
-use tracing::{debug, info, trace};
+use tracing::trace;
 
-use crate::collection::safe_point::SafePoint;
-use crate::heap::garbage_collector::{copy_gc, CopyGeneration};
+use crate::heap::garbage_collector::CopyGeneration;
+// use crate::collection::safe_point::SafePoint;
+// use crate::heap::garbage_collector::{copy_gc, CopyGeneration};
 use crate::heap::hash_code::HashCode;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Field};
 use crate::method_area::const_pool::FieldKey;
-use crate::thread::Thread;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -258,7 +257,7 @@ pub const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 pub struct Allocator {
     pub gen: CopyGeneration,
     hash_code: HashCode,
-    pub safe_point: SafePoint,
+    // pub safe_point: SafePoint,
 }
 
 impl Allocator {
@@ -266,7 +265,7 @@ impl Allocator {
         Allocator {
             gen: CopyGeneration::new(),
             hash_code: HashCode::new(),
-            safe_point: SafePoint::new(),
+            // safe_point: SafePoint::new(),
         }
     }
 
@@ -356,20 +355,20 @@ impl Allocator {
         self.gen.allocate(size)
     }
 
-    pub fn gc(&self, thread: &Thread) {
-
-        let percentage = (100 * self.gen.used()) / HEAP_SIZE;
-        if percentage > 25 {
-            self.safe_point.start_gc(thread);
-
-            // Actual GC occurs here!
-            {
-                copy_gc(thread.runtime.heap.as_ref());
-            }
-
-            self.safe_point.end_gc();
-        }
-    }
+    // pub fn gc(&self, thread: &Thread) {
+    //
+    //     let percentage = (100 * self.gen.used()) / HEAP_SIZE;
+    //     if percentage > 25 {
+    //         // self.safe_point.start_gc(thread);
+    //
+    //         // Actual GC occurs here!
+    //         {
+    //             copy_gc(thread.runtime.heap.as_ref());
+    //         }
+    //
+    //         self.safe_point.end_gc();
+    //     }
+    // }
 }
 
 fn write_value(data_start: *mut u8, offset: usize, value: CategoryOne) {

@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, Value};
+use crate::java::Value;
 use crate::thread::Thread;
 
 pub fn istore(thread: &mut Thread) {

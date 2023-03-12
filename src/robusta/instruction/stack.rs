@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{Int, Value};
 use crate::thread::Thread;
 
 pub fn pop(thread: &mut Thread) {

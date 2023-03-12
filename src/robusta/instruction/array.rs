@@ -1,6 +1,6 @@
 use tracing::trace;
 use crate::heap::allocator::ArrayType;
-use crate::java::{CategoryOne, Int, Value};
+use crate::java::{ Int, Value};
 use crate::log;
 use crate::thread::Thread;
 
@@ -22,7 +22,7 @@ pub fn array_length(thread: &mut Thread) {
         opcode="arraylength"
     );
 
-    let arr_ref = unsafe { cur_frame.operand_stack.pop().reference() };
+    let arr_ref = cur_frame.operand_stack.pop().reference();
 
     let arr = thread.runtime.heap.get_array(arr_ref);
     let arr_length = arr.length();

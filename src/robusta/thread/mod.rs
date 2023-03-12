@@ -1,8 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::i64;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
 use tracing::{debug, trace};
 
@@ -19,13 +16,13 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{bipush, pop, sipush};
-use crate::java::{CategoryOne, CategoryTwo, FieldType, Int, Long, MethodType, Reference, Value};
+use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::ConstPool;
 use crate::native::Args;
 use crate::runtime::Runtime;
-use crate::thread::critical::CriticalLock;
+// use crate::thread::critical::CriticalLock;
 
 mod critical;
 
@@ -33,7 +30,7 @@ mod critical;
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
-    pub critical_lock: CriticalLock,
+    // pub critical_lock: CriticalLock,
     // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
@@ -115,7 +112,7 @@ impl Thread {
             name,
             reference,
             runtime: runtime.clone(),
-            critical_lock: CriticalLock::new(),
+            // critical_lock: CriticalLock::new(),
             stack: vec![
                 Frame {
                     class,

@@ -1,4 +1,4 @@
-use crate::java::{CategoryOne, MethodType, Value};
+use crate::java::{ MethodType, Value};
 use crate::method_area;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;

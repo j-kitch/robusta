@@ -2,7 +2,7 @@ use tracing::{debug, trace};
 pub use new::new;
 
 // use crate::instruction::new::{resolve_class, resolve_method};
-use crate::java::{CategoryOne, Value};
+use crate::java::{Value};
 use crate::log;
 use crate::method_area::const_pool::ConstPool;
 use crate::method_area::Method;
@@ -34,7 +34,7 @@ pub fn load_constant(thread: &mut Thread) {
         index
     );
 
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     let value = thread.runtime.method_area.resolve_category_one(frame.const_pool, index);
 
     frame.operand_stack.push_value(value);
@@ -45,7 +45,7 @@ pub fn load_constant(thread: &mut Thread) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.astore_n).
 pub fn astore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     let value = cur_frame.operand_stack.pop();
 
     trace!(
@@ -62,7 +62,7 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.istore_n).
 pub fn istore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     let value = cur_frame.operand_stack.pop();
 
     trace!(
@@ -88,7 +88,7 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
 
     let int = cur_frame.local_vars.load_cat_one(n).int();
 
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     cur_frame.operand_stack.push_value(Value::Int(int));
 }
 
@@ -106,7 +106,7 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
 
     let reference = cur_frame.local_vars.load_cat_one(n).reference();
 
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     cur_frame.operand_stack.push_value(Value::Reference(reference));
 }
 
@@ -122,7 +122,7 @@ pub fn r#return(thread: &mut Thread) {
         opcode="return"
     );
 
-    let _guard = thread.critical_lock.acquire();
+    // let _guard = thread.critical_lock.acquire();
     thread.stack.pop();
 }
 

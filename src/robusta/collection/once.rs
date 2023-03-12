@@ -1,10 +1,8 @@
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::process::id;
 use std::sync::{RwLock, RwLockReadGuard};
 
 use chashmap::CHashMap;
-use tracing::Instrument;
 
 use crate::java::Reference;
 
