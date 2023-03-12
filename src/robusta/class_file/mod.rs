@@ -10,6 +10,7 @@ pub const MAGIC: u32 = 0xCAFE_BABE;
 /// Static access flag.
 pub const ACCESS_FLAG_STATIC: u16 = 0x0008;
 pub const ACCESS_FLAG_NATIVE: u16 = 0x0100;
+pub const ACCESS_FLAG_SYNC: u16 = 0x1000;
 
 /// The binary representation of a class file.
 ///
@@ -140,10 +141,10 @@ impl Method {
         for attr in &self.attributes {
             match attr {
                 MethodAttribute::Code(code) => return Some(code),
-                _ => {},
+                _ => {}
             }
         }
-        return None
+        return None;
     }
 }
 

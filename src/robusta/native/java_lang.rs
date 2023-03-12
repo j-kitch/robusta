@@ -206,6 +206,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
         class: 0 as *const Class, // TODO: Fill in later!
         is_static: true,
         is_native: false,
+        is_synchronized: false,
         name: "<fill-in-stack-trace>".to_string(),
         descriptor: MethodType::from_descriptor("()[Ljava/lang/StackTraceElement;").unwrap(),
         code: Some(Code {

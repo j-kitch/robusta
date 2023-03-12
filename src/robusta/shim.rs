@@ -38,6 +38,7 @@ pub fn create_main_thread() -> Class {
                 class: 0 as *const Class,
                 is_static: true,
                 is_native: false,
+                is_synchronized: false,
                 name: "<create-main-thread>".to_string(),
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Thread;").unwrap(),
                 code: Some(Code {
