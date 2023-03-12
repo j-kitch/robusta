@@ -2,86 +2,128 @@
 
 ## Safe Points
 
-I've noticed that the vast majority of the time that a thread spends can
-be considered a *safe point*.  The only sections that a thread is not within
-a safe point will be a section that changes the set of roots of the thread,
-or reads/writes from heap memory.
+The garbage collector needs to be able to ensure that all java threads are
+blocked in *safe points* before it begins the mark phase.  This is to ensure
+that the set of roots is not mutating during the mark phase.
 
-The set of roots of a thread are:
+The areas that will change the set of roots of a thread are as follows:
 
-- the references in the operand stack
-- the references in the local variable array
-- the thread instance
+- Pushing and popping references from the operand stack.
+- Storing references to the local variables.
+- Resolving a constant in a runtime const pool (even a class could invoke
+    creating static fields in the VM).
+- Reading or writing to the heap.
+- Pushing or popping frames from the stack.
+- Invoking a native method (the local variables need to be tracked).
+- Interacting with the VM in a native method.
 
-Instructions like `iadd`, `sipush` and `if_icmpge` can globally be considered
-safe points, and instructions like `invokestatic` are only unsafe when we're
-moving values from the operand stack to the next frame, and in unsafe sections
-of class loading and initialization. **TODO:** This was not true!  How is the
-GC supposed to be reading roots from an op stack & local var array when their
-data is constantly mutating underneath?
+The JVM can either request the thread to be blocked in a safe point, or
+request the thread to wait to enter an unsafe point.
 
-When a thread is waiting on another thread, waiting on IO, or a synchronization
-point in the program, we should consider all of these to be safe points that
-won't stop GC.
+A safe point can include waiting on a sync primitive, waiting on another
+thread, waiting on blocking I/O, if we implement safe points, then we need
+to be able to handle these cases.
 
-I think therefore, that rather than register safe points, and solve problems
-like how do you poll a waiting thread for the safe point, threads should be
-registering the opposite, unsafe regions, why should a thread that is doing
-1000s of pure computation instructions be stopped by a stop the world GC?
+Since almost everything that a thread does can be considered unsafe, the
+simplest solution is to invoke safe points at standard locations:
 
-### Design
+- at the start or end of an instruction
+- around a blocking operation
 
-The word unsafe is overloaded by Rust already, *this is a bigger problem
-we have, terms like thread & ref are overloaded by the language and we need
-to think about how we refer to these*.
+Garbage collection should occur less than 1/1,000,000 instructions, therefore
+we should make entering-exiting safe points the smallest regions, to allow
+the JVM to perform (rather than constantly opening/closing unsafe regions)
+for all the instructions.
 
-I'll use the term *critical region* to refer to a section in a thread that
-cannot be performed during GC.
+### Native Methods
 
-A thread should have the API
+Native methods need to maintain local variables in a way that can be
+accessed by the vm.  Not just input/output variables but the references
+that are used within the method.
 
+For example,
 
 ```rust
-pub fn instruction(thread: &mut Thread) {
-    let frame = thread.curr_frame();
+fn native_method_that_blocks(args: &Args) -> Option<Value> {
+    // All of the local variable params should be registered in the thread
+    // for the VM to see.
+    let params = &args.params;
     
-    // Do work that isn't GC sensitive
-    let int = frame.pop_int();
-    let double = frame.pop_double();
-    let index = frame.read_u16();
+    // We need to keep a reference to this array registered with the thread.
+    //
+    // If `new_array()` requires GC, then this method should block the
+    // current thread in a safe region.
+    let arr = args.runtime.new_array(ArrayType::Char, 20);
     
-    let result = perform_work(int, double);
-    ...
-
-    {
-        // We need to acquire some form of lock, that blocks
-        // if we have to wait for GC to finish.
-        let _guard = thread.enter_critical_region();
+    // About to perform a blocking call, we need to register this as safe.
+    let char_arr = {
+        // The simplest way to track the additional refs at this point
+        // is simply to pass them back to the thread!
+        let _safe = args.thread.enter_safe_region();
         
-        let reference = frame.pop_ref();
-        let object = thread.runtime.load_object(reference);
-        ...
-    }
+        // While we wait for this block to return, this native method
+        // **should not** stop GC. 
+        //
+        // This is why the thread needs to know about `arr` above.
+        let response = io::network_call("https://example");
+        
+        response.to_char_array()
+    }; //Dropping _safe should wait for GC to end, so we can continue.
     
-    // If we have more work that can be performed without the
-    // critical lock, there is no need to hold on to it.
-    let reference = frame.load_reference(0);
-    frame.push_reference(reference);
+    arr.as_char_array().copy_from(char_arr);
 }
 ```
 
-A method like `Thread::enter_critical_region` should encapsulate
-everything that handles the safe/unsafe boundary:
+The reason that native blocking methods need to be handled this way, is that
+all of our thread join/interrupt methods are native and require this implementation
+to handle blocking.
 
-- A thread invoking the method will return if GC is not happening.
-- A thread invoking the method will block if GC is occuring, and only
-    return after it has finished.
-- Once a thread has got the guard, GC that is attempting to start must
-    block, until the guard has been returned.
+- Native method locals need to be tracked like normal JVM frames.
+- Native methods need to be able to explicitly enter safe regions, while
+    continuing to run.
+- VM calls that can block on GC need to be able to enter safe regions and
+  block for native & normal methods.
 
-A method like `GarbageCollector::enter_safe_region` could perform the
-opposite side of this relationship.
+How do we keep track of additional references in a native method? For now,
+the simplest solution I think is to manually add them.
 
-The simplest way to solve this problem seems to be having a `Mutex<()>`
-in every thread, which the thread, or the GC can acquire.  This is probably
-not a good implementation for performance, but we'll start here.
+```rust
+fn native_method(args: &Args) -> Option<Value> {
+    // If new_object enters GC, we don't care yet, we have no
+    // additional refs to track.
+    let object = new_object();
+    
+    // Before we potentially enter GC with the second call to new_object,
+    // register the local object ref with the thread.
+    register_local(object);
+    let object_two = new_object();
+
+    {
+        // Register the next local and let thread know we're blocking.
+        register_local(object_two);
+        let _safe = begin_blocking_region();
+        
+        io_call();
+    }
+}
+```
+
+**TODO:** This all points to needing an implementation of sync working
+before we implement GC fully!
+
+## Thread
+
+A thread will have to register itself as entering a safe point.
+
+A thread will have to register itself as leaving a safe point, and if
+GC is occurring, it must block, and wait until it has finished. (In the
+case of a normal instruction safe point check, these two are combined, but
+for native methods that involve blocking, they are separate).
+
+While a thread is within a safe point, it cannot change the set of roots
+it contains.  While in a JVM frame, this is controlled, while in a native
+method, this relies on the implementation being correct.
+
+**TODO:** Could we separate the API into safe & unsafe for native methods
+to guarantee this at compile time?
+
