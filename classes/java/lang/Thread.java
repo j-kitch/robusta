@@ -44,11 +44,13 @@ public class Thread {
      */
     private native void nativeStart();
 
-    public final native void join();
+    public final native void join() throws InterruptedException;
 
-    public final native void join(long millis);
+    public final native void join(long millis) throws InterruptedException;
 
-    public static native void sleep(long millis);
+    public static native void sleep(long millis) throws InterruptedException;
 
     public static native Thread currentThread();
+
+    public native void interrupt();
 }

@@ -16,4 +16,12 @@ public class Object {
     }
 
     public final native Class<?> getClass();
+
+    public final native void notify();
+
+    public final native void notifyAll();
+
+    public final native void wait() throws InterruptedException;
+
+    public final native void wait(long millis) throws InterruptedException;
 }
