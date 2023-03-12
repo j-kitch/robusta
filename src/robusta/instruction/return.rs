@@ -5,8 +5,20 @@ use crate::thread::Thread;
 
 pub fn a_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
+    let method = unsafe { cur_frame.method.as_ref().unwrap() };
 
     let reference = cur_frame.operand_stack.pop();
+
+    if method.is_synchronized {
+        let this_ref = if method.is_static {
+            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
+        } else {
+            cur_frame.local_vars.load_cat_one(0).reference()
+        };
+        let this_obj = thread.runtime.heap.get_object(this_ref);
+        let header = unsafe { this_obj.header.as_ref().unwrap() };
+        header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+    }
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
@@ -16,8 +28,20 @@ pub fn a_return(thread: &mut Thread) {
 
 pub fn i_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
+    let method = unsafe { cur_frame.method.as_ref().unwrap() };
 
     let int = cur_frame.operand_stack.pop();
+
+    if method.is_synchronized {
+        let this_ref = if method.is_static {
+            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
+        } else {
+            cur_frame.local_vars.load_cat_one(0).reference()
+        };
+        let this_obj = thread.runtime.heap.get_object(this_ref);
+        let header = unsafe { this_obj.header.as_ref().unwrap() };
+        header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+    }
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
@@ -52,6 +76,18 @@ pub fn a_throw(thread: &mut Thread) {
                 return;
             }
         }
+
+        if method.is_synchronized {
+            let this_ref = if method.is_static {
+                thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
+            } else {
+                current_frame.local_vars.load_cat_one(0).reference()
+            };
+            let this_obj = thread.runtime.heap.get_object(this_ref);
+            let header = unsafe { this_obj.header.as_ref().unwrap() };
+            header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+        }
+
         // No handler found
         thread.stack.pop();
         frame = thread.stack.last_mut();

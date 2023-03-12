@@ -25,6 +25,13 @@ pub fn invoke_virtual(thread: &mut Thread) {
     }).unwrap();
     let class = unsafe { method.class.as_ref().unwrap() };
 
+    if method.is_synchronized {
+        let this_ref = &args[0].reference();
+        let this_obj = thread.runtime.heap.get_object(this_ref.clone());
+        let header = unsafe { this_obj.header.as_ref().unwrap() };
+        header.lock.enter_monitor(thread.reference.expect("Required for sync").0);
+    }
+
     if method.is_native {
         let result = thread.call_native(
             method,
@@ -51,6 +58,13 @@ pub fn invoke_special(thread: &mut Thread) {
     let class = unsafe { method.class.as_ref().unwrap() };
 
     let args = cur_frame.pop_args(false, &method.descriptor);
+
+    if method.is_synchronized {
+        let this_ref = &args[0].reference();
+        let this_obj = thread.runtime.heap.get_object(this_ref.clone());
+        let header = unsafe { this_obj.header.as_ref().unwrap() };
+        header.lock.enter_monitor(thread.reference.expect("Required for sync").0);
+    }
 
     if method.is_native {
         let result = thread.call_native(

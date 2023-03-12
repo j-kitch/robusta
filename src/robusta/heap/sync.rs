@@ -1,6 +1,7 @@
 use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
+// #[derive(Clone)]
 pub struct ObjectLock {
     /// The reference to the owning object, and the number of re-enters it has performed.
     mutex: Mutex<State>,

@@ -150,6 +150,13 @@ pub fn invoke_static(thread: &mut Thread) {
 
     let args = cur_frame.pop_args(true, &method.descriptor);
 
+    if method.is_synchronized {
+        let static_ref = thread.runtime.heap.get_static(class);
+        let static_obj = thread.runtime.heap.get_object(static_ref.clone());
+        let header = unsafe { static_obj.header.as_ref().unwrap() };
+        header.lock.enter_monitor(thread.reference.expect("Required for sync").0);
+    }
+
     if method.is_native {
         let result = thread.call_native(
             method,

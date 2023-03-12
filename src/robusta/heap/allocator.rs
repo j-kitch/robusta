@@ -7,6 +7,7 @@ use crate::heap::garbage_collector::CopyGeneration;
 // use crate::collection::safe_point::SafePoint;
 // use crate::heap::garbage_collector::{copy_gc, CopyGeneration};
 use crate::heap::hash_code::HashCode;
+use crate::heap::sync::ObjectLock;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Field};
@@ -91,7 +92,7 @@ impl Object {
 }
 
 #[repr(C)]
-#[derive(Clone)]
+// #[derive(Clone)]
 /// The object header is used to index into an object.
 ///
 /// TODO: This will be used for GC information.
@@ -99,6 +100,7 @@ pub struct ObjectHeader {
     /// The class of this object
     pub class: *const Class,
     pub hash_code: Int,
+    pub lock: ObjectLock,
 }
 
 #[repr(C)]
@@ -172,7 +174,7 @@ impl Array {
 }
 
 #[repr(C)]
-#[derive(Clone)]
+// #[derive(Clone)]
 /// The array header is used to index into the array.
 ///
 /// TODO: This will be used for GC information.
@@ -181,7 +183,8 @@ pub struct ArrayHeader {
     pub component: ArrayType,
     /// The length (in bytes) of the array data.
     pub length: usize,
-    hash_code: Int,
+    pub hash_code: Int,
+    pub lock: ObjectLock,
 }
 
 unsafe impl Send for ArrayHeader {}
@@ -293,7 +296,11 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            object.header.write(ObjectHeader { class: class_ptr, hash_code: self.hash_code.next() });
+            object.header.write(ObjectHeader {
+                class: class_ptr,
+                hash_code: self.hash_code.next(),
+                lock: ObjectLock::new(),
+            });
             object.data.write_bytes(0, class.instance_width);
 
             self.print_stats();
@@ -318,7 +325,11 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            object.header.write(ObjectHeader { class: class_ptr, hash_code: Int(0) });
+            object.header.write(ObjectHeader {
+                class: class_ptr,
+                hash_code: Int(0),
+                lock: ObjectLock::new(),
+            });
             object.data.write_bytes(0, class.static_width);
 
             self.print_stats();
@@ -341,7 +352,12 @@ impl Allocator {
                 data: start_ptr.add(header_size),
             };
 
-            array.header.write(ArrayHeader { component, length: data_size, hash_code: self.hash_code.next() });
+            array.header.write(ArrayHeader {
+                component,
+                length: data_size,
+                hash_code: self.hash_code.next(),
+                lock: ObjectLock::new(),
+            });
             array.data.write_bytes(0, size);
 
             self.print_stats();
