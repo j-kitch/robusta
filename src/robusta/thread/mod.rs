@@ -6,7 +6,7 @@ use tracing::{debug, trace};
 use crate::collection::wait::ThreadWait;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_null};
+use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_virtual};
@@ -208,6 +208,7 @@ impl Thread {
             0x59 => dup(self),
             0x60 => i_add(self),
             0x84 => i_inc(self),
+            0x9A => if_ne(self),
             0x9B => if_lt(self),
             0x99 => if_eq(self),
             0xA0 => if_int_cmp_ne(self),

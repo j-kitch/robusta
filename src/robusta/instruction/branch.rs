@@ -132,6 +132,28 @@ pub fn if_lt(thread: &mut Thread) {
     }
 }
 
+pub fn if_ne(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-3,
+        opcode="ifne",
+        offset
+    );
+
+    let value = frame.operand_stack.pop().int();
+
+    if value.0 != 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
 pub fn if_null(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
