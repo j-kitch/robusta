@@ -1,10 +1,7 @@
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use tracing::info;
-
 use crate::java::Reference;
-use crate::log;
 use crate::runtime::Runtime;
 
 pub struct ThreadWait {
