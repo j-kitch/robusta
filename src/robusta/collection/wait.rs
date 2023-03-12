@@ -32,20 +32,9 @@ impl ThreadWait {
 
     pub fn join(&self) {
         let thread_ref = self.thread_ref.lock().unwrap();
-        let thread_u32 = thread_ref.0;
-
-        loop {
-            let thread_ref = self.thread_ref.lock().unwrap();
-            self.cond_var.wait_while(thread_ref, |reference| {
-                self.runtime.heap.get_thread_alive(*reference)
-            }).unwrap().0;
-
-            info!(target: log::THREAD, "join broken by safe point wait");
-            // did we break because of the safe point?
-            if !self.runtime.heap.get_thread_alive(Reference(thread_u32)) {
-                return;
-            }
-        }
+        self.cond_var.wait_while(thread_ref, |reference| {
+            self.runtime.heap.get_thread_alive(*reference)
+        }).unwrap().0;
     }
 
     pub fn join_millis(&self, millis: i64) {
