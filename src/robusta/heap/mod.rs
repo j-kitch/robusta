@@ -12,6 +12,7 @@ use crate::method_area::const_pool::FieldKey;
 pub mod allocator;
 mod hash_code;
 pub mod garbage_collector;
+pub mod sync;
 
 pub struct Heap {
     pub allocator: Allocator,
