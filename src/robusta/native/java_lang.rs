@@ -397,7 +397,14 @@ fn thread_start(args: &Args) -> Option<Value> {
         }).unwrap() as *const method_area::Method;
 
         let mut thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method);
-        thread.run();
+
+        // hack
+        unsafe {
+            let t = thread.as_ref() as *const Thread;
+            let t = t as *mut Thread;
+            let t = t.as_mut().unwrap();
+            t.run();
+        }
     }).unwrap();
 
     None

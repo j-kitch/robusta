@@ -1,7 +1,9 @@
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
+use tracing::{info, trace};
 
 use crate::java::Reference;
+use crate::log;
 use crate::runtime::Runtime;
 
 pub struct ThreadWait {
@@ -23,11 +25,26 @@ impl ThreadWait {
         self.cond_var.notify_all();
     }
 
+    pub fn wait_gc(&self) {
+        self.cond_var.notify_all();
+    }
+
     pub fn join(&self) {
         let thread_ref = self.thread_ref.lock().unwrap();
-        self.cond_var.wait_while(thread_ref, |reference| {
-            self.runtime.heap.get_thread_alive(*reference)
-        }).unwrap().0;
+        let thread_u32 = thread_ref.0;
+
+        loop {
+            let thread_ref = self.thread_ref.lock().unwrap();
+            self.cond_var.wait_while(thread_ref, |reference| {
+                self.runtime.heap.get_thread_alive(*reference) && !self.runtime.heap.allocator.safe_point.is_safe_req()
+            }).unwrap().0;
+
+            info!(target: log::THREAD, "join broken by safe point wait");
+            // did we break because of the safe point?
+            if !self.runtime.heap.get_thread_alive(Reference(thread_u32)) {
+                return;
+            }
+        }
     }
 
     pub fn join_millis(&self, millis: i64) {

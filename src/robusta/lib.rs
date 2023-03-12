@@ -6,7 +6,7 @@ extern crate core;
 use std::env::args;
 use std::sync::Arc;
 
-use tracing::debug;
+use tracing::{debug, trace};
 use tracing::metadata::LevelFilter;
 use tracing::subscriber::set_global_default;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -35,7 +35,7 @@ mod shim;
 #[allow(dead_code)]
 pub struct VirtualMachine {
     runtime: Arc<Runtime>,
-    main_thread: Thread,
+    main_thread: Arc<Thread>,
 }
 
 impl VirtualMachine {
@@ -79,7 +79,9 @@ impl VirtualMachine {
                 class_ref.name.clone(), &class_ref.const_pool as *const ConstPool,
                 method as *const Method);
 
-            jvm_init_thread.stack.insert(0, Frame {
+            let jvm_init_t = jvm_init_thread.as_mut();
+
+            jvm_init_t.stack.insert(0, Frame {
                 class: "<result>".to_string(),
                 const_pool: 0 as *const ConstPool,
                 method: 0 as *const Method,
@@ -88,11 +90,12 @@ impl VirtualMachine {
                 pc: 0,
             });
 
-            while jvm_init_thread.stack.len() > 1 {
-                jvm_init_thread.next();
+            while jvm_init_t.stack.len() > 1 {
+                jvm_init_t.next();
+                trace!("here 1");
             }
 
-            jvm_init_thread.stack.last_mut().unwrap().operand_stack.pop().reference()
+            jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
         };
 
         let main_class = runtime.method_area.load_class(main_class);
@@ -114,6 +117,6 @@ impl VirtualMachine {
     }
 
     pub fn start(&mut self) {
-        self.main_thread.run()
+        self.main_thread.as_mut().run()
     }
 }

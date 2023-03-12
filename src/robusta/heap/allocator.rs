@@ -357,6 +357,7 @@ impl Allocator {
     }
 
     pub fn gc(&self, thread: &Thread) {
+
         let percentage = (100 * self.gen.used()) / HEAP_SIZE;
         if percentage > 25 {
             self.safe_point.start_gc(thread);

@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::i64;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::Sender;
 
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::collection::wait::ThreadWait;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
@@ -24,11 +25,15 @@ use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::ConstPool;
 use crate::native::Args;
 use crate::runtime::Runtime;
+use crate::thread::critical::CriticalLock;
+
+mod critical;
 
 /// A single Java thread in the running program.
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
+    pub critical_lock: CriticalLock,
     // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
@@ -39,7 +44,17 @@ pub struct Thread {
     pub stack: Vec<Frame>,
 }
 
+unsafe impl Send for Thread {}
+unsafe impl Sync for Thread {}
+
 impl Thread {
+    pub fn as_mut<'a>(self: &'a Arc<Self>) -> &'a mut Thread {
+        unsafe {
+            let thread = self.as_ref() as *const Thread;
+            thread.cast_mut().as_mut().unwrap()
+        }
+    }
+
     pub fn call_native(&self, method: &Method, args: Vec<Value>) -> Option<Value> {
         self.runtime.native.call(
             method,
@@ -80,6 +95,8 @@ impl Thread {
 
         while self.stack.len() > depth {
             self.next();
+            trace!("here 2");
+
         }
 
         // We've hit our native stub frame with the result.
@@ -90,14 +107,15 @@ impl Thread {
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
                // root_sender: Sender<HashSet<Reference>>,
-               class: String, pool: *const ConstPool, method: *const Method) -> Self {
+               class: String, pool: *const ConstPool, method: *const Method) -> Arc<Self> {
         reference.map(|reference| {
             runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
         });
-        Thread {
+        let thread = Arc::new(Thread {
             name,
             reference,
-            runtime,
+            runtime: runtime.clone(),
+            critical_lock: CriticalLock::new(),
             stack: vec![
                 Frame {
                     class,
@@ -108,7 +126,11 @@ impl Thread {
                     pc: 0,
                 }
             ],
-        }
+        });
+
+        runtime.threads2.write().unwrap().push(thread.clone());
+
+        thread
     }
 
     pub fn add_frame(&mut self, class: String, pool: *const ConstPool, method: *const Method) {
@@ -123,8 +145,6 @@ impl Thread {
     }
 
     pub fn run(&mut self) {
-        self.runtime.heap.allocator.safe_point.register_thread();
-
         self.reference.map(|r| self.runtime.heap.start_thread(r));
         let class_name = self.stack.last().unwrap().class.as_str();
         let method = unsafe { self.stack.last().unwrap().method.as_ref().unwrap() };
@@ -132,11 +152,8 @@ impl Thread {
 
         debug!(target: log::THREAD, method=method_name, "Starting thread");
         while !self.stack.is_empty() {
-            // self.runtime.heap.print_stats();
             self.next();
         }
-
-        self.runtime.heap.allocator.safe_point.remove_thread();
 
         self.reference.map(|r| {
             self.runtime.heap.end_thread(r);
@@ -145,26 +162,13 @@ impl Thread {
     }
 
     pub fn next(&mut self) {
-        self.runtime.heap.allocator.gc(&self);
-        self.runtime.heap.allocator.safe_point.enter_safe_point(&self);
-        let _ = self.stack.len();
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
         let bytecode = &method.code.as_ref().unwrap().code;
-        //
-        // print!("{:?} {}.{}{}",
-        //          std::thread::current().id() ,
-        //          curr_frame.class.as_str(),
-        //          curr_frame.method.name.as_str(),
-        //          curr_frame.method.descriptor.descriptor());
-        // io::stdout().flush().unwrap();
 
         let opcode = bytecode[curr_frame.pc];
 
         curr_frame.pc += 1;
-        //
-        // println!(" 0x{:00x}",
-        //          opcode);
 
         match opcode {
             0x02 => iconst_n(self, -1),

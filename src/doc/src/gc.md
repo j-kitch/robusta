@@ -16,7 +16,9 @@ The set of roots of a thread are:
 Instructions like `iadd`, `sipush` and `if_icmpge` can globally be considered
 safe points, and instructions like `invokestatic` are only unsafe when we're
 moving values from the operand stack to the next frame, and in unsafe sections
-of class loading and initialization.
+of class loading and initialization. **TODO:** This was not true!  How is the
+GC supposed to be reading roots from an op stack & local var array when their
+data is constantly mutating underneath?
 
 When a thread is waiting on another thread, waiting on IO, or a synchronization
 point in the program, we should consider all of these to be safe points that

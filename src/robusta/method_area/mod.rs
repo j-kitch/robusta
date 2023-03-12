@@ -263,7 +263,12 @@ impl MethodArea {
                     clinit as *const Method);
 
                 thread::scope(move |scope| {
-                    scope.spawn(move || thread.run());
+                    scope.spawn(move || {
+                        unsafe {
+                            let thread = (thread.as_ref() as *const Thread).cast_mut().as_mut().unwrap();
+                            thread.run();
+                        }
+                    });
                 });
             }
         });
