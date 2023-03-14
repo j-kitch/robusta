@@ -37,8 +37,12 @@ pub fn load_constant(thread: &mut Thread) {
     );
 
     // let _guard = thread.critical_lock.acquire();
+    thread.safe.enter();
+    let frame = thread.stack.last_mut().unwrap();
     let value = thread.runtime.method_area.resolve_category_one(frame.const_pool, index);
+    thread.safe.exit();
 
+    let frame = thread.stack.last_mut().unwrap();
     frame.operand_stack.push_value(value);
 }
 
@@ -152,7 +156,12 @@ pub fn invoke_static(thread: &mut Thread) {
         opcode="invokestatic"
     );
 
+    thread.safe.enter();
+    let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
+    thread.safe.exit();
+
+    let cur_frame = thread.stack.last_mut().unwrap();
     let method = unsafe { method.as_ref().unwrap() };
     let class = unsafe { method.class.as_ref().unwrap() };
 

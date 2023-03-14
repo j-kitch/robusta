@@ -62,7 +62,10 @@ pub fn a_throw(thread: &mut Thread) {
                 continue;
             }
             let is_handler = handler.catch_type == 0 || {
-                let catch_class = thread.runtime.method_area.resolve_class(current_frame.const_pool, handler.catch_type);
+                let pool = current_frame.const_pool;
+                thread.safe.enter();
+                let catch_class = thread.runtime.method_area.resolve_class(pool, handler.catch_type);
+                thread.safe.exit();
                 let catch_class = unsafe { catch_class.as_ref().unwrap() };
                 throw_class.is_instance_of(catch_class)
             };

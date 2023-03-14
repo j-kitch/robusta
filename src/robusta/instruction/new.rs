@@ -61,7 +61,10 @@ pub fn new(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
     let class_idx = cur_frame.read_u16();
+    thread.safe.enter();
+    let cur_frame = thread.stack.last_mut().unwrap();
     let class = thread.runtime.method_area.resolve_class(cur_frame.const_pool, class_idx);
+    thread.safe.exit();
     let class = unsafe { class.as_ref().unwrap() };
     // println!("{} new - {}", thread.group.as_str(), class_const.name.as_str());
     //
@@ -69,6 +72,7 @@ pub fn new(thread: &mut Thread) {
     // let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), class_const.name.as_str());
     let new_ref = thread.runtime.heap.new_object(class);
 
+    let cur_frame = thread.stack.last_mut().unwrap();
     cur_frame.operand_stack.push_value(Value::Reference(new_ref));
 }
 
@@ -78,10 +82,14 @@ pub fn new_array(thread: &mut Thread) {
 
     let count = cur_frame.operand_stack.pop().int();
 
+    thread.safe.enter();
+    let cur_frame = thread.stack.last_mut().unwrap();
     let arr_ref = match array_type {
         5 => thread.runtime.heap.new_array(crate::heap::allocator::ArrayType::Char, count),
         _ => panic!("newarray has not been implemented for array type {}", array_type)
     };
+    thread.safe.exit();
 
+    let cur_frame = thread.stack.last_mut().unwrap();
     cur_frame.operand_stack.push_value(Value::Reference(arr_ref));
 }

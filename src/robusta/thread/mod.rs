@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tracing::{debug, trace};
 
@@ -28,11 +29,30 @@ use crate::runtime::Runtime;
 
 mod critical;
 
+pub struct Safe {
+    bool: AtomicBool
+}
+
+impl Safe {
+    pub fn new() -> Self {
+        Safe { bool: AtomicBool::new(true) }
+    }
+
+    pub fn enter(&self) {
+        self.bool.store(true, Ordering::SeqCst)
+    }
+
+    pub fn exit(&self) {
+        self.bool.store(false, Ordering::SeqCst)
+    }
+}
+
 /// A single Java thread in the running program.
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
     pub locks: HashMap<Reference, Synchronized>,
+    pub safe: Safe,
     // pub critical_lock: CriticalLock,
     // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
@@ -129,7 +149,6 @@ impl Thread {
     }
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
-               // root_sender: Sender<HashSet<Reference>>,
                class: String, pool: *const ConstPool, method: *const Method) -> Arc<Self> {
         reference.map(|reference| {
             runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
@@ -138,8 +157,8 @@ impl Thread {
             name,
             reference,
             locks: HashMap::new(),
+            safe: Safe::new(),
             runtime: runtime.clone(),
-            // critical_lock: CriticalLock::new(),
             stack: vec![
                 Frame {
                     class,
@@ -186,6 +205,13 @@ impl Thread {
     }
 
     pub fn next(&mut self) {
+
+        // Safe region
+        {
+            self.safe.enter();
+            self.safe.exit();
+        }
+
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
         let bytecode = &method.code.as_ref().unwrap().code;

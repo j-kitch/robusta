@@ -6,10 +6,17 @@ use crate::thread::Thread;
 
 pub fn a_new_array(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
+    let const_pool = frame.const_pool;
     let class_idx = frame.read_u16();
-    let _ = thread.runtime.method_area.resolve_class(frame.const_pool, class_idx);
+    thread.safe.enter();
+    let _ = thread.runtime.method_area.resolve_class(const_pool, class_idx);
+    thread.safe.exit();
+    let frame = thread.stack.last_mut().unwrap();
     let count = frame.operand_stack.pop().int();
+    thread.safe.enter();
     let array_ref = thread.runtime.heap.new_array(ArrayType::Reference, count);
+    thread.safe.exit();
+    let frame = thread.stack.last_mut().unwrap();
     frame.operand_stack.push_value(Value::Reference(array_ref));
 }
 
