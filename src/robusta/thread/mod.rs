@@ -41,55 +41,58 @@ mod critical;
 
 pub struct Safe {
     name: String,
-    thread_safe: (parking_lot::Mutex<bool>, parking_lot::Condvar),
-    gc_ended: (parking_lot::Mutex<bool>, parking_lot::Condvar),
+    state: parking_lot::Mutex<(bool, bool)>,
+    wait: parking_lot::Condvar,
 }
 
 impl Safe {
     pub fn new(name: String) -> Self {
         Safe {
             name,
-            thread_safe: (Mutex::new(true), Condvar::new()),
-            gc_ended: (Mutex::new(true), Condvar::new()),
+            state: Mutex::new((false, false)),
+            wait: Condvar::new(),
         }
     }
 
     /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
         trace!(target: log::THREAD, "Entering safe region");
-        let mut is_thread_safe = self.thread_safe.0.lock();
-        *is_thread_safe = true;
-        self.thread_safe.1.notify_all();
+        let mut lock = self.state.lock();
+        lock.0 = true;
+        self.wait.notify_all();
     }
 
     pub fn start_gc(&self) {
         debug!(target: log::GC, "Stopping thread {}", self.name.as_str());
-        let mut is_thread_safe = self.thread_safe.0.lock();
-        let mut is_gc_ended = self.gc_ended.0.lock();
-        *is_gc_ended = false;
-        while !*is_thread_safe {
-            self.thread_safe.1.wait_while(&mut is_thread_safe, |thread_safe| !*thread_safe);
+        let mut lock = self.state.lock();
+        // Wait for thread to become safe.
+        while !lock.0 {
+            self.wait.wait_while(&mut lock, |(thread, gc)| {
+                !*thread
+            });
         }
+        lock.1 = true;
         debug!(target: log::GC, "Stopped thread {}", self.name.as_str());
     }
 
     /// Wait for GC to end.
     pub fn exit(&self) {
         trace!(target: log::GC, "Exiting safe region");
-        let mut is_thread_safe = self.thread_safe.0.lock();
-        let mut is_gc_ended = self.gc_ended.0.lock();
-        *is_thread_safe = false;
-        while !*is_gc_ended {
-            self.gc_ended.1.wait_while(&mut is_gc_ended, |ended| !*ended);
+        let mut lock = self.state.lock();
+        while lock.1 {
+            self.wait.wait_while(&mut lock, |(thread, gc)| {
+                *gc
+            });
         }
+        lock.0 = false;
         trace!(target: log::GC, "Exited safe region");
     }
 
     pub fn end_gc(&self) {
         trace!("Starting thread {} again", self.name.as_str());
-        let mut is_gc_ended = self.gc_ended.0.lock();
-        *is_gc_ended = true;
-        self.gc_ended.1.notify_all();
+        let mut lock = self.state.lock();
+        lock.1 = false;
+        self.wait.notify_all();
         trace!("Started thread {} again", self.name.as_str());
     }
 

@@ -3,8 +3,11 @@ use std::mem::size_of;
 use std::ptr::slice_from_raw_parts_mut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
-use std::thread::{Builder, spawn};
+use std::sync::mpsc::{channel, Receiver, Sender, sync_channel, SyncSender};
+use std::thread;
+use std::thread::{Builder, current, spawn};
+use std::time::Duration;
+use parking_lot::Mutex;
 use tracing::{debug, info, trace};
 
 use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
@@ -43,8 +46,10 @@ pub struct CopyGeneration {
     blue: Data,
     green: Data,
     source: AtomicBool,
-    start_gc: SyncSender<Arc<Runtime>>,
+    start_gc: Sender<Arc<Runtime>>,
 }
+
+unsafe impl Sync for CopyGeneration {}
 
 impl CopyGeneration {
     pub fn new() -> Self {
@@ -72,14 +77,29 @@ impl CopyGeneration {
 
     pub fn allocate(&self, runtime: Arc<Runtime>, size: usize) -> *mut u8 {
         let (source, _) = self.source_dest();
+
+
+        let used = source.used.load(Ordering::SeqCst);
+        let percentage = 100.0 * (used as f64) / (HEAP_SIZE as f64);
+        if percentage > 25.0 {
+            // we're already trying to do GC, enter safe region here!
+            let current = current();
+            let thread_name = current.name().unwrap();
+            let all_threads = runtime.threads2.read().unwrap();
+            let our_thread = all_threads.iter().find(|t| t.name.eq(thread_name)).unwrap();
+            our_thread.safe.safe_region();
+        }
+
         let allocated = source.allocate(size).cast_mut();
 
         /// Start GC if we have used 25% of mem.
         let used = source.used.load(Ordering::SeqCst);
         let percentage = 100.0 * (used as f64) / (HEAP_SIZE as f64);
+
         if used > (HEAP_SIZE / 4) {
             debug!(target: log::GC, "Used {:.2}% of Gen 1 Copy Space, starting GC", percentage);
             self.start_gc.send(runtime).unwrap();
+            thread::sleep(Duration::from_millis(10));
         }
 
         allocated
@@ -115,16 +135,18 @@ impl CopyGeneration {
 
 pub struct CopyCollector {
     start: Receiver<Arc<Runtime>>,
+    gcs: usize,
 }
 
-pub fn start_gc_thread() -> SyncSender<Arc<Runtime>> {
-    let (sender, receiver) = sync_channel(1);
+pub fn start_gc_thread() -> Sender<Arc<Runtime>> {
+    let (sender, receiver) = channel();
 
     Builder::new()
         .name("GC-Copy".to_string())
         .spawn(move || {
-        let collector = CopyCollector {
+        let mut collector = CopyCollector {
             start: receiver,
+            gcs: 0,
         };
         collector.run()
     }).unwrap();
@@ -133,22 +155,35 @@ pub fn start_gc_thread() -> SyncSender<Arc<Runtime>> {
 }
 
 impl CopyCollector {
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         loop {
             let runtime = self.start.recv().unwrap();
             self.gc(runtime);
         }
     }
 
-    pub fn gc(&self, runtime: Arc<Runtime>) {
+    pub fn gc(&mut self, runtime: Arc<Runtime>) {
         let heap = &runtime.heap;
+
+        let used = heap.allocator.gen.used() as f64;
+        let max = HEAP_SIZE as f64;
+        let perc = (100.0 * used) / max;
+        if perc < 25.0 {
+            debug!(target: log::GC, "Skipping GC with perc {:.2}%", perc);
+            return;
+        }
+
         debug!(target: log::GC, "Starting Gen 1 Copy Garbage Collection");
 
         // Ensure all threads are ready to start GC.
         let threads = runtime.threads2.read().unwrap();
-        for thread in threads.iter() {
-            thread.safe.start_gc();
-        }
+        std::thread::scope(|scope| {
+            for thread in threads.iter() {
+                Builder::new()
+                    .name(format!("GC-Copy-Pause-{}", thread.name.as_str()))
+                    .spawn_scoped(scope, || thread.safe.start_gc()).unwrap();
+            }
+        });
         debug!(target: log::GC, "All threads stopped");
 
 
@@ -237,9 +272,10 @@ impl CopyCollector {
         heap.retain(&visited);
         heap.allocator.gen.swap();
 
+        self.gcs += 1;
         let used = heap.allocator.gen.used();
         let percentage = (100.0 * (used as f64)) / HEAP_SIZE as f64;
-        debug!(target: log::GC, gen="gen-1", used=format!("{}mb", used / 1024 / 1024), percentage=format!("{:.2}%", percentage), "Ending Mark&Copy collection");
+        debug!(target: log::GC, gen="gen-1", gc=self.gcs, used=format!("{}mb", used / 1024 / 1024), percentage=format!("{:.2}%", percentage), "Ending Mark&Copy collection");
 
         for thread in threads.iter() {
             thread.safe.end_gc();
