@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tracing::debug;
 
-use crate::java::Value;
+use crate::java::{Reference, Value};
 use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
@@ -69,6 +69,24 @@ pub struct Args {
     pub thread: *const Thread,
     pub runtime: Arc<crate::runtime::Runtime>,
     pub params: Vec<Value>,
+}
+
+impl Args {
+    pub fn add_local(&self, reference: Reference) {
+        let thread = unsafe { self.thread.cast_mut().as_mut().unwrap() };
+        let frame = thread.stack.last_mut().unwrap();
+        frame.native_roots.insert(reference);
+    }
+
+    pub fn enter_safe(&self) {
+        let thread = unsafe { self.thread.cast_mut().as_mut().unwrap() };
+        thread.safe.enter();
+    }
+
+    pub fn exit_safe(&self) {
+        let thread = unsafe { self.thread.cast_mut().as_mut().unwrap() };
+        thread.safe.exit();
+    }
 }
 
 pub trait Plugin {

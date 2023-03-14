@@ -105,7 +105,9 @@ fn integer_to_string(args: &Args) -> Option<Value> {
     let int = args.params[0].int();
 
     let string_rep = format!("{}", int.0);
+    args.enter_safe();
     let string_ref = args.runtime.heap.insert_string_const(&string_rep, args.runtime.method_area.load_class("java.lang.String"));
+    args.exit_safe();
 
     Some(Value::Reference(string_ref))
 }
@@ -124,7 +126,9 @@ fn string_intern(args: &Args) -> Option<Value> {
     let chars = chars.as_chars_slice();
 
     let string = String::from_utf16(chars).unwrap();
+    args.enter_safe();
     let string_ref = args.runtime.heap.insert_string_const(&string, string_obj.class());
+    args.exit_safe();
 
     Some(Value::Reference(string_ref))
 }
@@ -133,7 +137,9 @@ fn object_get_class(args: &Args) -> Option<Value> {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get_object(object_ref);
 
+    args.enter_safe();
     let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
+    args.exit_safe();
 
     Some(Value::Reference(class_ref))
 }
@@ -416,7 +422,9 @@ fn thread_start(args: &Args) -> Option<Value> {
 
 pub fn thread_sleep(args: &Args) -> Option<Value> {
     let millis = args.params[0].long().0;
+    args.enter_safe();
     sleep(Duration::from_millis(millis as u64));
+    args.exit_safe();
     None
 }
 
@@ -431,7 +439,9 @@ pub fn thread_join(args: &Args) -> Option<Value> {
     }).reference();
     let name = args.runtime.heap.get_string(name_ref);
 
+    args.enter_safe();
     args.runtime.threads.get(&name).unwrap().join();
+    args.exit_safe();
 
     None
 }
@@ -449,7 +459,9 @@ pub fn thread_join_millis(args: &Args) -> Option<Value> {
     }).reference();
     let name = args.runtime.heap.get_string(name_ref);
 
+    args.enter_safe();
     args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
+    args.exit_safe();
 
     None
 }
