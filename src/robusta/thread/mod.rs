@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tracing::{debug, trace};
 
 use crate::collection::wait::ThreadWait;
+use crate::heap::sync::Synchronized;
 use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
@@ -30,6 +31,7 @@ mod critical;
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
+    pub locks: HashMap<Reference, Synchronized>,
     // pub critical_lock: CriticalLock,
     // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
@@ -45,6 +47,29 @@ unsafe impl Send for Thread {}
 unsafe impl Sync for Thread {}
 
 impl Thread {
+    pub fn enter_monitor(&mut self, object_ref: Reference) {
+        debug!(target: log::THREAD, "Entering monitor {}", object_ref.0);
+        if self.locks.contains_key(&object_ref) {
+            let sync = self.locks.get_mut(&object_ref).unwrap();
+            sync.enter();
+        } else {
+            let object = self.runtime.heap.get_object(object_ref);
+            let header = unsafe { object.header.as_ref().unwrap() };
+            let sync = header.lock.lock();
+            self.locks.insert(object_ref, sync);
+        }
+    }
+
+    pub fn exit_monitor(&mut self, object_ref: Reference) {
+        debug!(target: log::THREAD, "Exiting monitor {}", object_ref.0);
+        let sync = self.locks.get_mut(&object_ref).unwrap();
+        let should_remove = sync.exit();
+        if should_remove {
+            let sync = self.locks.remove(&object_ref).unwrap();
+            drop(sync);
+        }
+    }
+
     pub fn as_mut<'a>(self: &'a Arc<Self>) -> &'a mut Thread {
         unsafe {
             let thread = self.as_ref() as *const Thread;
@@ -111,6 +136,7 @@ impl Thread {
         let thread = Arc::new(Thread {
             name,
             reference,
+            locks: HashMap::new(),
             runtime: runtime.clone(),
             // critical_lock: CriticalLock::new(),
             stack: vec![

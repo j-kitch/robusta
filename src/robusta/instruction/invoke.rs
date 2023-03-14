@@ -27,9 +27,7 @@ pub fn invoke_virtual(thread: &mut Thread) {
 
     if method.is_synchronized {
         let this_ref = &args[0].reference();
-        let this_obj = thread.runtime.heap.get_object(this_ref.clone());
-        let header = unsafe { this_obj.header.as_ref().unwrap() };
-        header.lock.enter_monitor(thread.reference.expect("Required for sync").0);
+        thread.enter_monitor(*this_ref);
     }
 
     if method.is_native {
@@ -61,9 +59,7 @@ pub fn invoke_special(thread: &mut Thread) {
 
     if method.is_synchronized {
         let this_ref = &args[0].reference();
-        let this_obj = thread.runtime.heap.get_object(this_ref.clone());
-        let header = unsafe { this_obj.header.as_ref().unwrap() };
-        header.lock.enter_monitor(thread.reference.expect("Required for sync").0);
+        thread.exit_monitor(*this_ref);
     }
 
     if method.is_native {

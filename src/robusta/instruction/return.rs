@@ -15,9 +15,7 @@ pub fn a_return(thread: &mut Thread) {
         } else {
             cur_frame.local_vars.load_cat_one(0).reference()
         };
-        let this_obj = thread.runtime.heap.get_object(this_ref);
-        let header = unsafe { this_obj.header.as_ref().unwrap() };
-        header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+        thread.exit_monitor(this_ref);
     }
 
     thread.stack.pop();
@@ -38,9 +36,7 @@ pub fn i_return(thread: &mut Thread) {
         } else {
             cur_frame.local_vars.load_cat_one(0).reference()
         };
-        let this_obj = thread.runtime.heap.get_object(this_ref);
-        let header = unsafe { this_obj.header.as_ref().unwrap() };
-        header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+        thread.exit_monitor(this_ref);
     }
 
     thread.stack.pop();
@@ -83,9 +79,7 @@ pub fn a_throw(thread: &mut Thread) {
             } else {
                 current_frame.local_vars.load_cat_one(0).reference()
             };
-            let this_obj = thread.runtime.heap.get_object(this_ref);
-            let header = unsafe { this_obj.header.as_ref().unwrap() };
-            header.lock.exit_monitor(thread.reference.expect("required for lock").0);
+            thread.exit_monitor(this_ref);
         }
 
         // No handler found

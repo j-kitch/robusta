@@ -7,13 +7,11 @@ use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
 use crate::native::robusta::robusta_plugins;
-use crate::native::sync::sync_plugins;
 use crate::thread::Thread;
 
 mod robusta;
 mod stateless;
 mod java_lang;
-mod sync;
 
 pub struct NativeMethods {
     plugins: Vec<Box<dyn Plugin>>,
@@ -28,7 +26,6 @@ impl NativeMethods {
         let mut plugins = Vec::new();
         plugins.append(&mut robusta_plugins());
         plugins.append(&mut java_lang_plugins());
-        plugins.append(&mut sync_plugins());
         NativeMethods { plugins }
     }
 
