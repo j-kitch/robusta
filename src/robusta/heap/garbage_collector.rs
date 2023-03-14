@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
 use std::thread::{Builder, spawn};
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
 use crate::heap::{Heap, Heaped};
@@ -151,6 +151,7 @@ impl CopyCollector {
         }
         debug!(target: log::GC, "All threads stopped");
 
+
         let mut roots: HashSet<Reference> = HashSet::new();
         for thread in threads.iter() {
             let thread_roots = thread_roots(thread.as_ref());
@@ -265,23 +266,27 @@ pub fn thread_roots(thread: &Thread) -> HashSet<Reference> {
 
 pub fn heap_roots(heap: &Heap) -> HashSet<Reference> {
     let mut refs = HashSet::new();
-
     // class objects are roots
     refs.extend(heap.class_objects.current_values().iter());
 
     // string constants are roots
     refs.extend(heap.string_constants.current_values().iter());
 
-    // static fields are roots
-    for reference in &heap.static_objects.current_values() {
-        let object = heap.get_object(*reference);
-        for field in &object.class().static_fields {
-            if field.descriptor.is_reference() {
-                let reference = object.field_from(field).reference();
-                refs.insert(reference);
-            }
-        }
-    }
+    // TODO: Have we implemented static objects yet?
+    // info!("C");
+    // // static fields are roots
+    // for reference in &heap.static_objects.current_values() {
+    //     info!("D, ref {}", reference.0);
+    //     let object = heap.get_object(*reference);
+    //     info!("E, {}", object.header as usize);
+    //     for field in &object.class().static_fields {
+    //
+    //         if field.descriptor.is_reference() {
+    //             let reference = object.field_from(field).reference();
+    //             refs.insert(reference);
+    //         }
+    //     }
+    // }
 
     refs
 }

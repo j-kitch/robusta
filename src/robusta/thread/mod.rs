@@ -128,7 +128,9 @@ impl Thread {
         } else {
             let object = self.runtime.heap.get_object(object_ref);
             let header = unsafe { object.header.as_ref().unwrap() };
+            self.safe.enter();
             let sync = header.lock.lock();
+            self.safe.exit();
             self.locks.insert(object_ref, sync);
         }
     }
