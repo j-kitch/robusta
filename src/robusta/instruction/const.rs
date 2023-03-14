@@ -13,10 +13,8 @@ pub fn load_constant_wide(thread: &mut Thread) {
         index=const_idx,
     );
 
-    thread.safe.enter();
     let frame = thread.stack.last_mut().unwrap();
     let const_value = thread.runtime.method_area.resolve_category_one(frame.const_pool, const_idx);
-    thread.safe.exit();
 
     let frame = thread.stack.last_mut().unwrap();
     frame.operand_stack.push_value(const_value);
@@ -32,10 +30,8 @@ pub fn load_constant_cat_2_wide(thread: &mut Thread) {
         index=const_idx,
     );
 
-    thread.safe.enter();
     let frame = thread.stack.last_mut().unwrap();
     let const_value = thread.runtime.method_area.resolve_category_two(frame.const_pool, const_idx);
-    thread.safe.exit();
 
     let frame = thread.stack.last_mut().unwrap();
     frame.operand_stack.push_value(const_value);

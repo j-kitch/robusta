@@ -68,7 +68,7 @@ impl VirtualMachine {
 
         debug!(target: log::JVM, "Starting Robusta");
 
-        let runtime = Arc::new(Runtime::new());
+        let runtime = Runtime::new();
 
         // Required Initialization
         let main_thread_ref = {
@@ -98,6 +98,9 @@ impl VirtualMachine {
                 jvm_init_t.next();
                 trace!("here 1");
             }
+
+            // Always safe.
+            jvm_init_t.safe.enter();
 
             jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
         };

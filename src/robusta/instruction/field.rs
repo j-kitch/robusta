@@ -8,9 +8,7 @@ pub fn get_field(thread: &mut Thread) {
     let const_pool = curr_frame.const_pool;
 
     let field_idx = curr_frame.read_u16();
-    thread.safe.enter();
     let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), const_pool, field_idx);
-    thread.safe.exit();
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
@@ -35,15 +33,11 @@ pub fn get_static(thread: &mut Thread) {
 
     trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="getstatic", index=field_idx);
 
-    thread.safe.enter();
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
-    thread.safe.exit();
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
-    thread.safe.enter();
     let static_ref = thread.runtime.heap.get_static(class);
-    thread.safe.exit();
     let static_obj = thread.runtime.heap.get_object(static_ref);
 
     let field_value = static_obj.get_static(&FieldKey {
@@ -64,15 +58,11 @@ pub fn put_static(thread: &mut Thread) {
 
     trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="putstatic", index=field_idx);
 
-    thread.safe.enter();
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
-    thread.safe.exit();
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 
-    thread.safe.enter();
     let static_ref = thread.runtime.heap.get_static(class);
-    thread.safe.exit();
     let static_obj = thread.runtime.heap.get_object(static_ref);
 
     let curr_frame = thread.stack.last_mut().unwrap();
@@ -90,9 +80,7 @@ pub fn put_field(thread: &mut Thread) {
     let const_pool = curr_frame.const_pool;
 
     let field_idx = curr_frame.read_u16();
-    thread.safe.enter();
     let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), const_pool, field_idx);
-    thread.safe.exit();
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
 

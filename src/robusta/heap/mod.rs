@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use rand::{RngCore, thread_rng};
 
@@ -8,6 +8,7 @@ use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
 use crate::java::{CategoryOne, FieldType, Int, Reference};
 use crate::method_area::Class;
 use crate::method_area::const_pool::FieldKey;
+use crate::runtime::Runtime;
 
 pub mod allocator;
 mod hash_code;

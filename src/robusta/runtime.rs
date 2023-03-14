@@ -1,6 +1,7 @@
 use std::sync::{Arc, RwLock};
 use chashmap::CHashMap;
 use crate::collection::wait::ThreadWait;
+use crate::heap::garbage_collector::start_gc_thread;
 
 use crate::heap::Heap;
 use crate::method_area::MethodArea;
@@ -18,15 +19,17 @@ pub struct Runtime {
 unsafe impl Send for Runtime {}
 
 impl Runtime {
-    pub fn new() -> Self {
+    pub fn new() -> Arc<Self> {
         let heap = Box::new(Heap::new());
         let method_area = Box::new(MethodArea::new(heap.as_ref() as *const Heap));
-        Runtime {
+        let rt = Arc::new(Runtime {
             heap,
             method_area,
             native: Box::new(NativeMethods::new()),
             threads: CHashMap::new(),
             threads2: RwLock::new(Vec::new()),
-        }
+        });
+        rt.heap.allocator.set_rt(rt.clone());
+        rt
     }
 }

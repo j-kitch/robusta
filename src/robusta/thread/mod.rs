@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use parking_lot::Condvar;
+use parking_lot::lock_api::Mutex;
 
 use tracing::{debug, trace};
 
@@ -29,21 +31,71 @@ use crate::runtime::Runtime;
 
 mod critical;
 
+/// GC attempts to acquire the safe lock.
+///     If thread is not safe, GC waits until it is.
+///
+///    Thread tries to exit safe.
+///     Thread exits when GC has ended.
+///
+///
+
 pub struct Safe {
-    bool: AtomicBool
+    name: String,
+    thread_safe: (parking_lot::Mutex<bool>, parking_lot::Condvar),
+    gc_ended: (parking_lot::Mutex<bool>, parking_lot::Condvar),
 }
 
 impl Safe {
-    pub fn new() -> Self {
-        Safe { bool: AtomicBool::new(true) }
+    pub fn new(name: String) -> Self {
+        Safe {
+            name,
+            thread_safe: (Mutex::new(true), Condvar::new()),
+            gc_ended: (Mutex::new(true), Condvar::new()),
+        }
     }
 
+    /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
-        self.bool.store(true, Ordering::SeqCst)
+        trace!(target: log::THREAD, "Entering safe region");
+        let mut is_thread_safe = self.thread_safe.0.lock();
+        *is_thread_safe = true;
+        self.thread_safe.1.notify_all();
     }
 
+    pub fn start_gc(&self) {
+        debug!(target: log::GC, "Stopping thread {}", self.name.as_str());
+        let mut is_thread_safe = self.thread_safe.0.lock();
+        let mut is_gc_ended = self.gc_ended.0.lock();
+        *is_gc_ended = false;
+        while !*is_thread_safe {
+            self.thread_safe.1.wait_while(&mut is_thread_safe, |thread_safe| !*thread_safe);
+        }
+        debug!(target: log::GC, "Stopped thread {}", self.name.as_str());
+    }
+
+    /// Wait for GC to end.
     pub fn exit(&self) {
-        self.bool.store(false, Ordering::SeqCst)
+        trace!(target: log::GC, "Exiting safe region");
+        let mut is_thread_safe = self.thread_safe.0.lock();
+        let mut is_gc_ended = self.gc_ended.0.lock();
+        *is_thread_safe = false;
+        while !*is_gc_ended {
+            self.gc_ended.1.wait_while(&mut is_gc_ended, |ended| !*ended);
+        }
+        trace!(target: log::GC, "Exited safe region");
+    }
+
+    pub fn end_gc(&self) {
+        trace!("Starting thread {} again", self.name.as_str());
+        let mut is_gc_ended = self.gc_ended.0.lock();
+        *is_gc_ended = true;
+        self.gc_ended.1.notify_all();
+        trace!("Started thread {} again", self.name.as_str());
+    }
+
+    pub fn safe_region(&self) {
+        self.enter();
+        self.exit();
     }
 }
 
@@ -155,10 +207,10 @@ impl Thread {
             runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
         });
         let thread = Arc::new(Thread {
-            name,
+            name: name.clone(),
             reference,
             locks: HashMap::new(),
-            safe: Safe::new(),
+            safe: Safe::new(name.clone()),
             runtime: runtime.clone(),
             stack: vec![
                 Frame {

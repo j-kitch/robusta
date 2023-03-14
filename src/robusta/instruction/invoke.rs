@@ -10,10 +10,8 @@ pub fn invoke_virtual(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let method_idx = cur_frame.read_u16();
 
-    thread.safe.enter();
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
-    thread.safe.exit();
     let method = unsafe { method.as_ref().unwrap() };
 
     let cur_frame = thread.stack.last_mut().unwrap();
@@ -51,10 +49,8 @@ pub fn invoke_special(thread: &mut Thread) {
     let method_idx = cur_frame.read_u16();
 
     // TODO: Not Handling interface methods here
-    thread.safe.enter();
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
-    thread.safe.exit();
 
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = unsafe { method.as_ref().unwrap() };

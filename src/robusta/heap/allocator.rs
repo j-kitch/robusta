@@ -1,5 +1,6 @@
 use std::mem::size_of;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
+use std::sync::Arc;
 
 use tracing::trace;
 
@@ -12,6 +13,7 @@ use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, V
 use crate::log;
 use crate::method_area::{Class, Field};
 use crate::method_area::const_pool::FieldKey;
+use crate::runtime::Runtime;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -258,6 +260,7 @@ pub const HEAP_SIZE: usize = 1280 * 1024 * 1024;
 
 /// The allocator is the actual heap memory that is used for storing objects.
 pub struct Allocator {
+    pub rt: Option<Arc<Runtime>>,
     pub gen: CopyGeneration,
     hash_code: HashCode,
     // pub safe_point: SafePoint,
@@ -266,9 +269,19 @@ pub struct Allocator {
 impl Allocator {
     pub fn new() -> Self {
         Allocator {
+            rt: None,
             gen: CopyGeneration::new(),
             hash_code: HashCode::new(),
             // safe_point: SafePoint::new(),
+        }
+    }
+
+    pub fn set_rt(&self, rt: Arc<Runtime>) {
+        unsafe {
+            let alloc = self as *const Allocator;
+            let alloc = alloc.cast_mut();
+            let alloc = alloc.as_mut().unwrap();
+            alloc.rt = Some(rt);
         }
     }
 
@@ -286,7 +299,7 @@ impl Allocator {
         let data_size = class.instance_width;
         let size = header_size + data_size;
 
-        let start_ptr = self.allocate(size);
+        let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
 
         let class_ptr = class as *const Class;
 
@@ -315,7 +328,7 @@ impl Allocator {
         let data_size = class.static_width;
         let size = header_size + data_size;
 
-        let start_ptr = self.allocate(size);
+        let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
 
         let class_ptr = class as *const Class;
 
@@ -344,7 +357,7 @@ impl Allocator {
         let data_size = length.0 as usize * component.width();
         let size = header_size + data_size;
 
-        let start_ptr = self.allocate(size);
+        let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
 
         unsafe {
             let array = Array {
@@ -367,8 +380,8 @@ impl Allocator {
     }
 
     /// Allocate the given number of bytes, returning a pointer to the start.
-    fn allocate(&self, size: usize) -> *mut u8 {
-        self.gen.allocate(size)
+    fn allocate(&self, rt: Arc<Runtime>, size: usize) -> *mut u8 {
+        self.gen.allocate(rt, size)
     }
 
     // pub fn gc(&self, thread: &Thread) {

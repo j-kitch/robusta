@@ -105,9 +105,7 @@ fn integer_to_string(args: &Args) -> Option<Value> {
     let int = args.params[0].int();
 
     let string_rep = format!("{}", int.0);
-    args.enter_safe();
     let string_ref = args.runtime.heap.insert_string_const(&string_rep, args.runtime.method_area.load_class("java.lang.String"));
-    args.exit_safe();
 
     Some(Value::Reference(string_ref))
 }
@@ -126,9 +124,7 @@ fn string_intern(args: &Args) -> Option<Value> {
     let chars = chars.as_chars_slice();
 
     let string = String::from_utf16(chars).unwrap();
-    args.enter_safe();
     let string_ref = args.runtime.heap.insert_string_const(&string, string_obj.class());
-    args.exit_safe();
 
     Some(Value::Reference(string_ref))
 }
@@ -137,9 +133,7 @@ fn object_get_class(args: &Args) -> Option<Value> {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get_object(object_ref);
 
-    args.enter_safe();
     let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
-    args.exit_safe();
 
     Some(Value::Reference(class_ref))
 }
