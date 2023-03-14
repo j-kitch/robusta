@@ -20,6 +20,7 @@ pub mod math;
 pub mod branch;
 pub mod locals;
 pub mod stack;
+pub mod sync;
 
 /// Instruction `ldc`
 ///

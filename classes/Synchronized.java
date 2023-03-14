@@ -56,8 +56,11 @@ public class Synchronized {
             }
         }
 
+        Object globalLock = new Object();
         for (int i = 0; i < 5; i++) {
-            threads[i] = new ObjectSync();
+            ObjectSync thread = new ObjectSync();
+            thread.lock = globalLock;
+            threads[i] = thread;
         }
 
         for (Thread thread : threads) {

@@ -17,6 +17,7 @@ use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return};
 use crate::instruction::stack::{bipush, pop, sipush};
+use crate::instruction::sync::{monitor_enter, monitor_exit};
 use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
@@ -256,6 +257,8 @@ impl Thread {
             0xBD => a_new_array(self),
             0xBE => array_length(self),
             0xBF => a_throw(self),
+            0xC2 => monitor_enter(self),
+            0xC3 => monitor_exit(self),
             0xC6 => if_null(self),
             _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
         }
