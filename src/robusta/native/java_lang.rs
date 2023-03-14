@@ -16,7 +16,7 @@ use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
 use crate::thread::Thread;
 
-pub fn java_lang_plugins() -> Vec<Box<dyn Plugin>> {
+pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
     vec![
         stateless(
             Method {

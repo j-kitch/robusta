@@ -3,6 +3,7 @@
 
 extern crate core;
 
+use std::collections::HashSet;
 use std::env::args;
 use std::sync::Arc;
 
@@ -88,6 +89,9 @@ impl VirtualMachine {
                 operand_stack: OperandStack::new(),
                 local_vars: LocalVars::new(),
                 pc: 0,
+                native_roots: HashSet::new(),
+                native_args: vec![],
+                native: None,
             });
 
             while jvm_init_t.stack.len() > 1 {

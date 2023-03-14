@@ -8,7 +8,7 @@ use crate::method_area::const_pool::FieldKey;
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
 
-pub fn robusta_plugins() -> Vec<Box<dyn Plugin>> {
+pub fn robusta_plugins() -> Vec<Arc<dyn Plugin>> {
     vec![
         stateless(
             Method {

@@ -20,8 +20,8 @@ pub struct Method {
 }
 
 /// Create a new plugin that simply delegates the given method to the function.
-pub fn stateless(method: Method, function: Function) -> Box<dyn Plugin> {
-    Box::new(StatelessPlugin { method, function }) as _
+pub fn stateless(method: Method, function: Function) -> Arc<dyn Plugin> {
+    Arc::new(StatelessPlugin { method, function }) as _
 }
 
 impl Plugin for StatelessPlugin {

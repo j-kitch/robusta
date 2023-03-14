@@ -23,7 +23,7 @@ use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::ConstPool;
-use crate::native::Args;
+use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 // use crate::thread::critical::CriticalLock;
 
@@ -98,14 +98,9 @@ impl Thread {
         }
     }
 
-    pub fn call_native(&self, method: &Method, args: Vec<Value>) -> Option<Value> {
-        self.runtime.native.call(
+    pub fn call_native(&self, method: &Method) -> Option<Arc<dyn Plugin>> {
+        self.runtime.native.find(
             method,
-            &Args {
-                thread: self as *const Thread,
-                params: args,
-                runtime: self.runtime.clone(),
-            },
         )
     }
 
@@ -123,6 +118,9 @@ impl Thread {
             operand_stack: OperandStack::new(),
             local_vars: LocalVars::new(),
             pc: 0,
+            native: None,
+            native_args: vec![],
+            native_roots: HashSet::new(),
         });
 
         let depth = self.stack.len();
@@ -134,6 +132,9 @@ impl Thread {
             operand_stack: OperandStack::new(),
             local_vars: LocalVars::new(),
             pc: 0,
+            native: None,
+            native_args: vec![],
+            native_roots: HashSet::new(),
         });
 
         while self.stack.len() > depth {
@@ -167,6 +168,9 @@ impl Thread {
                     local_vars: LocalVars::new(),
                     method,
                     pc: 0,
+                    native: None,
+                    native_args: vec![],
+                    native_roots: HashSet::new(),
                 }
             ],
         });
@@ -184,6 +188,9 @@ impl Thread {
             local_vars: LocalVars::new(),
             method,
             pc: 0,
+            native: None,
+            native_args: vec![],
+            native_roots: HashSet::new(),
         })
     }
 
@@ -214,6 +221,29 @@ impl Thread {
 
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
+
+        // Handle native methods here.
+        if curr_frame.native.is_some() {
+            let args = curr_frame.native_args.clone();
+            let plugin = curr_frame.native.as_ref().unwrap().clone();
+            let thread = self as *const Thread;
+            let result = (plugin).call(
+                method,
+                &Args {
+                    thread,
+                    runtime: self.runtime.clone(),
+                    params: args,
+                }
+            );
+            self.stack.pop();
+            if let Some(result) = result {
+                let curr_frame = self.stack.last_mut().unwrap();
+                curr_frame.operand_stack.push_value(result);
+            }
+            return;
+        }
+
+        // Handle non native methods here.
         let bytecode = &method.code.as_ref().unwrap().code;
 
         let opcode = bytecode[curr_frame.pc];
@@ -299,6 +329,9 @@ impl Thread {
             operand_stack: OperandStack::new(),
             pc: 0,
             method,
+            native: None,
+            native_args: vec![],
+            native_roots: HashSet::new(),
         };
 
         let mut idx = 0;
@@ -309,6 +342,32 @@ impl Thread {
 
         self.stack.push(frame);
     }
+    /// Push a new frame onto the top of the stack.
+    pub fn push_native(&mut self, class: String, const_pool: *const ConstPool, method: *const Method, args: Vec<Value>, plugin: Arc<dyn Plugin>) {
+        let mut frame = Frame {
+            class,
+            const_pool,
+            local_vars: LocalVars::new(),
+            operand_stack: OperandStack::new(),
+            pc: 0,
+            method,
+            native: Some(plugin),
+            native_args: args.clone(),
+            native_roots: HashSet::new(),
+        };
+
+        let mut idx = 0;
+        for arg in args {
+            frame.local_vars.store_value(idx, arg.clone());
+            if let Value::Reference(reference) = arg {
+                frame.native_roots.insert(reference);
+            }
+            idx += arg.category() as u16;
+        }
+
+        self.stack.push(frame);
+    }
+
 }
 
 /// A single frame in a JVM thread's stack.
@@ -322,6 +381,11 @@ pub struct Frame {
     pub local_vars: LocalVars,
     /// The program counter within the current method.
     pub pc: usize,
+
+    /// For native methods only.
+    pub native: Option<Arc<dyn Plugin>>,
+    pub native_args: Vec<Value>,
+    pub native_roots: HashSet<Reference>
 }
 
 unsafe impl Send for Frame {}

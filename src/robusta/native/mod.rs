@@ -14,7 +14,7 @@ mod stateless;
 mod java_lang;
 
 pub struct NativeMethods {
-    plugins: Vec<Box<dyn Plugin>>,
+    plugins: Vec<Arc<dyn Plugin>>,
 }
 
 unsafe impl Send for NativeMethods {}
@@ -27,6 +27,19 @@ impl NativeMethods {
         plugins.append(&mut robusta_plugins());
         plugins.append(&mut java_lang_plugins());
         NativeMethods { plugins }
+    }
+
+    pub fn find(&self, method: &Method) -> Option<Arc<dyn Plugin>> {
+        let class = unsafe { method.class.as_ref().unwrap() };
+        debug!(
+            target: log::THREAD,
+            method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()),
+            "Invoking native method"
+        );
+        let plugin = self.plugins.iter()
+            .find(|p| p.supports(method));
+
+        plugin.map(|p| p.clone())
     }
 
     pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {

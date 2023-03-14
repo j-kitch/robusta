@@ -177,15 +177,11 @@ pub fn invoke_static(thread: &mut Thread) {
     }
 
     if method.is_native {
-        let result = thread.call_native(
+        let plugin = thread.call_native(
             method,
-           args
-        );
-
-        if let Some(result) = result {
-            let cur_frame = thread.stack.last_mut().unwrap();
-            cur_frame.operand_stack.push_value(result);
-        }
+        ).unwrap();
+        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking native static method");
+        thread.push_native(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args, plugin);
     } else {
         debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking static method");
         thread.add_frame(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method);
