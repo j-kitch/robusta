@@ -56,14 +56,12 @@ impl Safe {
 
     /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
-        trace!(target: log::THREAD, "Entering safe region");
         let mut lock = self.state.lock();
         lock.0 = true;
         self.wait.notify_all();
     }
 
     pub fn start_gc(&self) {
-        debug!(target: log::GC, "Stopping thread {}", self.name.as_str());
         let mut lock = self.state.lock();
         // Wait for thread to become safe.
         while !lock.0 {
@@ -77,7 +75,6 @@ impl Safe {
 
     /// Wait for GC to end.
     pub fn exit(&self) {
-        trace!(target: log::GC, "Exiting safe region");
         let mut lock = self.state.lock();
         while lock.1 {
             self.wait.wait_while(&mut lock, |(thread, gc)| {
@@ -85,15 +82,13 @@ impl Safe {
             });
         }
         lock.0 = false;
-        trace!(target: log::GC, "Exited safe region");
     }
 
     pub fn end_gc(&self) {
-        trace!("Starting thread {} again", self.name.as_str());
         let mut lock = self.state.lock();
         lock.1 = false;
         self.wait.notify_all();
-        trace!("Started thread {} again", self.name.as_str());
+        trace!("Started thread {}", self.name.as_str());
     }
 
     pub fn safe_region(&self) {
