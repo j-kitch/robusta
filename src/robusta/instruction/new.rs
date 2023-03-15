@@ -84,7 +84,6 @@ pub fn new_array(thread: &mut Thread) {
 
     let count = cur_frame.operand_stack.pop().int();
 
-    let cur_frame = thread.stack.last_mut().unwrap();
     let arr_ref = match array_type {
         5 => thread.runtime.heap.new_array(crate::heap::allocator::ArrayType::Char, count),
         _ => panic!("newarray has not been implemented for array type {}", array_type)

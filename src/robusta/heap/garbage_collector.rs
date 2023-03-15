@@ -1,22 +1,19 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::mem::size_of;
 use std::ptr::slice_from_raw_parts_mut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender, sync_channel, SyncSender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
-use std::thread::{Builder, current, scope, spawn};
+use std::thread::{Builder, current, scope};
 use std::time::Duration;
-use parking_lot::Mutex;
-use tracing::{debug, info, trace};
 
-use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
+use tracing::{debug, trace};
+
 use crate::heap::{Heap, Heaped};
-use crate::java::{FieldType, Reference};
+use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
+use crate::java::Reference;
 use crate::log;
-use crate::log::HEAP;
-use crate::method_area::Class;
-use crate::method_area::const_pool::FieldKey;
 use crate::runtime::Runtime;
 use crate::thread::Thread;
 
@@ -94,7 +91,7 @@ impl CopyGeneration {
 
         let allocated = source.allocate(size).cast_mut();
 
-        /// Start GC if we have used 25% of mem.
+        // Start GC if we have used 25% of mem.
         let used = source.used.load(Ordering::SeqCst);
         let percentage = 100.0 * (used as f64) / (HEAP_SIZE as f64);
 
@@ -146,12 +143,12 @@ pub fn start_gc_thread() -> Sender<Arc<Runtime>> {
     Builder::new()
         .name("GC-Copy".to_string())
         .spawn(move || {
-        let mut collector = CopyCollector {
-            start: receiver,
-            gcs: 0,
-        };
-        collector.run()
-    }).unwrap();
+            let mut collector = CopyCollector {
+                start: receiver,
+                gcs: 0,
+            };
+            collector.run()
+        }).unwrap();
 
     sender
 }
@@ -179,7 +176,7 @@ impl CopyCollector {
 
         // Ensure all threads are ready to start GC.
         let threads = runtime.threads2.read().unwrap();
-        std::thread::scope(|scope| {
+        scope(|scope| {
             for thread in threads.iter() {
                 Builder::new()
                     .name(format!("GC-Copy-Pause-{}", thread.name.as_str()))
@@ -221,8 +218,8 @@ impl CopyCollector {
                     let new_start = heap.allocator.gen.copy(start, size);
 
 
-                    let mut source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
-                    let mut dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
+                    let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
+                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
 
                     dest.copy_from_slice(source);
 
@@ -246,8 +243,8 @@ impl CopyCollector {
 
                     let new_start = heap.allocator.gen.copy(start, size);
 
-                    let mut source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
-                    let mut dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
+                    let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
+                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
 
                     dest.copy_from_slice(source);
 
@@ -290,7 +287,6 @@ impl CopyCollector {
             }
         });
         debug!(target: log::GC, "All threads restarted");
-
     }
 }
 

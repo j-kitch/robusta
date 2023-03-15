@@ -4,7 +4,6 @@ use std::thread::{Builder, sleep};
 use std::time::Duration;
 
 use rand::{RngCore, thread_rng};
-use tracing::info;
 
 use crate::method_area;
 use crate::class_file::Code;

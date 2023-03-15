@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
 
@@ -42,7 +41,7 @@ mod critical;
 pub struct Safe {
     name: String,
     state: parking_lot::Mutex<(bool, bool)>,
-    wait: parking_lot::Condvar,
+    wait: Condvar,
 }
 
 impl Safe {
@@ -65,7 +64,7 @@ impl Safe {
         let mut lock = self.state.lock();
         // Wait for thread to become safe.
         while !lock.0 {
-            self.wait.wait_while(&mut lock, |(thread, gc)| {
+            self.wait.wait_while(&mut lock, |(thread, _)| {
                 !*thread
             });
         }
@@ -77,7 +76,7 @@ impl Safe {
     pub fn exit(&self) {
         let mut lock = self.state.lock();
         while lock.1 {
-            self.wait.wait_while(&mut lock, |(thread, gc)| {
+            self.wait.wait_while(&mut lock, |(_, gc)| {
                 *gc
             });
         }

@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
 
 use parking_lot::{RawMutex, RawThreadId};
 use parking_lot::lock_api::{ArcReentrantMutexGuard, ReentrantMutex};
@@ -18,19 +18,18 @@ impl ObjectLock {
         let guard = self.mutex.lock_arc();
         Synchronized {
             reentry: 1,
-            guard,
+            _guard: guard,
         }
     }
 }
 
 pub struct Synchronized {
     reentry: usize,
-    guard: ArcReentrantMutexGuard<RawMutex, RawThreadId, ()>,
+    _guard: ArcReentrantMutexGuard<RawMutex, RawThreadId, ()>,
 }
 
 impl Synchronized {
     pub fn enter(&mut self) {
-        let v = parking_lot::ReentrantMutex::new(10);
         self.reentry += 1;
     }
 

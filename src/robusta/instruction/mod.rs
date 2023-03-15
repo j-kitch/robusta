@@ -1,8 +1,6 @@
-use std::os::macos::raw::stat;
 use tracing::{debug, trace};
 pub use new::new;
 
-// use crate::instruction::new::{resolve_class, resolve_method};
 use crate::java::{Value};
 use crate::log;
 use crate::method_area::const_pool::ConstPool;

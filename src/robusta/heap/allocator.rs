@@ -5,8 +5,6 @@ use std::sync::Arc;
 use tracing::trace;
 
 use crate::heap::garbage_collector::CopyGeneration;
-// use crate::collection::safe_point::SafePoint;
-// use crate::heap::garbage_collector::{copy_gc, CopyGeneration};
 use crate::heap::hash_code::HashCode;
 use crate::heap::sync::ObjectLock;
 use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};

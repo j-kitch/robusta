@@ -1,7 +1,6 @@
 use std::sync::{Arc, RwLock};
 use chashmap::CHashMap;
 use crate::collection::wait::ThreadWait;
-use crate::heap::garbage_collector::start_gc_thread;
 
 use crate::heap::Heap;
 use crate::method_area::MethodArea;
