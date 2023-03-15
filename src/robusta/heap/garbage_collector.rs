@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender, sync_channel, SyncSender};
 use std::thread;
-use std::thread::{Builder, current, spawn};
+use std::thread::{Builder, current, scope, spawn};
 use std::time::Duration;
 use parking_lot::Mutex;
 use tracing::{debug, info, trace};
@@ -277,9 +277,15 @@ impl CopyCollector {
         let percentage = (100.0 * (used as f64)) / HEAP_SIZE as f64;
         debug!(target: log::GC, gen="gen-1", gc=self.gcs, used=format!("{}mb", used / 1024 / 1024), percentage=format!("{:.2}%", percentage), "Ending Mark&Copy collection");
 
-        for thread in threads.iter() {
-            thread.safe.end_gc();
-        }
+        scope(|scope| {
+            for thread in threads.iter() {
+                Builder::new()
+                    .name(format!("GC-Copy-Restart-{}", thread.name.as_str()))
+                    .spawn_scoped(scope, || thread.safe.end_gc()).unwrap();
+            }
+        });
+        debug!(target: log::GC, "All threads restarted");
+
     }
 }
 

@@ -261,6 +261,9 @@ impl Thread {
         while !self.stack.is_empty() {
             self.next();
         }
+        debug!(target: log::THREAD, method=method_name, "Ended thread");
+        // Forever safe!
+        self.safe.enter();
 
         self.reference.map(|r| {
             self.runtime.heap.end_thread(r);
