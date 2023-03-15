@@ -1,5 +1,6 @@
-
+use tracing::trace;
 use crate::java::{ Value};
+use crate::log;
 use crate::thread::Thread;
 
 // /// Many instructions involve resolving class types, which follows a strict algorithm to ensure that
@@ -61,6 +62,9 @@ pub fn new(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
     let class_idx = cur_frame.read_u16();
+
+    trace!(target: log::INSTR, pc=cur_frame.pc - 3, opcode="new", index=class_idx);
+
     let cur_frame = thread.stack.last_mut().unwrap();
     let class = thread.runtime.method_area.resolve_class(cur_frame.const_pool, class_idx);
     let class = unsafe { class.as_ref().unwrap() };

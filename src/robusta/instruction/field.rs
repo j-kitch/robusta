@@ -80,6 +80,9 @@ pub fn put_field(thread: &mut Thread) {
     let const_pool = curr_frame.const_pool;
 
     let field_idx = curr_frame.read_u16();
+
+    trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="putfield", index=field_idx);
+
     let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };

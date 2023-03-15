@@ -328,7 +328,7 @@ impl Class {
         }
     }
 
-    fn parents(&self) -> Hierarchy {
+    pub fn parents(&self) -> Hierarchy {
         Hierarchy { current: Some(self as *const Class) }
     }
 

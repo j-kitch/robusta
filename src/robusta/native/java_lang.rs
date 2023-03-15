@@ -4,6 +4,7 @@ use std::thread::{Builder, sleep};
 use std::time::Duration;
 
 use rand::{RngCore, thread_rng};
+use tracing::info;
 
 use crate::method_area;
 use crate::class_file::Code;
@@ -387,7 +388,7 @@ fn thread_start(args: &Args) -> Option<Value> {
     let runtime = args.runtime.clone();
     let class = thread_obj.class().name.clone();
 
-    runtime.threads.insert(class.clone(), ThreadWait::new(runtime.clone(), thread_ref));
+    runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), thread_ref));
 
     Builder::new().name(name.clone()).spawn(move || {
         let const_pool = &thread_obj.class().const_pool as *const ConstPool;

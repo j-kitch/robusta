@@ -12,9 +12,11 @@ use tracing::{debug, info, trace};
 
 use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
 use crate::heap::{Heap, Heaped};
-use crate::java::Reference;
+use crate::java::{FieldType, Reference};
 use crate::log;
 use crate::log::HEAP;
+use crate::method_area::Class;
+use crate::method_area::const_pool::FieldKey;
 use crate::runtime::Runtime;
 use crate::thread::Thread;
 
@@ -255,10 +257,13 @@ impl CopyCollector {
                     heap.set(next_object, Heaped::Object(object));
 
                     // For every reference in the objects fields, add to set.
-                    for field in &class.instance_fields {
-                        if field.descriptor.is_reference() {
-                            let reference = object.field_from(field);
-                            remaining_to_visit.insert(reference.reference());
+                    for parent in class.parents() {
+                        let parent = unsafe { parent.as_ref().unwrap() };
+                        for field in &parent.instance_fields {
+                            if field.descriptor.is_reference() {
+                                let reference = object.field_from(field);
+                                remaining_to_visit.insert(reference.reference());
+                            }
                         }
                     }
                 }

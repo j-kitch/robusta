@@ -26,16 +26,16 @@ pub struct Heap {
 unsafe impl Send for Heap {}
 
 impl Heap {
-    pub fn retain(&self, _: &HashSet<Reference>) {
+    pub fn retain(&self, retain: &HashSet<Reference>) {
         let mut references = self.references.write().unwrap();
 
-        let keys_to_remove: Vec<Reference> = references.keys()
-            .filter(|r| !references.contains_key(r))
-            .map(|r| *r)
+        let refs_to_remove: Vec<Reference> = references.keys()
+            .filter(|key| !retain.contains(key))
+            .map(|key| *key)
             .collect();
 
-        for key in &keys_to_remove {
-            references.remove(key);
+        for reference in &refs_to_remove {
+            references.remove(reference);
         }
     }
 
