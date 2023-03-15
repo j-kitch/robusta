@@ -9,6 +9,10 @@ public class MultiThreadedOutOfMemory {
         }
     }
 
+    /**
+     * Attempt to allocate 190Gb of heap memory, across 10
+     * threads, requiring multi-threaded garbage collection!
+     */
     public static void main(String[] args) {
         Thread[] threads = new Thread[10];
 
