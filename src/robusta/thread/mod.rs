@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
 use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
-
 use tracing::{debug, trace};
 
 use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
-use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new, r#return};
+use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
 use crate::instruction::dup::dup;
@@ -17,7 +17,7 @@ use crate::instruction::locals::{aload, astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
-use crate::instruction::r#return::{a_return, a_throw, i_return};
+use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
 use crate::java::{CategoryOne, MethodType, Reference, Value};
@@ -26,6 +26,7 @@ use crate::method_area::{Class, Method};
 use crate::method_area::const_pool::ConstPool;
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
+
 // use crate::thread::critical::CriticalLock;
 
 mod critical;

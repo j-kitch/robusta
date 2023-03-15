@@ -112,32 +112,6 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
     cur_frame.operand_stack.push_value(Value::Reference(reference));
 }
 
-/// Instruction `return`
-///
-/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.return).
-pub fn r#return(thread: &mut Thread) {
-    let frame = thread.stack.last_mut().unwrap();
-    let method = unsafe { frame.method.as_ref().unwrap() };
-
-    trace!(
-        target: log::INSTR,
-        pc=frame.pc-1,
-        opcode="return"
-    );
-
-    if method.is_synchronized {
-        let this_ref = if method.is_static {
-            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
-        } else {
-            frame.local_vars.load_cat_one(0).reference()
-        };
-        thread.exit_monitor(this_ref);
-    }
-
-    // let _guard = thread.critical_lock.acquire();
-    thread.stack.pop();
-}
-
 /// Instruction `invokestatic` invokes a class static method.
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.invokestatic).

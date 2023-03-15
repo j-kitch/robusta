@@ -1,22 +1,33 @@
-use crate::java::{ MethodType, Value};
-use crate::method_area;
+use tracing::trace;
+use crate::java::{MethodType, Value};
+use crate::{log, method_area};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;
 
+/// Instruction `return`
+///
+/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.return).
+pub fn r#return(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    trace!(
+        target: log::INSTR,
+        pc=frame.pc-1,
+        opcode="return"
+    );
+
+    exit_monitor(thread);
+
+    // let _guard = thread.critical_lock.acquire();
+    thread.stack.pop();
+}
+
 pub fn a_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let method = unsafe { cur_frame.method.as_ref().unwrap() };
 
     let reference = cur_frame.operand_stack.pop();
 
-    if method.is_synchronized {
-        let this_ref = if method.is_static {
-            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
-        } else {
-            cur_frame.local_vars.load_cat_one(0).reference()
-        };
-        thread.exit_monitor(this_ref);
-    }
+    exit_monitor(thread);
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
@@ -26,18 +37,10 @@ pub fn a_return(thread: &mut Thread) {
 
 pub fn i_return(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    let method = unsafe { cur_frame.method.as_ref().unwrap() };
 
     let int = cur_frame.operand_stack.pop();
 
-    if method.is_synchronized {
-        let this_ref = if method.is_static {
-            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
-        } else {
-            cur_frame.local_vars.load_cat_one(0).reference()
-        };
-        thread.exit_monitor(this_ref);
-    }
+    exit_monitor(thread);
 
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
@@ -74,14 +77,7 @@ pub fn a_throw(thread: &mut Thread) {
             }
         }
 
-        if method.is_synchronized {
-            let this_ref = if method.is_static {
-                thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
-            } else {
-                current_frame.local_vars.load_cat_one(0).reference()
-            };
-            thread.exit_monitor(this_ref);
-        }
+        exit_monitor(thread);
 
         // No handler found
         thread.stack.pop();
@@ -102,4 +98,17 @@ pub fn a_throw(thread: &mut Thread) {
         &method_class.const_pool as *const ConstPool,
         throwable_method as *const method_area::Method,
         vec![Value::Reference(throwable_ref)]);
+}
+
+fn exit_monitor(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let method = unsafe { frame.method.as_ref().unwrap() };
+    if method.is_synchronized {
+        let monitor_ref = if method.is_static {
+            thread.runtime.heap.get_static(unsafe { method.class.as_ref().unwrap() })
+        } else {
+            frame.local_vars.load_cat_one(0).reference()
+        };
+        thread.exit_monitor(monitor_ref);
+    }
 }
