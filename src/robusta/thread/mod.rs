@@ -7,19 +7,7 @@ use tracing::{debug, trace};
 
 use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
-use crate::instruction::{aload_n, astore_n, iload_n, istore_n, load_constant, new};
-use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
-use crate::instruction::dup::dup;
-use crate::instruction::field::{get_field, get_static, put_field, put_static};
-use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
-use crate::instruction::locals::{aload, astore, iload, istore};
-use crate::instruction::math::{i_add, i_inc};
-use crate::instruction::new::new_array;
-use crate::instruction::r#const::{iconst_n, load_constant_cat_2_wide, load_constant_wide};
-use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
-use crate::instruction::stack::{bipush, pop, sipush};
-use crate::instruction::sync::{monitor_enter, monitor_exit};
+use crate::instruction::instruction;
 use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Method};
@@ -299,80 +287,7 @@ impl Thread {
         }
 
         // Handle non native methods here.
-        let bytecode = &method.code.as_ref().unwrap().code;
-
-        let opcode = bytecode[curr_frame.pc];
-
-        curr_frame.pc += 1;
-
-        match opcode {
-            0x02 => iconst_n(self, -1),
-            0x03 => iconst_n(self, 0),
-            0x04 => iconst_n(self, 1),
-            0x05 => iconst_n(self, 2),
-            0x06 => iconst_n(self, 3),
-            0x07 => iconst_n(self, 4),
-            0x08 => iconst_n(self, 5),
-            0x10 => bipush(self),
-            0x11 => sipush(self),
-            0x12 => load_constant(self),
-            0x13 => load_constant_wide(self),
-            0x14 => load_constant_cat_2_wide(self),
-            0x15 => iload(self),
-            0x19 => aload(self),
-            0x1A => iload_n(self, 0),
-            0x1B => iload_n(self, 1),
-            0x1C => iload_n(self, 2),
-            0x1D => iload_n(self, 3),
-            0x2A => aload_n(self, 0),
-            0x2B => aload_n(self, 1),
-            0x2C => aload_n(self, 2),
-            0x2D => aload_n(self, 3),
-            0x32 => a_array_load(self),
-            0x34 => char_array_load(self),
-            0x36 => istore(self),
-            0x3A => astore(self),
-            0x3B => istore_n(self, 0),
-            0x3C => istore_n(self, 1),
-            0x3D => istore_n(self, 2),
-            0x3E => istore_n(self, 3),
-            0x4B => astore_n(self, 0),
-            0x4C => astore_n(self, 1),
-            0x4D => astore_n(self, 2),
-            0x4E => astore_n(self, 3),
-            0x53 => a_array_store(self),
-            0x55 => char_array_store(self),
-            0x57 => pop(self),
-            0x59 => dup(self),
-            0x60 => i_add(self),
-            0x84 => i_inc(self),
-            0x9A => if_ne(self),
-            0x9B => if_lt(self),
-            0x99 => if_eq(self),
-            0xA0 => if_int_cmp_ne(self),
-            0xA2 => if_int_cmp_ge(self),
-            0xA4 => if_int_cmp_le(self),
-            0xA7 => goto(self),
-            0xAC => i_return(self),
-            0xB0 => a_return(self),
-            0xB1 => r#return(self),
-            0xB2 => get_static(self),
-            0xB3 => put_static(self),
-            0xB4 => get_field(self),
-            0xB5 => put_field(self),
-            0xB6 => invoke_virtual(self),
-            0xB7 => invoke_special(self),
-            0xB8 => invoke_static(self),
-            0xBB => new(self),
-            0xBC => new_array(self),
-            0xBD => a_new_array(self),
-            0xBE => array_length(self),
-            0xBF => a_throw(self),
-            0xC2 => monitor_enter(self),
-            0xC3 => monitor_exit(self),
-            0xC6 => if_null(self),
-            _ => panic!("not implemented {}.{}{} opcode 0x{:0x?}", curr_frame.class.as_str(), method.name.as_str(), method.descriptor.descriptor(), opcode)
-        }
+        instruction(self);
     }
 
     /// Push a new frame onto the top of the stack.
