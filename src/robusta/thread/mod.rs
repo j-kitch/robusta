@@ -7,12 +7,12 @@ use tracing::{debug, trace};
 
 use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
-use crate::instruction::{aload_n, astore_n, iload_n, invoke_static, istore_n, load_constant, new};
+use crate::instruction::{aload_n, astore_n, iload_n, istore_n, load_constant, new};
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
-use crate::instruction::invoke::{invoke_special, invoke_virtual};
+use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, astore, iload, istore};
 use crate::instruction::math::{i_add, i_inc};
 use crate::instruction::new::new_array;

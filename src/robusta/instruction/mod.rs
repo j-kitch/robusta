@@ -1,10 +1,8 @@
-use tracing::{debug, trace};
+use tracing::{trace};
 pub use new::new;
 
 use crate::java::{Value};
 use crate::log;
-use crate::method_area::const_pool::ConstPool;
-use crate::method_area::Method;
 use crate::thread::Thread;
 
 pub mod new;
@@ -110,54 +108,4 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
 
     // let _guard = thread.critical_lock.acquire();
     cur_frame.operand_stack.push_value(Value::Reference(reference));
-}
-
-/// Instruction `invokestatic` invokes a class static method.
-///
-/// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.invokestatic).
-pub fn invoke_static(thread: &mut Thread) {
-    let cur_frame = thread.stack.last_mut().unwrap();
-
-    let method_idx = cur_frame.read_u16();
-
-    trace!(
-        target: log::INSTR,
-        pc=cur_frame.pc-3,
-        opcode="invokestatic"
-    );
-
-    let cur_frame = thread.stack.last_mut().unwrap();
-    let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
-
-    let cur_frame = thread.stack.last_mut().unwrap();
-    let method = unsafe { method.as_ref().unwrap() };
-    let class = unsafe { method.class.as_ref().unwrap() };
-
-    if !method.is_static {
-        panic!("Expected a static method");
-    }
-
-    let args = cur_frame.pop_args(true, &method.descriptor);
-
-    if method.is_synchronized {
-        let static_ref = thread.runtime.heap.get_static(class);
-        thread.enter_monitor(static_ref);
-    }
-
-    if method.is_native {
-        let plugin = thread.call_native(
-            method,
-        ).unwrap();
-        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking native static method");
-        thread.push_native(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args, plugin);
-    } else {
-        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking static method");
-        thread.add_frame(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method);
-        let frame = thread.stack.last_mut().unwrap();
-        let mut idx = 0;
-        for param in &args {
-            frame.local_vars.store_value(idx, param.clone());
-            idx += param.category() as u16;
-        }
-    }
 }

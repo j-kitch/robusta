@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::env::args;
 use std::sync::Arc;
 
-use tracing::{debug, trace};
+use tracing::debug;
 use tracing::metadata::LevelFilter;
 use tracing::subscriber::set_global_default;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -96,7 +96,6 @@ impl VirtualMachine {
 
             while jvm_init_t.stack.len() > 1 {
                 jvm_init_t.next();
-                trace!("here 1");
             }
 
             // Always safe.
