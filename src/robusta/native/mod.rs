@@ -41,29 +41,7 @@ impl NativeMethods {
 
         plugin.map(|p| p.clone())
     }
-
-    pub fn call(&self, method: &Method, args: &Args) -> Option<Value> {
-        let class = unsafe { method.class.as_ref().unwrap() };
-        debug!(
-            target: log::THREAD,
-            method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()),
-            "Invoking native method"
-        );
-        let plugin = self.plugins.iter()
-            .find(|p| p.supports(method))
-            .unwrap();
-        let result = plugin.call(method, args);
-        // println!("Return");
-        return result;
-    }
 }
-
-// #[derive(PartialEq, Eq, Hash)]
-// pub struct Method {
-//     pub class: String,
-//     pub name: String,
-//     pub descriptor: MethodType,
-// }
 
 pub struct Args {
     pub thread: *const Thread,
@@ -72,6 +50,7 @@ pub struct Args {
 }
 
 impl Args {
+    /// TODO: Not used yet.
     pub fn add_local(&self, reference: Reference) {
         let thread = unsafe { self.thread.cast_mut().as_mut().unwrap() };
         let frame = thread.stack.last_mut().unwrap();

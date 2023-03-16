@@ -75,7 +75,7 @@ pub fn new(thread: &mut Thread) {
     let new_ref = thread.runtime.heap.new_object(class);
 
     let cur_frame = thread.stack.last_mut().unwrap();
-    cur_frame.operand_stack.push_value(Value::Reference(new_ref));
+    cur_frame.operand_stack.push(Value::Reference(new_ref));
 }
 
 pub fn new_array(thread: &mut Thread) {
@@ -90,5 +90,5 @@ pub fn new_array(thread: &mut Thread) {
     };
 
     let cur_frame = thread.stack.last_mut().unwrap();
-    cur_frame.operand_stack.push_value(Value::Reference(arr_ref));
+    cur_frame.operand_stack.push(Value::Reference(arr_ref));
 }

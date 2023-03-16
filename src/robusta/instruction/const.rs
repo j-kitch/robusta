@@ -22,7 +22,7 @@ pub fn load_constant(thread: &mut Thread) {
     let value = thread.runtime.method_area.resolve_category_one(frame.const_pool, index);
 
     let frame = thread.stack.last_mut().unwrap();
-    frame.operand_stack.push_value(value);
+    frame.operand_stack.push(value);
 }
 
 pub fn load_constant_wide(thread: &mut Thread) {
@@ -39,7 +39,7 @@ pub fn load_constant_wide(thread: &mut Thread) {
     let const_value = thread.runtime.method_area.resolve_category_one(frame.const_pool, const_idx);
 
     let frame = thread.stack.last_mut().unwrap();
-    frame.operand_stack.push_value(const_value);
+    frame.operand_stack.push(const_value);
 }
 
 pub fn load_constant_cat_2_wide(thread: &mut Thread) {
@@ -56,7 +56,7 @@ pub fn load_constant_cat_2_wide(thread: &mut Thread) {
     let const_value = thread.runtime.method_area.resolve_category_two(frame.const_pool, const_idx);
 
     let frame = thread.stack.last_mut().unwrap();
-    frame.operand_stack.push_value(const_value);
+    frame.operand_stack.push(const_value);
 }
 
 pub fn iconst_n(thread: &mut Thread, int: i32) {
@@ -68,5 +68,5 @@ pub fn iconst_n(thread: &mut Thread, int: i32) {
         opcode=format!("iconst_{}", int)
     );
 
-    cur_frame.operand_stack.push_value(Value::Int(Int(int)));
+    cur_frame.operand_stack.push(Value::Int(Int(int)));
 }

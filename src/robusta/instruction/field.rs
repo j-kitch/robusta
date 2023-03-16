@@ -22,7 +22,7 @@ pub fn get_field(thread: &mut Thread) {
         descriptor: field.descriptor.clone(),
     });
 
-    curr_frame.operand_stack.push_value(field_value);
+    curr_frame.operand_stack.push(field_value);
 }
 
 pub fn get_static(thread: &mut Thread) {
@@ -47,7 +47,7 @@ pub fn get_static(thread: &mut Thread) {
     });
 
     let curr_frame = thread.stack.last_mut().unwrap();
-    curr_frame.operand_stack.push_value(field_value);
+    curr_frame.operand_stack.push(field_value);
 }
 
 pub fn put_static(thread: &mut Thread) {

@@ -9,7 +9,7 @@ pub fn i_add(thread: &mut Thread) {
 
     let (result, _) = value1.0.overflowing_add(value2.0);
 
-    frame.operand_stack.push_value(Value::Int(Int(result)));
+    frame.operand_stack.push(Value::Int(Int(result)));
 }
 
 pub fn i_inc(thread: &mut Thread) {

@@ -13,6 +13,6 @@ pub fn dup(thread: &mut Thread) {
 
     let value = cur_frame.operand_stack.pop();
 
-    cur_frame.operand_stack.push_value(value);
-    cur_frame.operand_stack.push_value(value);
+    cur_frame.operand_stack.push(value);
+    cur_frame.operand_stack.push(value);
 }

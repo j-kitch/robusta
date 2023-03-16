@@ -127,11 +127,6 @@ impl CopyGeneration {
     }
 }
 
-// enum Source {
-//     Blue,
-//     Green,
-// }
-
 pub struct CopyCollector {
     start: Receiver<Arc<Runtime>>,
     gcs: usize,

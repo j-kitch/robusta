@@ -53,7 +53,7 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
     let int = cur_frame.local_vars.load_cat_one(n).int();
 
     // let _guard = thread.critical_lock.acquire();
-    cur_frame.operand_stack.push_value(Value::Int(int));
+    cur_frame.operand_stack.push(Value::Int(int));
 }
 
 /// aload_<n>
@@ -71,7 +71,7 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
     let reference = cur_frame.local_vars.load_cat_one(n).reference();
 
     // let _guard = thread.critical_lock.acquire();
-    cur_frame.operand_stack.push_value(Value::Reference(reference));
+    cur_frame.operand_stack.push(Value::Reference(reference));
 }
 
 pub fn istore(thread: &mut Thread) {
@@ -92,12 +92,12 @@ pub fn iload(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let index = frame.read_u8();
     let value = frame.local_vars.load_cat_one(index as u16).int();
-    frame.operand_stack.push_value(Value::Int(value));
+    frame.operand_stack.push(Value::Int(value));
 }
 
 pub fn aload(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let index = frame.read_u8();
     let value = frame.local_vars.load_cat_one(index as u16).reference();
-    frame.operand_stack.push_value(Value::Reference(value));
+    frame.operand_stack.push(Value::Reference(value));
 }

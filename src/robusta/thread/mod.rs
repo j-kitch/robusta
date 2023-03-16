@@ -15,18 +15,6 @@ use crate::method_area::const_pool::ConstPool;
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 
-// use crate::thread::critical::CriticalLock;
-
-mod critical;
-
-/// GC attempts to acquire the safe lock.
-///     If thread is not safe, GC waits until it is.
-///
-///    Thread tries to exit safe.
-///     Thread exits when GC has ended.
-///
-///
-
 pub struct Safe {
     name: String,
     state: parking_lot::Mutex<(bool, bool)>,
@@ -91,8 +79,6 @@ pub struct Thread {
     pub reference: Option<Reference>,
     pub locks: HashMap<Reference, Synchronized>,
     pub safe: Safe,
-    // pub critical_lock: CriticalLock,
-    // root_sender: Sender<HashSet<Reference>>,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
     pub runtime: Arc<Runtime>,
@@ -138,10 +124,8 @@ impl Thread {
         }
     }
 
-    pub fn call_native(&self, method: &Method) -> Option<Arc<dyn Plugin>> {
-        self.runtime.native.find(
-            method,
-        )
+    pub fn find_native(&self, method: &Method) -> Option<Arc<dyn Plugin>> {
+        self.runtime.native.find(method)
     }
 
     /// A native method needs to be able to invoke the thread stack again to get a result.
@@ -220,20 +204,6 @@ impl Thread {
         thread
     }
 
-    pub fn add_frame(&mut self, class: String, pool: *const ConstPool, method: *const Method) {
-        self.stack.push(Frame {
-            class,
-            const_pool: pool,
-            operand_stack: OperandStack::new(),
-            local_vars: LocalVars::new(),
-            method,
-            pc: 0,
-            native: None,
-            native_args: vec![],
-            native_roots: HashSet::new(),
-        })
-    }
-
     pub fn run(&mut self) {
         self.reference.map(|r| self.runtime.heap.start_thread(r));
         let class_name = self.stack.last().unwrap().class.as_str();
@@ -256,11 +226,7 @@ impl Thread {
 
     pub fn next(&mut self) {
 
-        // Safe region
-        {
-            self.safe.enter();
-            self.safe.exit();
-        }
+        self.safe.safe_region();
 
         let curr_frame = self.stack.last_mut().unwrap();
         let method = unsafe { curr_frame.method.as_ref().unwrap() };
@@ -281,7 +247,7 @@ impl Thread {
             self.stack.pop();
             if let Some(result) = result {
                 let curr_frame = self.stack.last_mut().unwrap();
-                curr_frame.operand_stack.push_value(result);
+                curr_frame.operand_stack.push(result);
             }
             return;
         }
@@ -428,7 +394,7 @@ impl OperandStack {
             .collect()
     }
 
-    pub fn push_value(&mut self, value: Value) {
+    pub fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 

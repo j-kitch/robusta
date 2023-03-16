@@ -96,19 +96,3 @@ fn robusta_exit(args: &Args) -> Option<Value> {
     debug!(target: log::JVM, code, "Exiting JVM");
     exit(code)
 }
-
-//
-// fn load_class(runtime: Arc<Runtime>, values: Vec<Value>) -> Option<Value> {
-//     let str_ref = values[0].reference();
-//     let str_obj = runtime.heap.load_object(str_ref);
-//     let chars_ref = str_obj.get_field(&const_pool::Field {
-//         class: Arc::new(Class { name: "java.lang.String".to_string() }),
-//         name: "chars".to_string(),
-//         descriptor: FieldType::from_descriptor("[C").unwrap(),
-//     }).reference();
-//     let chars = runtime.heap.load_array(chars_ref);
-//
-//     let name = String::from_utf16(chars.as_chars_slice()).unwrap();
-//
-//     intern_class(runtime, &name)
-// }

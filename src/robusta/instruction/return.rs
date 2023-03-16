@@ -32,7 +32,7 @@ pub fn a_return(thread: &mut Thread) {
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    cur_frame.operand_stack.push_value(reference);
+    cur_frame.operand_stack.push(reference);
 }
 
 pub fn i_return(thread: &mut Thread) {
@@ -45,7 +45,7 @@ pub fn i_return(thread: &mut Thread) {
     thread.stack.pop();
     let cur_frame = thread.stack.last_mut().unwrap();
 
-    cur_frame.operand_stack.push_value(int);
+    cur_frame.operand_stack.push(int);
 }
 
 pub fn a_throw(thread: &mut Thread) {
@@ -72,7 +72,7 @@ pub fn a_throw(thread: &mut Thread) {
             };
             if is_handler {
                 current_frame.pc = handler.handler_pc as usize;
-                current_frame.operand_stack.push_value(Value::Reference(throwable_ref));
+                current_frame.operand_stack.push(Value::Reference(throwable_ref));
                 return;
             }
         }
