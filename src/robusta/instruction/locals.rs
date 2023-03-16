@@ -9,7 +9,6 @@ use crate::thread::Thread;
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.astore_n).
 pub fn astore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    // let _guard = thread.critical_lock.acquire();
     let value = cur_frame.operand_stack.pop();
 
     trace!(
@@ -26,7 +25,6 @@ pub fn astore_n(thread: &mut Thread, n: u16) {
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.istore_n).
 pub fn istore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
-    // let _guard = thread.critical_lock.acquire();
     let value = cur_frame.operand_stack.pop();
 
     trace!(
@@ -52,7 +50,6 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
 
     let int = cur_frame.local_vars.load_cat_one(n).int();
 
-    // let _guard = thread.critical_lock.acquire();
     cur_frame.operand_stack.push(Value::Int(int));
 }
 
@@ -70,7 +67,6 @@ pub fn aload_n(thread: &mut Thread, n: u16) {
 
     let reference = cur_frame.local_vars.load_cat_one(n).reference();
 
-    // let _guard = thread.critical_lock.acquire();
     cur_frame.operand_stack.push(Value::Reference(reference));
 }
 

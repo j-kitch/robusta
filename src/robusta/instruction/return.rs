@@ -18,7 +18,6 @@ pub fn r#return(thread: &mut Thread) {
 
     exit_monitor(thread);
 
-    // let _guard = thread.critical_lock.acquire();
     thread.stack.pop();
 }
 

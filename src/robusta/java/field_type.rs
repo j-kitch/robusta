@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn from_descriptor_class() {
         assert_eq!(FieldType::from_descriptor("Labc;").unwrap(), FieldType::Reference("abc".to_string()));
-        assert_eq!(FieldType::from_descriptor("Ljava/thing;").unwrap(), FieldType::Reference("java/thing".to_string()));
+        assert_eq!(FieldType::from_descriptor("Ljava/thing;").unwrap(), FieldType::Reference("java.thing".to_string()));
     }
 
     #[test]

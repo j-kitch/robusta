@@ -68,10 +68,6 @@ pub fn new(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let class = thread.runtime.method_area.resolve_class(cur_frame.const_pool, class_idx);
     let class = unsafe { class.as_ref().unwrap() };
-    // println!("{} new - {}", thread.group.as_str(), class_const.name.as_str());
-    //
-    // resolve_class(thread.runtime.clone(), class_const.name.as_str());
-    // let (class, _) = thread.runtime.method_area.insert(thread.runtime.clone(), class_const.name.as_str());
     let new_ref = thread.runtime.heap.new_object(class);
 
     let cur_frame = thread.stack.last_mut().unwrap();

@@ -17,7 +17,6 @@ pub fn load_constant(thread: &mut Thread) {
         index
     );
 
-    // let _guard = thread.critical_lock.acquire();
     let frame = thread.stack.last_mut().unwrap();
     let value = thread.runtime.method_area.resolve_category_one(frame.const_pool, index);
 

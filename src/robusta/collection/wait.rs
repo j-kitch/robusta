@@ -23,10 +23,6 @@ impl ThreadWait {
         self.cond_var.notify_all();
     }
 
-    pub fn wait_gc(&self) {
-        self.cond_var.notify_all();
-    }
-
     pub fn join(&self) {
         let thread_ref = self.thread_ref.lock().unwrap();
         self.cond_var.wait_while(thread_ref, |reference| {
