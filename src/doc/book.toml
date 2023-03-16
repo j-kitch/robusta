@@ -1,0 +1,6 @@
+[book]
+authors = ["Joshua Kitchen"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The Robusta Book"

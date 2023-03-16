@@ -1,0 +1,102 @@
+pub use new::new;
+use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
+use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
+use crate::instruction::dup::dup;
+use crate::instruction::field::{get_field, get_static, put_field, put_static};
+use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
+use crate::instruction::locals::{aload, aload_n, astore, astore_n, iload, iload_n, istore, istore_n};
+use crate::instruction::math::{i_add, i_inc};
+use crate::instruction::new::new_array;
+use crate::instruction::r#const::{iconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
+use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
+use crate::instruction::stack::{bipush, pop, sipush};
+use crate::instruction::sync::{monitor_enter, monitor_exit};
+
+use crate::thread::Thread;
+
+mod new;
+mod dup;
+mod invoke;
+mod field;
+mod r#return;
+mod r#const;
+mod array;
+mod math;
+mod branch;
+mod locals;
+mod stack;
+mod sync;
+
+pub fn instruction(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let opcode = frame.read_u8();
+
+    match opcode {
+        0x02 => iconst_n(thread, -1),
+        0x03 => iconst_n(thread, 0),
+        0x04 => iconst_n(thread, 1),
+        0x05 => iconst_n(thread, 2),
+        0x06 => iconst_n(thread, 3),
+        0x07 => iconst_n(thread, 4),
+        0x08 => iconst_n(thread, 5),
+        0x10 => bipush(thread),
+        0x11 => sipush(thread),
+        0x12 => load_constant(thread),
+        0x13 => load_constant_wide(thread),
+        0x14 => load_constant_cat_2_wide(thread),
+        0x15 => iload(thread),
+        0x19 => aload(thread),
+        0x1A => iload_n(thread, 0),
+        0x1B => iload_n(thread, 1),
+        0x1C => iload_n(thread, 2),
+        0x1D => iload_n(thread, 3),
+        0x2A => aload_n(thread, 0),
+        0x2B => aload_n(thread, 1),
+        0x2C => aload_n(thread, 2),
+        0x2D => aload_n(thread, 3),
+        0x32 => a_array_load(thread),
+        0x34 => char_array_load(thread),
+        0x36 => istore(thread),
+        0x3A => astore(thread),
+        0x3B => istore_n(thread, 0),
+        0x3C => istore_n(thread, 1),
+        0x3D => istore_n(thread, 2),
+        0x3E => istore_n(thread, 3),
+        0x4B => astore_n(thread, 0),
+        0x4C => astore_n(thread, 1),
+        0x4D => astore_n(thread, 2),
+        0x4E => astore_n(thread, 3),
+        0x53 => a_array_store(thread),
+        0x55 => char_array_store(thread),
+        0x57 => pop(thread),
+        0x59 => dup(thread),
+        0x60 => i_add(thread),
+        0x84 => i_inc(thread),
+        0x9A => if_ne(thread),
+        0x9B => if_lt(thread),
+        0x99 => if_eq(thread),
+        0xA0 => if_int_cmp_ne(thread),
+        0xA2 => if_int_cmp_ge(thread),
+        0xA4 => if_int_cmp_le(thread),
+        0xA7 => goto(thread),
+        0xAC => i_return(thread),
+        0xB0 => a_return(thread),
+        0xB1 => r#return(thread),
+        0xB2 => get_static(thread),
+        0xB3 => put_static(thread),
+        0xB4 => get_field(thread),
+        0xB5 => put_field(thread),
+        0xB6 => invoke_virtual(thread),
+        0xB7 => invoke_special(thread),
+        0xB8 => invoke_static(thread),
+        0xBB => new(thread),
+        0xBC => new_array(thread),
+        0xBD => a_new_array(thread),
+        0xBE => array_length(thread),
+        0xBF => a_throw(thread),
+        0xC2 => monitor_enter(thread),
+        0xC3 => monitor_exit(thread),
+        0xC6 => if_null(thread),
+        _ => panic!("not implemented opcode 0x{:0x?}", opcode)
+    }
+}
