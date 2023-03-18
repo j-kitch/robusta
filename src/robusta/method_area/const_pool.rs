@@ -30,6 +30,9 @@ impl ConstPool {
                 cp::Const::Integer(integer) => {
                     pool.pool.insert(*key, Const::Integer(integer.int));
                 }
+                cp::Const::Float(float) => {
+                    pool.pool.insert(*key, Const::Float(float.float));
+                }
                 cp::Const::Long(long) => {
                     pool.pool.insert(*key, Const::Long(long.long));
                 }
@@ -139,6 +142,7 @@ pub enum Const {
     Method(SymbolicReference<MethodKey, *const Method>),
     String(SymbolicReference<String, Reference>),
     Integer(i32),
+    Float(f32),
     Long(i64),
 }
 

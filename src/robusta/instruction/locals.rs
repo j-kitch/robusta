@@ -1,4 +1,4 @@
-use crate::java::Value;
+use crate::java::{Float, Value};
 use crate::thread::Thread;
 
 /// astore_<n>
@@ -61,6 +61,12 @@ pub fn iload(thread: &mut Thread) {
     let index = frame.read_u8();
     let value = frame.local_vars.load_cat_one(index as u16).int();
     frame.operand_stack.push(Value::Int(value));
+}
+
+pub fn fload_n(thread: &mut Thread, n: u16) {
+    let frame = thread.stack.last_mut().unwrap();
+    let float = frame.local_vars.load_value(n).float();
+    frame.operand_stack.push(Value::Float(float));
 }
 
 pub fn lload(thread: &mut Thread) {

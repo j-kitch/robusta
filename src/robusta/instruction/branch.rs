@@ -1,3 +1,4 @@
+use crate::java::{Int, Value};
 use crate::thread::Thread;
 
 pub fn if_int_cmp_ge(thread: &mut Thread) {
@@ -119,6 +120,20 @@ pub fn if_lt(thread: &mut Thread) {
     }
 }
 
+pub fn if_le(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+    let value = frame.operand_stack.pop().int();
+
+    if value.0 <= 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
 pub fn if_ge(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -176,4 +191,22 @@ pub fn if_non_null(thread: &mut Thread) {
         pc += offset as i64;
         frame.pc = pc as usize;
     }
+}
+
+pub fn fcmp(thread: &mut Thread, nan: i32) {
+    let frame = thread.stack.last_mut().unwrap();
+    let value2 = frame.operand_stack.pop().float().0;
+    let value1 = frame.operand_stack.pop().float().0;
+
+    let result = if value1 > value2 {
+        1
+    } else if value1 == value2 {
+        0
+    } else if value1 < value2 {
+        -1
+    } else {
+        nan
+    };
+
+    frame.operand_stack.push(Value::Int(Int(result)));
 }

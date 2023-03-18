@@ -36,6 +36,22 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.Class".to_string(),
+                name: "registerNatives".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "getPrimitiveClass".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/Class;").unwrap(),
+            },
+            Arc::new(get_primitive_class),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.ClassLoader".to_string(),
                 name: "registerNatives".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
@@ -492,4 +508,14 @@ pub fn current_thread(args: &Args) -> Option<Value> {
 
 pub fn no_op(_: &Args) -> Option<Value> {
     None
+}
+
+pub fn get_primitive_class(args: &Args) -> Option<Value> {
+    let string_ref = args.params[0].reference();
+    let primitive = args.runtime.heap.get_string(string_ref);
+
+    let primitive_class = args.runtime.method_area.load_class(&primitive);
+    let primitive_object = args.runtime.method_area.load_class_object(primitive_class);
+
+    Some(Value::Reference(primitive_object))
 }

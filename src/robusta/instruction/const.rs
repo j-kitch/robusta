@@ -1,4 +1,4 @@
-use crate::java::{Int, Long, Reference, Value};
+use crate::java::{Float, Int, Long, Reference, Value};
 use crate::thread::Thread;
 
 /// Instruction `ldc`
@@ -41,6 +41,12 @@ pub fn iconst_n(thread: &mut Thread, int: i32) {
     let cur_frame = thread.stack.last_mut().unwrap();
 
     cur_frame.operand_stack.push(Value::Int(Int(int)));
+}
+
+pub fn fconst_n(thread: &mut Thread, float: f32) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    cur_frame.operand_stack.push(Value::Float(Float(float)));
 }
 
 pub fn lconst_n(thread: &mut Thread, long: i64) {

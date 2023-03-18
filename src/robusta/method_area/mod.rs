@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -6,7 +7,7 @@ use tracing::debug;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
-use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
+use crate::java::{FieldType, Float, Int, Long, MethodType, Reference, Value};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::log;
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
@@ -39,6 +40,137 @@ impl MethodArea {
         }
     }
 
+    pub fn load_primitive_classes(&self) {
+        self.classes.get_or_init("boolean".to_string(), |_| {
+            Class {
+                name: "boolean".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("byte".to_string(), |_| {
+            Class {
+                name: "byte".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("char".to_string(), |_| {
+            Class {
+                name: "char".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("short".to_string(), |_| {
+            Class {
+                name: "short".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("int".to_string(), |_| {
+            Class {
+                name: "int".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("float".to_string(), |_| {
+            Class {
+                name: "float".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("long".to_string(), |_| {
+            Class {
+                name: "long".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+        self.classes.get_or_init("double".to_string(), |_| {
+            Class {
+                name: "double".to_string(),
+                flags: ClassFlags { bits: 0 },
+                const_pool: ConstPool { pool: HashMap::new() },
+                super_class: None,
+                interfaces: vec![],
+                instance_fields: vec![],
+                static_fields: vec![],
+                methods: vec![],
+                attributes: vec![],
+                instance_width: 0,
+                static_width: 0,
+                source_file: None,
+            }
+        });
+    }
+
     pub fn insert_gen_class(&self, class: Class) -> *const Class {
         let class = self.classes.get_or_init(class.name.clone(), |_| class);
         class.self_referential();
@@ -49,6 +181,7 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         match pool.get_const(index) {
             Const::Integer(int) => Value::Int(Int(*int)),
+            Const::Float(float) => Value::Float(Float(*float)),
             Const::String(reference) => {
                 let reference = reference.resolve(|string| self.load_string(string));
                 Value::Reference(*reference)

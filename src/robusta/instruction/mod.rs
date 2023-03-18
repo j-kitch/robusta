@@ -1,15 +1,16 @@
 use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{goto, if_eq, if_ge, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
+use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
+use crate::instruction::conv::int_to_float;
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
-use crate::instruction::locals::{aload, aload_n, astore, astore_n, iload, iload_n, istore, istore_n, lload};
-use crate::instruction::math::{i_add, i_inc, i_sub};
+use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
+use crate::instruction::math::{f_mul, i_add, i_inc, i_sub};
 use crate::instruction::new::new_array;
-use crate::instruction::r#const::{aconst_null, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
+use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
@@ -30,6 +31,7 @@ mod locals;
 mod stack;
 mod sync;
 mod class;
+mod conv;
 
 pub fn instruction(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
@@ -58,6 +60,9 @@ pub fn instruction(thread: &mut Thread) {
         0x08 => iconst_n(thread, 5),
         0x09 => lconst_n(thread, 0),
         0x0A => lconst_n(thread, 1),
+        0x0B => fconst_n(thread, 0.0),
+        0x0C => fconst_n(thread, 1.0),
+        0x0D => fconst_n(thread, 2.0),
         0x10 => bipush(thread),
         0x11 => sipush(thread),
         0x12 => load_constant(thread),
@@ -70,6 +75,10 @@ pub fn instruction(thread: &mut Thread) {
         0x1B => iload_n(thread, 1),
         0x1C => iload_n(thread, 2),
         0x1D => iload_n(thread, 3),
+        0x22 => fload_n(thread, 0),
+        0x23 => fload_n(thread, 1),
+        0x24 => fload_n(thread, 2),
+        0x25 => fload_n(thread, 3),
         0x2A => aload_n(thread, 0),
         0x2B => aload_n(thread, 1),
         0x2C => aload_n(thread, 2),
@@ -92,11 +101,16 @@ pub fn instruction(thread: &mut Thread) {
         0x59 => dup(thread),
         0x60 => i_add(thread),
         0x64 => i_sub(thread),
+        0x6A => f_mul(thread),
         0x84 => i_inc(thread),
+        0x86 => int_to_float(thread),
+        0x95 => fcmp(thread, -1),
+        0x96 => fcmp(thread, 1),
+        0x99 => if_eq(thread),
         0x9A => if_ne(thread),
         0x9B => if_lt(thread),
         0x9C => if_ge(thread),
-        0x99 => if_eq(thread),
+        0x9E => if_le(thread),
         0xA0 => if_int_cmp_ne(thread),
         0xA1 => if_int_cmp_lt(thread),
         0xA2 => if_int_cmp_ge(thread),
@@ -140,6 +154,9 @@ fn op_name(code: u8) -> &'static str {
         0x08 => "iconst_5",
         0x09 => "lconst_0",
         0x0A => "lconst_1",
+        0x0B => "fconst_0",
+        0x0C => "fconst_1",
+        0x0D => "fconst_2",
         0x10 => "bipush",
         0x11 => "sipush",
         0x12 => "ldc",
@@ -152,6 +169,10 @@ fn op_name(code: u8) -> &'static str {
         0x1B => "iload_1",
         0x1C => "iload_2",
         0x1D => "iload_3",
+        0x22 => "fload_0",
+        0x23 => "fload_1",
+        0x24 => "fload_2",
+        0x25 => "fload_3",
         0x2A => "aload_0",
         0x2B => "aload_1",
         0x2C => "aload_2",
@@ -174,11 +195,16 @@ fn op_name(code: u8) -> &'static str {
         0x59 => "dup",
         0x60 => "iadd",
         0x64 => "isub",
+        0x6A => "fmul",
         0x84 => "iinc",
+        0x86 => "i2f",
+        0x95 => "fcmpl",
+        0x96 => "fcmpg",
+        0x99 => "ifeq",
         0x9A => "ifne",
         0x9B => "iflt",
         0x9C => "ifge",
-        0x99 => "ifeq",
+        0x9E => "ifle",
         0xA0 => "if_icmpne",
         0xA1 => "if_icmplt",
         0xA2 => "if_icmpge",

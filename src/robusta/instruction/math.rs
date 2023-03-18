@@ -1,4 +1,4 @@
-use crate::java::{ Int, Value};
+use crate::java::{Float, Int, Value};
 use crate::thread::Thread;
 
 pub fn i_add(thread: &mut Thread) {
@@ -21,6 +21,17 @@ pub fn i_sub(thread: &mut Thread) {
     let (result, _) = value1.0.overflowing_sub(value2.0);
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn f_mul(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().float();
+    let value1 = frame.operand_stack.pop().float();
+
+    let result = value1.0 * value2.0;
+
+    frame.operand_stack.push(Value::Float(Float(result)));
 }
 
 pub fn i_inc(thread: &mut Thread) {

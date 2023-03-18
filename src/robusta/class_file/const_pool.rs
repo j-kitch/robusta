@@ -14,6 +14,13 @@ pub struct Integer {
 }
 
 #[derive(Debug, PartialEq)]
+/// The `CONSTANT_Float_info` structure is used to represent an int constant.
+pub struct Float {
+    /// The float constant.
+    pub float: f32,
+}
+
+#[derive(Debug, PartialEq)]
 /// The `CONSTANT_Long_info` structure is used to represent an long constant.
 pub struct Long {
     /// The long constant.
@@ -89,6 +96,7 @@ pub struct NameAndType {
 pub enum Const {
     Utf8(Utf8),
     Integer(Integer),
+    Float(Float),
     Long(Long),
     Class(Class),
     String(String),
