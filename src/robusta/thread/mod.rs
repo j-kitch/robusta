@@ -163,7 +163,6 @@ impl Thread {
 
         while self.stack.len() > depth {
             self.next();
-            trace!("here 2");
 
         }
 

@@ -1,8 +1,8 @@
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::log;
-use crate::method_area::Method;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::method_area::Method;
 use crate::thread::Thread;
 
 /// No difference between these two methods YET
@@ -21,11 +21,9 @@ pub fn invoke_static(thread: &mut Thread) {
     invoke(thread, "invokestatic", true, false)
 }
 
-fn invoke(thread: &mut Thread, name: &str, is_static: bool, is_virtual: bool) {
+fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let method_idx = cur_frame.read_u16();
-
-    trace!(target: log::INSTR, pc=cur_frame.pc - 3, opcode=name, index=method_idx);
 
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);

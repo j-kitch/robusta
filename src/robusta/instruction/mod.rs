@@ -1,3 +1,4 @@
+use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
@@ -11,6 +12,7 @@ use crate::instruction::r#const::{iconst_n, load_constant, load_constant_cat_2_w
 use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
+use crate::log;
 
 use crate::thread::Thread;
 
@@ -29,7 +31,19 @@ mod sync;
 
 pub fn instruction(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
+    let method = unsafe { frame.method.as_ref().unwrap() };
+    let class = unsafe { method.class.as_ref().unwrap() };
+    let pc = frame.pc;
     let opcode = frame.read_u8();
+    let depth = thread.stack.len();
+
+    trace!(
+        target: log::INSTR,
+        stack=depth,
+        method=format!("{}.{}{}", &class.name, &method.name, method.descriptor.descriptor()),
+        pc,
+        op=op_name(opcode)
+    );
 
     match opcode {
         0x02 => iconst_n(thread, -1),
@@ -98,5 +112,76 @@ pub fn instruction(thread: &mut Thread) {
         0xC3 => monitor_exit(thread),
         0xC6 => if_null(thread),
         _ => panic!("not implemented opcode 0x{:0x?}", opcode)
+    }
+}
+
+fn op_name(code: u8) -> &'static str {
+    match code {
+        0x02 => "iconst_m1",
+        0x03 => "iconst_0",
+        0x04 => "iconst_1",
+        0x05 => "iconst_2",
+        0x06 => "iconst_3",
+        0x07 => "iconst_4",
+        0x08 => "iconst_5",
+        0x10 => "bipush",
+        0x11 => "sipush",
+        0x12 => "ldc",
+        0x13 => "ldc_w",
+        0x14 => "ldc2_w",
+        0x15 => "iload",
+        0x19 => "aload",
+        0x1A => "iload_0",
+        0x1B => "iload_1",
+        0x1C => "iload_2",
+        0x1D => "iload_3",
+        0x2A => "aload_0",
+        0x2B => "aload_1",
+        0x2C => "aload_2",
+        0x2D => "aload_3",
+        0x32 => "aaload",
+        0x34 => "caload",
+        0x36 => "istore",
+        0x3A => "astore",
+        0x3B => "istore_0",
+        0x3C => "istore_1",
+        0x3D => "istore_2",
+        0x3E => "istore_3",
+        0x4B => "astore_0",
+        0x4C => "astore_1",
+        0x4D => "astore_2",
+        0x4E => "astore_3",
+        0x53 => "aastore",
+        0x55 => "castore",
+        0x57 => "pop",
+        0x59 => "dup",
+        0x60 => "iadd",
+        0x84 => "iinc",
+        0x9A => "ifne",
+        0x9B => "iflt",
+        0x99 => "ifeq",
+        0xA0 => "if_icmpne",
+        0xA2 => "if_icmpge",
+        0xA4 => "if_icmple",
+        0xA7 => "goto",
+        0xAC => "ireturn",
+        0xB0 => "areturn",
+        0xB1 => "return",
+        0xB2 => "getstatic",
+        0xB3 => "putstatic",
+        0xB4 => "getfield",
+        0xB5 => "putfield",
+        0xB6 => "invokevirtual",
+        0xB7 => "invokespecial",
+        0xB8 => "invokestatic",
+        0xBB => "new",
+        0xBC => "newarray",
+        0xBD => "anewarray",
+        0xBE => "arraylength",
+        0xBF => "athrow",
+        0xC2 => "monitorenter",
+        0xC3 => "monitorexit",
+        0xC6 => "ifnull",
+        _ => panic!("not implemented opcode 0x{:0x?}", code)
     }
 }

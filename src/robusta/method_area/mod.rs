@@ -32,7 +32,7 @@ impl MethodArea {
         MethodArea {
             loader: ClassFileLoader::new(vec![
                 PathBuf::from("./classes"),
-                PathBuf::from("./classes/EmptyMain.jar"),
+                PathBuf::from("./classes/rt.jar"),
             ]),
             heap,
             classes: OnceMap::new(),

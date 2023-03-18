@@ -1,6 +1,5 @@
-use tracing::trace;
+use crate::method_area;
 use crate::java::{MethodType, Value};
-use crate::{log, method_area};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;
 
@@ -8,14 +7,6 @@ use crate::thread::Thread;
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.return).
 pub fn r#return(thread: &mut Thread) {
-    let frame = thread.stack.last_mut().unwrap();
-
-    trace!(
-        target: log::INSTR,
-        pc=frame.pc-1,
-        opcode="return"
-    );
-
     exit_monitor(thread);
 
     thread.stack.pop();

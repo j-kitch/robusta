@@ -1,5 +1,3 @@
-use tracing::trace;
-use crate::log;
 use crate::method_area::const_pool::FieldKey;
 use crate::thread::Thread;
 
@@ -31,8 +29,6 @@ pub fn get_static(thread: &mut Thread) {
 
     let field_idx = curr_frame.read_u16();
 
-    trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="getstatic", index=field_idx);
-
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
@@ -56,8 +52,6 @@ pub fn put_static(thread: &mut Thread) {
 
     let field_idx = curr_frame.read_u16();
 
-    trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="putstatic", index=field_idx);
-
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
@@ -80,8 +74,6 @@ pub fn put_field(thread: &mut Thread) {
     let const_pool = curr_frame.const_pool;
 
     let field_idx = curr_frame.read_u16();
-
-    trace!(target: log::INSTR, pc=curr_frame.pc - 3, opcode="putfield", index=field_idx);
 
     let field = thread.runtime.method_area.resolve_field(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
