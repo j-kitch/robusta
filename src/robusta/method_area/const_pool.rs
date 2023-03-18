@@ -84,6 +84,23 @@ impl ConstPool {
                         resolved: Once::new(),
                     }));
                 }
+                cp::Const::InterfaceMethodRef(method) => {
+                    let class = file.get_const_class(method.class);
+                    let class_name = file.get_const_utf8(class.name);
+                    let name_and_type = file.get_const_name_and_type(method.name_and_type);
+                    let name = file.get_const_utf8(name_and_type.name);
+                    let name = String::from_utf8(name.bytes.clone()).unwrap();
+                    let descriptor = file.get_const_utf8(name_and_type.descriptor);
+                    let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
+                    pool.pool.insert(*key, Const::Method(SymbolicReference {
+                        const_key: MethodKey {
+                            class: String::from_utf8(class_name.bytes.clone()).unwrap().replace("/", "."),
+                            name,
+                            descriptor,
+                        },
+                        resolved: Once::new(),
+                    }));
+                }
                 _ => {}
             }
         }

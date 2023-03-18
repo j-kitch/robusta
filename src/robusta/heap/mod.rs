@@ -89,7 +89,7 @@ impl Heap {
         let string_obj = self.get_object(reference);
         let chars_ref = string_obj.get_field(&FieldKey {
             class: "java.lang.String".to_string(),
-            name: "chars".to_string(),
+            name: "value".to_string(),
             descriptor: FieldType::from_descriptor("[C").unwrap(),
         }).reference();
         let chars_arr = self.get_array(chars_ref);
@@ -120,7 +120,7 @@ impl Heap {
 
             object.set_field(&FieldKey {
                 class: "java.lang.String".to_string(),
-                name: "chars".to_string(),
+                name: "value".to_string(),
                 descriptor: FieldType::from_descriptor("[C").unwrap(),
             }, CategoryOne { reference: chars_ref });
 

@@ -32,6 +32,8 @@ pub fn get_static(thread: &mut Thread) {
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
+    let rt = thread.runtime.clone();
+    rt.method_area.initialize(thread, class);
 
     let static_ref = thread.runtime.heap.get_static(class);
     let static_obj = thread.runtime.heap.get_object(static_ref);
@@ -55,6 +57,9 @@ pub fn put_static(thread: &mut Thread) {
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
+
+    let rt = thread.runtime.clone();
+    rt.method_area.initialize(thread, class);
 
     let static_ref = thread.runtime.heap.get_static(class);
     let static_obj = thread.runtime.heap.get_object(static_ref);

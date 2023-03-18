@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::io::Read;
 
 use crate::class_file::{ClassAttribute, ClassFile, Code, CodeAttribute, const_pool, ExHandler, Field, LineNumber, LineNumberTable, MAGIC, Method, MethodAttribute, SourceFile, UnknownAttribute};
-use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, Long, MethodRef, NameAndType, Utf8};
+use crate::class_file::const_pool::{Class, Const, FieldRef, Integer, InterfaceMethodRef, Long, MethodRef, NameAndType, Utf8};
 
 /// Parse a class file structure from a reader.
 pub fn parse(reader: &mut dyn Read) -> ClassFile {
@@ -179,6 +179,10 @@ impl<'a> Parser<'a> {
                 name_and_type: self.read_u16()?,
             })),
             10 => Ok(Const::MethodRef(MethodRef {
+                class: self.read_u16()?,
+                name_and_type: self.read_u16()?,
+            })),
+            11 => Ok(Const::InterfaceMethodRef(InterfaceMethodRef {
                 class: self.read_u16()?,
                 name_and_type: self.read_u16()?,
             })),

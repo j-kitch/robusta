@@ -48,6 +48,10 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
 
     let method = unsafe { method.as_ref().unwrap() };
     let class = unsafe { method.class.as_ref().unwrap() };
+    if is_static {
+        let rt = thread.runtime.clone();
+        rt.method_area.initialize(thread, class);
+    }
 
     if method.is_synchronized {
         let this_ref = if is_static {

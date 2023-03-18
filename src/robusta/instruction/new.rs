@@ -7,6 +7,7 @@ use crate::thread::Thread;
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.new).
 pub fn new(thread: &mut Thread) {
+    let rt = thread.runtime.clone();
     let cur_frame = thread.stack.last_mut().unwrap();
 
     let class_idx = cur_frame.read_u16();
@@ -14,6 +15,8 @@ pub fn new(thread: &mut Thread) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let class = thread.runtime.method_area.resolve_class(cur_frame.const_pool, class_idx);
     let class = unsafe { class.as_ref().unwrap() };
+    rt.method_area.initialize(thread, class);
+
     let new_ref = thread.runtime.heap.new_object(class);
 
     let cur_frame = thread.stack.last_mut().unwrap();

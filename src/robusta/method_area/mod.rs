@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::thread;
 
 use tracing::debug;
 
@@ -83,36 +82,33 @@ impl MethodArea {
         *class
     }
 
-    pub fn resolve_method(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Method {
+    pub fn resolve_method(&self, _: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Method {
         let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {
             let class = self.load_class(&method_key.class);
-            self.initialize(rt, class);
             let method = class.find_method(method_key).unwrap();
             method as *const Method
         });
         *method
     }
 
-    pub fn resolve_field(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
+    pub fn resolve_field(&self, _: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
         let pool = unsafe { pool.as_ref().unwrap() };
         let field_const = pool.get_field(index);
         let field = field_const.resolve(|field_key| {
             let class = self.load_class(&field_key.class);
-            self.initialize(rt, class);
             let field = class.find_field(field_key);
             field as *const Field
         });
         *field
     }
 
-    pub fn resolve_static(&self, rt: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
+    pub fn resolve_static(&self, _: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Field {
         let pool = unsafe { pool.as_ref().unwrap() };
         let field_const = pool.get_field(index);
         let field = field_const.resolve(|field_key| {
             let class = self.load_class(&field_key.class);
-            self.initialize(rt, class);
             let field = class.find_static(field_key);
             field as *const Field
         });
@@ -241,36 +237,34 @@ impl MethodArea {
         heap.insert_class_object(class, class_class, string_class)
     }
 
-    fn initialize(&self, rt: Arc<Runtime>, class: &Class) {
-        self.initialized.get_or_init(class.name.clone(), |class_name| {
+    pub fn initialize(&self, thread: &mut Thread, class: &Class) {
+        let already_init = thread.stack.iter().any(|f| {
+            if f.method == 0 as *const Method {
+                return false;
+            }
+            let method = unsafe { f.method.as_ref().unwrap() };
+            method.name.eq("<clinit>") && f.class.eq(&class.name)
+        });
+        if already_init {
+            return;
+        }
+
+        self.initialized.get_or_init(class.name.clone(), |_| {
             if let Some(parent) = class.super_class {
                 let parent = unsafe { parent.as_ref().unwrap() };
-                self.initialize(rt.clone(), parent);
+                self.initialize(thread, parent);
             }
-
-            let clinit = class.find_method(&MethodKey {
-                class: class_name.to_string(),
-                name: "<clinit>".to_string(),
-                descriptor: MethodType::from_descriptor("()V").unwrap(),
-            });
-
-            if let Some(clinit) = clinit {
-                let thread = Thread::new(
-                    "".to_string(),
-                    None,
-                    rt.clone(),
-                    class_name.to_string(),
+            if let Some(clinit) = class.methods.iter().find(|m| m.name.eq("<clinit>")) {
+                let depth = thread.stack.len();
+                thread.push_frame(
+                    class.name.clone(),
                     &class.const_pool as *const ConstPool,
-                    clinit as *const Method);
-
-                thread::scope(move |scope| {
-                    scope.spawn(move || {
-                        unsafe {
-                            let thread = (thread.as_ref() as *const Thread).cast_mut().as_mut().unwrap();
-                            thread.run();
-                        }
-                    });
-                });
+                    clinit as *const Method,
+                    vec![]
+                );
+                while thread.stack.len() > depth {
+                    thread.next();
+                }
             }
         });
     }

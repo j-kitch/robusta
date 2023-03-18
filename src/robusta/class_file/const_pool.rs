@@ -59,6 +59,18 @@ pub struct MethodRef {
 }
 
 #[derive(Debug, PartialEq)]
+/// The `CONSTANT_InterfaceMethodref_info` structure, used to represent an interface method on a
+/// class.
+pub struct InterfaceMethodRef {
+    /// An index into the `const_pool`, a valid `Const::Class`, representing the interface
+    /// that this method is defined on.
+    pub class: u16,
+    /// An index into the `const_pool`, a valid `Const::NameAndType`, representing the
+    /// name and method signature of this method.
+    pub name_and_type: u16,
+}
+
+#[derive(Debug, PartialEq)]
 /// The `CONSTANT_NameAndType_info` structure is used to represent a field or method,
 /// without indicating which class or interface type it belongs to:
 pub struct NameAndType {
@@ -82,6 +94,7 @@ pub enum Const {
     String(String),
     FieldRef(FieldRef),
     MethodRef(MethodRef),
+    InterfaceMethodRef(InterfaceMethodRef),
     NameAndType(NameAndType),
 }
 

@@ -29,6 +29,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Object".to_string(),
+                name: "registerNatives".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
                 name: "getClass".to_string(),
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
             },
@@ -65,6 +73,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(thread_start),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "registerNatives".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
         ),
         stateless(
             Method {
@@ -116,7 +132,7 @@ fn string_intern(args: &Args) -> Option<Value> {
 
     let chars_ref = string_obj.get_field(&FieldKey {
         class: "java.lang.String".to_string(),
-        name: "chars".to_string(),
+        name: "value".to_string(),
         descriptor: FieldType::from_descriptor("[C").unwrap(),
     }).reference();
 
@@ -464,4 +480,8 @@ pub fn current_thread(args: &Args) -> Option<Value> {
     let thread = unsafe { args.thread.as_ref().unwrap() };
     let thread_ref = thread.reference.as_ref().unwrap();
     Some(Value::Reference(*thread_ref))
+}
+
+pub fn no_op(_: &Args) -> Option<Value> {
+    None
 }

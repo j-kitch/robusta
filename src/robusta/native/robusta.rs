@@ -59,7 +59,7 @@ fn robusta_println_string(args: &Args) -> Option<Value> {
 
     let chars_field = str_obj.get_field(&FieldKey {
         class: "java.lang.String".to_string(),
-        name: "chars".to_string(),
+        name: "value".to_string(),
         descriptor: FieldType::from_descriptor("[C").unwrap(),
     }).reference();
 
@@ -78,7 +78,7 @@ fn robusta_printerr_string(args: &Args) -> Option<Value> {
 
     let chars_field = str_obj.get_field(&FieldKey {
         class: "java.lang.String".to_string(),
-        name: "chars".to_string(),
+        name: "value".to_string(),
         descriptor: FieldType::from_descriptor("[C").unwrap(),
     }).reference();
 
