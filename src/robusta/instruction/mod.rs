@@ -2,13 +2,14 @@ use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
+use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
-use crate::instruction::locals::{aload, aload_n, astore, astore_n, iload, iload_n, istore, istore_n};
+use crate::instruction::locals::{aload, aload_n, astore, astore_n, iload, iload_n, istore, istore_n, lload};
 use crate::instruction::math::{i_add, i_inc, i_sub};
 use crate::instruction::new::new_array;
-use crate::instruction::r#const::{iconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
+use crate::instruction::r#const::{aconst_null, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
@@ -28,6 +29,7 @@ mod branch;
 mod locals;
 mod stack;
 mod sync;
+mod class;
 
 pub fn instruction(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
@@ -46,6 +48,7 @@ pub fn instruction(thread: &mut Thread) {
     );
 
     match opcode {
+        0x01 => aconst_null(thread),
         0x02 => iconst_n(thread, -1),
         0x03 => iconst_n(thread, 0),
         0x04 => iconst_n(thread, 1),
@@ -53,12 +56,15 @@ pub fn instruction(thread: &mut Thread) {
         0x06 => iconst_n(thread, 3),
         0x07 => iconst_n(thread, 4),
         0x08 => iconst_n(thread, 5),
+        0x09 => lconst_n(thread, 0),
+        0x0A => lconst_n(thread, 1),
         0x10 => bipush(thread),
         0x11 => sipush(thread),
         0x12 => load_constant(thread),
         0x13 => load_constant_wide(thread),
         0x14 => load_constant_cat_2_wide(thread),
         0x15 => iload(thread),
+        0x16 => lload(thread),
         0x19 => aload(thread),
         0x1A => iload_n(thread, 0),
         0x1B => iload_n(thread, 1),
@@ -111,6 +117,8 @@ pub fn instruction(thread: &mut Thread) {
         0xBD => a_new_array(thread),
         0xBE => array_length(thread),
         0xBF => a_throw(thread),
+        0xC0 => check_cast(thread),
+        0xC1 => instance_of(thread),
         0xC2 => monitor_enter(thread),
         0xC3 => monitor_exit(thread),
         0xC6 => if_null(thread),
@@ -121,6 +129,7 @@ pub fn instruction(thread: &mut Thread) {
 
 fn op_name(code: u8) -> &'static str {
     match code {
+        0x01 => "aconst_null",
         0x02 => "iconst_m1",
         0x03 => "iconst_0",
         0x04 => "iconst_1",
@@ -128,12 +137,15 @@ fn op_name(code: u8) -> &'static str {
         0x06 => "iconst_3",
         0x07 => "iconst_4",
         0x08 => "iconst_5",
+        0x09 => "lconst_0",
+        0x0A => "lconst_1",
         0x10 => "bipush",
         0x11 => "sipush",
         0x12 => "ldc",
         0x13 => "ldc_w",
         0x14 => "ldc2_w",
         0x15 => "iload",
+        0x16 => "lload",
         0x19 => "aload",
         0x1A => "iload_0",
         0x1B => "iload_1",
@@ -186,6 +198,8 @@ fn op_name(code: u8) -> &'static str {
         0xBD => "anewarray",
         0xBE => "arraylength",
         0xBF => "athrow",
+        0xC0 => "checkcast",
+        0xC1 => "instanceof",
         0xC2 => "monitorenter",
         0xC3 => "monitorexit",
         0xC6 => "ifnull",

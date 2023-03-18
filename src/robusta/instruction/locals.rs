@@ -63,6 +63,13 @@ pub fn iload(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(value));
 }
 
+pub fn lload(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.local_vars.load_value(index as u16).long();
+    frame.operand_stack.push(Value::Long(value));
+}
+
 pub fn aload(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let index = frame.read_u8();

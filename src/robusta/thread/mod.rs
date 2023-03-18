@@ -443,4 +443,8 @@ impl LocalVars {
             _ => panic!("expected to load cat one")
         }
     }
+
+    pub fn load_value(&mut self, index: u16) -> Value {
+        self.map.get(&index).unwrap().clone()
+    }
 }
