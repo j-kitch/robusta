@@ -6,7 +6,7 @@ use crate::runtime::Runtime;
 
 pub struct ThreadWait {
     runtime: Arc<Runtime>,
-    thread_ref: Mutex<Reference>,
+    pub thread_ref: Mutex<Reference>,
     cond_var: Condvar,
 }
 

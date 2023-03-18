@@ -36,6 +36,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.ClassLoader".to_string(),
+                name: "registerNatives".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Object".to_string(),
                 name: "getClass".to_string(),
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
@@ -369,7 +377,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     let class = args.runtime.method_area.insert_gen_class(class);
     let method = &unsafe { class.as_ref().unwrap() }.methods[0] as *const method_area::Method;
 
-    let array_reference = thread.native_invoke(class, method).unwrap().reference();
+    let array_reference = thread.native_invoke(class, method, vec![]).unwrap().reference();
 
     // Store array reference in field
     let throwable = args.runtime.heap.get_object(throwable_ref);

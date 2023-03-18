@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tracing::debug;
 
-use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, METHOD_ACC_SYNC, ClassAttribute, Code};
+use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
 use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
@@ -116,6 +116,7 @@ impl MethodArea {
     }
 
     pub fn load_class(&self, class_name: &str) -> &Class {
+        // info!("load class {}", class_name);
         let class = self.classes.get_or_init(class_name.to_string(), |name| {
             debug!(target: log::LOADER, class=name, "Loading class");
             let class_file = self.loader.find(name).unwrap();
@@ -260,7 +261,7 @@ impl MethodArea {
                     class.name.clone(),
                     &class.const_pool as *const ConstPool,
                     clinit as *const Method,
-                    vec![]
+                    vec![],
                 );
                 while thread.stack.len() > depth {
                     thread.next();

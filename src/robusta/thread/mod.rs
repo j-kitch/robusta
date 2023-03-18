@@ -129,7 +129,7 @@ impl Thread {
     }
 
     /// A native method needs to be able to invoke the thread stack again to get a result.
-    pub fn native_invoke(&mut self, class: *const Class, method: *const Method) -> Option<Value> {
+    pub fn native_invoke(&mut self, class: *const Class, method: *const Method, args: Vec<Value>) -> Option<Value> {
         let class = unsafe { class.as_ref().unwrap() };
         let method2 = unsafe { method.as_ref().unwrap() };
         let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };
@@ -149,17 +149,7 @@ impl Thread {
 
         let depth = self.stack.len();
 
-        self.stack.push(Frame {
-            class: class.name.clone(),
-            const_pool: &class.const_pool as *const ConstPool,
-            method,
-            operand_stack: OperandStack::new(),
-            local_vars: LocalVars::new(),
-            pc: 0,
-            native: None,
-            native_args: vec![],
-            native_roots: HashSet::new(),
-        });
+        self.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, method, args);
 
         while self.stack.len() > depth {
             self.next();

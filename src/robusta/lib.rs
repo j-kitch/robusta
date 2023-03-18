@@ -70,6 +70,8 @@ impl VirtualMachine {
 
         let runtime = Runtime::new();
 
+        runtime.method_area.load_class("sun.misc.Launcher");
+
         // Required Initialization
         let main_thread_ref = {
             let create_thread_class = runtime.method_area.insert_gen_class(shim::create_main_thread());

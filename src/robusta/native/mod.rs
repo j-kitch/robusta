@@ -6,12 +6,16 @@ use crate::java::{Reference, Value};
 use crate::log;
 use crate::method_area::Method;
 use crate::native::java_lang::java_lang_plugins;
+use crate::native::java_security::java_security_plugins;
 use crate::native::robusta::robusta_plugins;
+use crate::native::system::system_plugins;
 use crate::thread::Thread;
 
 mod robusta;
 mod stateless;
 mod java_lang;
+mod java_security;
+mod system;
 
 pub struct NativeMethods {
     plugins: Vec<Arc<dyn Plugin>>,
@@ -26,6 +30,8 @@ impl NativeMethods {
         let mut plugins = Vec::new();
         plugins.append(&mut robusta_plugins());
         plugins.append(&mut java_lang_plugins());
+        plugins.append(&mut java_security_plugins());
+        plugins.append(&mut system_plugins());
         NativeMethods { plugins }
     }
 
