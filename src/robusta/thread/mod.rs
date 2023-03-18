@@ -32,9 +32,11 @@ impl Safe {
 
     /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
+        // trace!("enter safe");
         let mut lock = self.state.lock();
         lock.0 = true;
         self.wait.notify_all();
+        // trace!("entered safe");
     }
 
     pub fn start_gc(&self) {
@@ -51,6 +53,7 @@ impl Safe {
 
     /// Wait for GC to end.
     pub fn exit(&self) {
+        // trace!("exiting safe");
         let mut lock = self.state.lock();
         while lock.1 {
             self.wait.wait_while(&mut lock, |(_, gc)| {
@@ -58,6 +61,7 @@ impl Safe {
             });
         }
         lock.0 = false;
+        // trace!("exited safe");
     }
 
     pub fn end_gc(&self) {

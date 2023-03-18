@@ -44,6 +44,22 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.io.FileInputStream".to_string(),
+                name: "initIDs".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.io.FileDescriptor".to_string(),
+                name: "initIDs".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Class".to_string(),
                 name: "registerNatives".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),

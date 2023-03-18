@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use maplit::hashset;
 use tracing::debug;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
@@ -467,6 +468,29 @@ impl Class {
         Hierarchy { current: Some(self as *const Class) }
     }
 
+    pub fn parents_and_interfaces(&self) -> HashSet<*const Class> {
+        let mut classes = hashset! {};
+        let mut visited = hashset! {};
+
+        classes.insert(self as *const Class);
+
+        while visited.len() < classes.len() {
+            let next_class = classes.difference(&visited).next().unwrap().clone();
+            let class = unsafe { next_class.as_ref().unwrap() };
+
+            if let Some(parent) = class.super_class {
+                classes.insert(parent);
+                for interface in &class.interfaces {
+                    classes.insert(*interface);
+                }
+            }
+
+            visited.insert(next_class);
+        }
+
+        classes
+    }
+
     pub fn find_field(&self, key: &FieldKey) -> &Field {
         self.parents()
             .flat_map(|class| unsafe { (*class).instance_fields.iter() })
@@ -487,7 +511,7 @@ impl Class {
     }
 
     pub fn is_instance_of(&self, other: &Class) -> bool {
-        self.parents().any(|c| {
+        self.parents_and_interfaces().iter().any(|c| {
             let c = unsafe { c.as_ref().unwrap() };
             c.name.eq(&other.name)
         })

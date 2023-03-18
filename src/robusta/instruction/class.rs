@@ -11,6 +11,7 @@ pub fn check_cast(thread: &mut Thread) {
 
     if object_ref.0 == 0 {
         frame.operand_stack.push(Value::Reference(Reference(0)));
+        return;
     }
 
     let object = thread.runtime.heap.get_object(object_ref);
@@ -33,6 +34,7 @@ pub fn instance_of(thread: &mut Thread) {
 
     if object_ref.0 == 0 {
         frame.operand_stack.push(Value::Int(Int(0)));
+        return;
     }
 
     let object = thread.runtime.heap.get_object(object_ref);

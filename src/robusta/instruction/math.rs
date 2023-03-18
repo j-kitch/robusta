@@ -1,3 +1,4 @@
+use std::ops::BitXor;
 use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
@@ -34,6 +35,17 @@ pub fn i_sub(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn i_mul(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
+
+    let result = value1.0.overflowing_mul(value2.0).0;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn f_mul(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -56,6 +68,32 @@ pub fn i_inc(thread: &mut Thread) {
     frame.local_vars.store_value(index as u16, Value::Int(Int(value)))
 }
 
+pub fn ixor(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let result = value1 ^ value2;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn iushr(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let s = value2 & 0b11111;
+
+    let unsigned_value_1 = u32::from_be_bytes(value1.to_be_bytes());
+    let unsigned_result = unsigned_value_1 >> s;
+    let result = i32::from_be_bytes(unsigned_result.to_be_bytes());
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn lshl(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -69,6 +107,17 @@ pub fn lshl(thread: &mut Thread) {
     frame.operand_stack.push(Value::Long(Long(result)));
 }
 
+pub fn iand(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let result = value1 & value2;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn land(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -78,4 +127,15 @@ pub fn land(thread: &mut Thread) {
     let result = value1 & value2;
 
     frame.operand_stack.push(Value::Long(Long(result)));
+}
+
+pub fn irem(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let result = value1 % value2;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
 }

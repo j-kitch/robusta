@@ -28,6 +28,7 @@ unsafe impl Sync for NativeMethods {}
 impl NativeMethods {
     pub fn new() -> Self {
         let mut plugins = Vec::new();
+        plugins.push(Arc::new(RegisterNative {}) as _);
         plugins.append(&mut robusta_plugins());
         plugins.append(&mut java_lang_plugins());
         plugins.append(&mut java_security_plugins());
@@ -79,3 +80,18 @@ pub trait Plugin {
     fn call(&self, method: &Method, args: &Args) -> Option<Value>;
 }
 
+struct RegisterNative {
+
+}
+
+impl Plugin for RegisterNative {
+    fn supports(&self, method: &Method) -> bool {
+        method.name.eq("registerNatives") &&
+            method.descriptor.descriptor().eq("()V") &&
+            unsafe { method.class.as_ref().unwrap() }.name.ne("java.lang.System")
+    }
+
+    fn call(&self, _: &Method, _: &Args) -> Option<Value> {
+        None
+    }
+}
