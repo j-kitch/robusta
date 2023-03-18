@@ -28,6 +28,13 @@ pub struct Long {
 }
 
 #[derive(Debug, PartialEq)]
+/// The `CONSTANT_Double_info` structure is used to represent a double constant.
+pub struct Double {
+    /// The double constant.
+    pub double: f64,
+}
+
+#[derive(Debug, PartialEq)]
 /// The `CONSTANT_Class_info` structure, used to represent a class or an interface.
 pub struct Class {
     /// An index into the `const_pool`, a valid `Const::Utf8`, representing a valid
@@ -98,6 +105,7 @@ pub enum Const {
     Integer(Integer),
     Float(Float),
     Long(Long),
+    Double(Double),
     Class(Class),
     String(String),
     FieldRef(FieldRef),
@@ -109,7 +117,7 @@ pub enum Const {
 impl Const {
     pub fn width(&self) -> u16 {
         match self {
-            Const::Long(_) => 2,
+            Const::Long(_) | Const::Double(_) => 2,
             _ => 1
         }
     }
@@ -121,10 +129,9 @@ impl Const {
     /// inserted first.
     pub fn order(&self) -> usize {
         match self {
-            Const::String(_) | Const::Integer(_) | Const::Long(_) => 0,
-            Const::Class(_) => 1,
-            Const::FieldRef(_) | Const::MethodRef(_) => 2,
-            _ => 3
+            Const::Class(_) => 0,
+            Const::FieldRef(_) | Const::MethodRef(_) => 1,
+            _ => 2
         }
     }
 }

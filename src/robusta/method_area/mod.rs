@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::once::OnceMap;
 use crate::heap::Heap;
-use crate::java::{FieldType, Float, Int, Long, MethodType, Reference, Value};
+use crate::java::{Double, FieldType, Float, Int, Long, MethodType, Reference, Value};
 use crate::loader::{ClassFileLoader, Loader};
 use crate::log;
 use crate::method_area::const_pool::{Const, ConstPool, FieldKey, MethodKey};
@@ -199,6 +199,7 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         match pool.get_const(index) {
             Const::Long(long) => Value::Long(Long(*long)),
+            Const::Double(double) => Value::Double(Double(*double)),
             _ => panic!("Expected to load a category 2 const, but not found")
         }
     }

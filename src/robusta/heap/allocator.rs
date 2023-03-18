@@ -68,10 +68,10 @@ impl Object {
         read_value(self.data, field.offset, &field.descriptor)
     }
 
-    pub fn set_field(&self, field: &FieldKey, value: CategoryOne) {
+    pub fn set_field(&self, field: &FieldKey, value: Value) {
         let field = self.class().find_field(field);
 
-        write_value(self.data, field.offset, value)
+        write_value(self.data, field.offset, &field.descriptor, value)
     }
 
     pub fn get_static(&self, field: &FieldKey) -> Value {
@@ -80,10 +80,10 @@ impl Object {
         read_value(self.data, field.offset, &field.descriptor)
     }
 
-    pub fn set_static(&self, field: &FieldKey, value: CategoryOne) {
+    pub fn set_static(&self, field: &FieldKey, value: Value) {
         let field = self.class().find_static(field);
 
-        write_value(self.data, field.offset, value)
+        write_value(self.data, field.offset, &field.descriptor, value)
     }
 
     pub fn hash_code(&self) -> Int {
@@ -128,10 +128,10 @@ impl Array {
         Int(length as i32)
     }
 
-    pub fn set_element(&self, index: Int, value: CategoryOne) {
+    pub fn set_element(&self, index: Int, value: Value) {
         let header = self.header();
         let index = index.0 as usize * header.component.width();
-        write_value(self.data, index, value)
+        write_value(self.data, index, &header.component.to_field(), value)
     }
 
     pub fn get_element(&self, index: Int) -> Value {
@@ -398,11 +398,51 @@ impl Allocator {
     // }
 }
 
-fn write_value(data_start: *mut u8, offset: usize, value: CategoryOne) {
+fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
     unsafe {
         let pointer: *mut u8 = data_start.add(offset);
-        let pointer: *mut i32 = pointer.cast();
-        pointer.write(value.int().0)
+        match field {
+            FieldType::Boolean | FieldType::Byte => {
+                let value = value.int().0 as i8;
+                let pointer = pointer as *mut i8;
+                pointer.write(value)
+            }
+            FieldType::Char => {
+                let value = value.int().0 as u16;
+                let pointer = pointer as *mut u16;
+                pointer.write(value)
+            }
+            FieldType::Short => {
+                let value = value.int().0 as i16;
+                let pointer = pointer as *mut i16;
+                pointer.write(value)
+            }
+            FieldType::Int => {
+                let value = value.int().0;
+                let pointer = pointer as *mut i32;
+                pointer.write(value)
+            }
+            FieldType::Float => {
+                let value = value.float().0;
+                let pointer = pointer as *mut f32;
+                pointer.write(value)
+            }
+            FieldType::Long => {
+                let value = value.long().0;
+                let pointer = pointer as *mut i64;
+                pointer.write(value)
+            }
+            FieldType::Double => {
+                let value = value.double().0;
+                let pointer = pointer as *mut f64;
+                pointer.write(value)
+            }
+            FieldType::Reference(_) | FieldType::Array(_) => {
+                let value = value.reference().0;
+                let pointer = pointer as *mut u32;
+                pointer.write(value)
+            }
+        }
     }
 }
 

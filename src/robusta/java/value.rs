@@ -92,7 +92,7 @@ impl Value {
             Value::Int(int) => CategoryOne { int: *int },
             Value::Float(float) => CategoryOne { float: *float },
             Value::Reference(reference) => CategoryOne { reference: *reference },
-            _ => panic!("Not a category one type")
+            _ => panic!("Not a category one type {:?}", self)
         }
     }
 }

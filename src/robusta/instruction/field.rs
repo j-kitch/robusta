@@ -71,7 +71,7 @@ pub fn put_static(thread: &mut Thread) {
         class: class.name.clone(),
         name: field.name.clone(),
         descriptor: field.descriptor.clone(),
-    }, value.cat_one());
+    }, value);
 }
 
 pub fn put_field(thread: &mut Thread) {
@@ -85,7 +85,7 @@ pub fn put_field(thread: &mut Thread) {
     let class = unsafe { field.class.as_ref().unwrap() };
 
     let curr_frame = thread.stack.last_mut().unwrap();
-    let value = curr_frame.operand_stack.pop().cat_one();
+    let value = curr_frame.operand_stack.pop();
 
     let obj_ref = curr_frame.operand_stack.pop().reference();
     let object = thread.runtime.heap.get_object(obj_ref);

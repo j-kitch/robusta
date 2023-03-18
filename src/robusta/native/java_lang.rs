@@ -9,7 +9,7 @@ use crate::method_area;
 use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::collection::wait::ThreadWait;
-use crate::java::{CategoryOne, FieldType, MethodType, Value};
+use crate::java::{CategoryOne, FieldType, Int, Long, MethodType, Value};
 use crate::method_area::{Class, ClassFlags};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
@@ -41,6 +41,30 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "desiredAssertionStatus0".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)Z").unwrap(),
+            },
+            Arc::new(assertion_status),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Float".to_string(),
+                name: "floatToRawIntBits".to_string(),
+                descriptor: MethodType::from_descriptor("(F)I").unwrap(),
+            },
+            Arc::new(float_to_int_bits),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Double".to_string(),
+                name: "doubleToRawLongBits".to_string(),
+                descriptor: MethodType::from_descriptor("(D)J").unwrap(),
+            },
+            Arc::new(double_to_long_bits),
         ),
         stateless(
             Method {
@@ -401,7 +425,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
         class: "java.lang.Throwable".to_string(),
         name: "stackTrace".to_string(),
         descriptor: FieldType::from_descriptor("[Ljava.lang.StackTraceElement;").unwrap(),
-    }, CategoryOne { reference: array_reference });
+    }, Value::Reference(array_reference));
 
     None
 }
@@ -518,4 +542,22 @@ pub fn get_primitive_class(args: &Args) -> Option<Value> {
     let primitive_object = args.runtime.method_area.load_class_object(primitive_class);
 
     Some(Value::Reference(primitive_object))
+}
+
+fn assertion_status(_: &Args) -> Option<Value> {
+    Some(Value::Int(Int(0)))
+}
+
+fn float_to_int_bits(args: &Args) -> Option<Value> {
+    let float = args.params[0].float().0;
+    let bytes = float.to_be_bytes();
+    let int = i32::from_be_bytes(bytes);
+    Some(Value::Int(Int(int)))
+}
+
+fn double_to_long_bits(args: &Args) -> Option<Value> {
+    let double = args.params[0].double().0;
+    let bytes = double.to_be_bytes();
+    let long = i64::from_be_bytes(bytes);
+    Some(Value::Long(Long(long)))
 }

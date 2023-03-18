@@ -3,12 +3,12 @@ pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
-use crate::instruction::conv::int_to_float;
+use crate::instruction::conv::{int_to_float, int_to_long};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
-use crate::instruction::math::{f_mul, i_add, i_inc, i_sub};
+use crate::instruction::math::{f_mul, i_add, i_inc, i_sub, l_add};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
@@ -100,9 +100,11 @@ pub fn instruction(thread: &mut Thread) {
         0x57 => pop(thread),
         0x59 => dup(thread),
         0x60 => i_add(thread),
+        0x61 => l_add(thread),
         0x64 => i_sub(thread),
         0x6A => f_mul(thread),
         0x84 => i_inc(thread),
+        0x85 => int_to_long(thread),
         0x86 => int_to_float(thread),
         0x95 => fcmp(thread, -1),
         0x96 => fcmp(thread, 1),
@@ -194,9 +196,11 @@ fn op_name(code: u8) -> &'static str {
         0x57 => "pop",
         0x59 => "dup",
         0x60 => "iadd",
+        0x61 => "ladd",
         0x64 => "isub",
         0x6A => "fmul",
         0x84 => "iinc",
+        0x85 => "i2l",
         0x86 => "i2f",
         0x95 => "fcmpl",
         0x96 => "fcmpg",

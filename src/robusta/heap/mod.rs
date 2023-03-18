@@ -5,7 +5,7 @@ use rand::{RngCore, thread_rng};
 
 use crate::collection::once::OnceMap;
 use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
-use crate::java::{CategoryOne, FieldType, Int, Reference};
+use crate::java::{CategoryOne, FieldType, Int, Reference, Value};
 use crate::method_area::Class;
 use crate::method_area::const_pool::FieldKey;
 
@@ -122,7 +122,7 @@ impl Heap {
                 class: "java.lang.String".to_string(),
                 name: "value".to_string(),
                 descriptor: FieldType::from_descriptor("[C").unwrap(),
-            }, CategoryOne { reference: chars_ref });
+            }, Value::Reference(chars_ref));
 
             object_ref
         }).clone()
@@ -141,7 +141,7 @@ impl Heap {
                 class: "java.lang.Class".to_string(),
                 name: "name".to_string(),
                 descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
-            }, CategoryOne { reference: name_ref });
+            }, Value::Reference(name_ref));
 
             object_ref
         }).clone()
@@ -182,7 +182,7 @@ impl Heap {
             class: "java.lang.Thread".to_string(),
             name: "threadStatus".to_string(),
             descriptor: FieldType::Int,
-        }, CategoryOne { int: Int(1) });
+        }, Value::Int(Int(1)));
     }
 
     pub fn end_thread(&self, thread: Reference) {
@@ -191,7 +191,7 @@ impl Heap {
             class: "java.lang.Thread".to_string(),
             name: "threadStatus".to_string(),
             descriptor: FieldType::Int,
-        }, CategoryOne { int: Int(2) });
+        }, Value::Int(Int(2)));
     }
 }
 

@@ -36,6 +36,9 @@ impl ConstPool {
                 cp::Const::Long(long) => {
                     pool.pool.insert(*key, Const::Long(long.long));
                 }
+                cp::Const::Double(double) => {
+                    pool.pool.insert(*key, Const::Double(double.double));
+                }
                 cp::Const::String(string) => {
                     let string = file.get_const_utf8(string.string);
                     let string = String::from_utf8(string.bytes.clone()).unwrap();
@@ -144,6 +147,7 @@ pub enum Const {
     Integer(i32),
     Float(f32),
     Long(i64),
+    Double(f64),
 }
 
 pub struct ClassKey {

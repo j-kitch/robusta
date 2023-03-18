@@ -46,7 +46,7 @@ pub fn char_array_store(thread: &mut Thread) {
 
     let arr = thread.runtime.heap.get_array(arr_ref);
 
-    arr.set_element(index, value.cat_one());
+    arr.set_element(index, value);
 }
 
 pub fn a_array_store(thread: &mut Thread) {
@@ -58,7 +58,7 @@ pub fn a_array_store(thread: &mut Thread) {
 
     let arr = thread.runtime.heap.get_array(arr_ref);
 
-    arr.set_element(index, value.cat_one());
+    arr.set_element(index, value);
 }
 
 pub fn a_array_load(thread: &mut Thread) {

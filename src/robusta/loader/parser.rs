@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::io::Read;
 
 use crate::class_file::{ClassAttribute, ClassFile, Code, CodeAttribute, const_pool, ExHandler, Field, LineNumber, LineNumberTable, MAGIC, Method, MethodAttribute, SourceFile, UnknownAttribute};
-use crate::class_file::const_pool::{Class, Const, FieldRef, Float, Integer, InterfaceMethodRef, Long, MethodRef, NameAndType, Utf8};
+use crate::class_file::const_pool::{Class, Const, Double, FieldRef, Float, Integer, InterfaceMethodRef, Long, MethodRef, NameAndType, Utf8};
 
 /// Parse a class file structure from a reader.
 pub fn parse(reader: &mut dyn Read) -> ClassFile {
@@ -171,6 +171,9 @@ impl<'a> Parser<'a> {
             5 => Ok(Const::Long(Long {
                 long: self.read_i64()?,
             })),
+            6 => Ok(Const::Double(Double {
+                double: self.read_f64()?,
+            })),
             7 => Ok(Const::Class(Class {
                 name: self.read_u16()?
             })),
@@ -316,6 +319,14 @@ impl<'a> Parser<'a> {
         let i64_slice: &[u8; 8] = &self.buffer[0..8].try_into()
             .map_err(LoadError::new)?;
         Ok(i64::from_be_bytes(*i64_slice))
+    }
+
+    fn read_f64(&mut self) -> Result<f64, LoadError> {
+        self.reader.read_exact(&mut self.buffer[0..8])
+            .map_err(LoadError::new)?;
+        let f64_slice: &[u8; 8] = &self.buffer[0..8].try_into()
+            .map_err(LoadError::new)?;
+        Ok(f64::from_be_bytes(*f64_slice))
     }
 
     fn read_length(&mut self, length: usize) -> Result<Vec<u8>, LoadError> {
