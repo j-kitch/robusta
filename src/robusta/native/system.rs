@@ -43,6 +43,6 @@ fn register_natives(args: &Args) -> Option<Value> {
     None
 }
 
-fn init_properties(_: &Args) -> Option<Value> {
-    None
+fn init_properties(args: &Args) -> Option<Value> {
+    Some(args.params[0])
 }
