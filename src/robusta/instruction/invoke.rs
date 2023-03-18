@@ -21,12 +21,49 @@ pub fn invoke_static(thread: &mut Thread) {
     invoke(thread, "invokestatic", true, false)
 }
 
+pub fn invoke_interface(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u16();
+
+    // TODO: Do we need to check the count value?
+    let _count = frame.read_u8();
+    let _ = frame.read_u8();
+
+    let method = thread.runtime.method_area.resolve_method(frame.const_pool, index);
+    let method = unsafe { method.as_ref().unwrap() };
+
+    let args = frame.pop_args(false, &method.descriptor);
+    let this_ref = args[0].reference();
+    let this_obj = thread.runtime.heap.get_object(this_ref);
+    let this_class = unsafe { this_obj.header.as_ref().unwrap().class.as_ref().unwrap() };
+
+    let this_method = this_class.find_method(&MethodKey {
+        class: this_class.name.clone(),
+        name: method.name.clone(),
+        descriptor: method.descriptor.clone(),
+    }).unwrap();
+    let class = unsafe { this_method.class.as_ref().unwrap() };
+
+    if this_method.is_synchronized {
+        thread.enter_monitor(this_ref);
+    }
+
+    if this_method.is_native {
+        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking native method");
+        let native_method = thread.find_native(this_method).unwrap();
+        thread.push_native(class.name.clone(), &class.const_pool as *const ConstPool, this_method as *const Method, args, native_method);
+    } else {
+        debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking method");
+        thread.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, this_method as *const Method, args);
+    }
+}
+
 fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let method_idx = cur_frame.read_u16();
 
     let cur_frame = thread.stack.last_mut().unwrap();
-    let method = thread.runtime.method_area.resolve_method(thread.runtime.clone(), cur_frame.const_pool, method_idx);
+    let method = thread.runtime.method_area.resolve_method(cur_frame.const_pool, method_idx);
     let method = unsafe { method.as_ref().unwrap() };
 
     let cur_frame = thread.stack.last_mut().unwrap();

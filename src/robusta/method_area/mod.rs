@@ -216,7 +216,7 @@ impl MethodArea {
         *class
     }
 
-    pub fn resolve_method(&self, _: Arc<Runtime>, pool: *const ConstPool, index: u16) -> *const Method {
+    pub fn resolve_method(&self, pool: *const ConstPool, index: u16) -> *const Method {
         let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {

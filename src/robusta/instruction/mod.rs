@@ -6,7 +6,7 @@ use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
-use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
+use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
 use crate::instruction::math::{f_mul, i_add, i_inc, i_sub, l_add, land, lshl};
 use crate::instruction::new::new_array;
@@ -135,6 +135,7 @@ pub fn instruction(thread: &mut Thread) {
         0xB6 => invoke_virtual(thread),
         0xB7 => invoke_special(thread),
         0xB8 => invoke_static(thread),
+        0xB9 => invoke_interface(thread),
         0xBB => new(thread),
         0xBC => new_array(thread),
         0xBD => a_new_array(thread),
@@ -237,6 +238,7 @@ fn op_name(code: u8) -> &'static str {
         0xB6 => "invokevirtual",
         0xB7 => "invokespecial",
         0xB8 => "invokestatic",
+        0xB9 => "invokeinterface",
         0xBB => "new",
         0xBC => "newarray",
         0xBD => "anewarray",
