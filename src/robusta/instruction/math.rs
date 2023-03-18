@@ -55,3 +55,27 @@ pub fn i_inc(thread: &mut Thread) {
 
     frame.local_vars.store_value(index as u16, Value::Int(Int(value)))
 }
+
+pub fn lshl(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let s = value2 & 0b111111;
+
+    let result = value1 << s;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
+}
+
+pub fn land(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let result = value1 & value2;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
+}

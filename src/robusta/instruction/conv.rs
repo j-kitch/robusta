@@ -1,4 +1,4 @@
-use crate::java::{Float, Long, Value};
+use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
 pub fn int_to_float(thread: &mut Thread) {
@@ -6,6 +6,13 @@ pub fn int_to_float(thread: &mut Thread) {
     let int = frame.operand_stack.pop().int();
     let float = int.0 as f32;
     frame.operand_stack.push(Value::Float(Float(float)));
+}
+
+pub fn float_to_int(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let float = frame.operand_stack.pop().float();
+    let int = float.0 as i32;
+    frame.operand_stack.push(Value::Int(Int(int)));
 }
 
 pub fn int_to_long(thread: &mut Thread) {

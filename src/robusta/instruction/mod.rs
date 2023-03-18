@@ -1,17 +1,17 @@
 use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
+use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
-use crate::instruction::conv::{int_to_float, int_to_long};
+use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
-use crate::instruction::math::{f_mul, i_add, i_inc, i_sub, l_add};
+use crate::instruction::math::{f_mul, i_add, i_inc, i_sub, l_add, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
-use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
+use crate::instruction::r#return::{a_return, a_throw, d_return, f_return, i_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
 use crate::log;
@@ -103,15 +103,19 @@ pub fn instruction(thread: &mut Thread) {
         0x61 => l_add(thread),
         0x64 => i_sub(thread),
         0x6A => f_mul(thread),
+        0x79 => lshl(thread),
+        0x7F => land(thread),
         0x84 => i_inc(thread),
         0x85 => int_to_long(thread),
         0x86 => int_to_float(thread),
+        0x8B => float_to_int(thread),
         0x95 => fcmp(thread, -1),
         0x96 => fcmp(thread, 1),
         0x99 => if_eq(thread),
         0x9A => if_ne(thread),
         0x9B => if_lt(thread),
         0x9C => if_ge(thread),
+        0x9D => if_gt(thread),
         0x9E => if_le(thread),
         0xA0 => if_int_cmp_ne(thread),
         0xA1 => if_int_cmp_lt(thread),
@@ -120,6 +124,8 @@ pub fn instruction(thread: &mut Thread) {
         0xA6 => if_ref_cmp_ne(thread),
         0xA7 => goto(thread),
         0xAC => i_return(thread),
+        0xAE => f_return(thread),
+        0xAF => d_return(thread),
         0xB0 => a_return(thread),
         0xB1 => r#return(thread),
         0xB2 => get_static(thread),
@@ -199,15 +205,19 @@ fn op_name(code: u8) -> &'static str {
         0x61 => "ladd",
         0x64 => "isub",
         0x6A => "fmul",
+        0x79 => "lshl",
+        0x7F => "land",
         0x84 => "iinc",
         0x85 => "i2l",
         0x86 => "i2f",
+        0x8B => "f2i",
         0x95 => "fcmpl",
         0x96 => "fcmpg",
         0x99 => "ifeq",
         0x9A => "ifne",
         0x9B => "iflt",
         0x9C => "ifge",
+        0x9D => "ifgt",
         0x9E => "ifle",
         0xA0 => "if_icmpne",
         0xA1 => "if_icmplt",
@@ -216,6 +226,8 @@ fn op_name(code: u8) -> &'static str {
         0xA6 => "if_acmpne",
         0xA7 => "goto",
         0xAC => "ireturn",
+        0xAE => "freturn",
+        0xAF => "dreturn",
         0xB0 => "areturn",
         0xB1 => "return",
         0xB2 => "getstatic",

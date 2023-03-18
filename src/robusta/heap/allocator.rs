@@ -7,7 +7,7 @@ use tracing::trace;
 use crate::heap::garbage_collector::CopyGeneration;
 use crate::heap::hash_code::HashCode;
 use crate::heap::sync::ObjectLock;
-use crate::java::{CategoryOne, Double, FieldType, Float, Int, Long, Reference, Value};
+use crate::java::{Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
 use crate::method_area::{Class, Field};
 use crate::method_area::const_pool::FieldKey;

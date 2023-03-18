@@ -1,4 +1,4 @@
-use crate::java::{Float, Value};
+use crate::java::Value;
 use crate::thread::Thread;
 
 /// astore_<n>

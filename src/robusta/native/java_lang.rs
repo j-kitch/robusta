@@ -5,11 +5,11 @@ use std::time::Duration;
 
 use rand::{RngCore, thread_rng};
 
-use crate::method_area;
 use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::collection::wait::ThreadWait;
-use crate::java::{CategoryOne, FieldType, Int, Long, MethodType, Value};
+use crate::java::{Double, FieldType, Int, Long, MethodType, Value};
+use crate::method_area;
 use crate::method_area::{Class, ClassFlags};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
@@ -65,6 +65,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(D)J").unwrap(),
             },
             Arc::new(double_to_long_bits),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Double".to_string(),
+                name: "longBitsToDouble".to_string(),
+                descriptor: MethodType::from_descriptor("(J)D").unwrap(),
+            },
+            Arc::new(long_bits_to_double),
         ),
         stateless(
             Method {
@@ -560,4 +568,11 @@ fn double_to_long_bits(args: &Args) -> Option<Value> {
     let bytes = double.to_be_bytes();
     let long = i64::from_be_bytes(bytes);
     Some(Value::Long(Long(long)))
+}
+
+fn long_bits_to_double(args: &Args) -> Option<Value> {
+    let long = args.params[0].long().0;
+    let bytes = long.to_be_bytes();
+    let double = f64::from_be_bytes(bytes);
+    Some(Value::Double(Double(double)))
 }

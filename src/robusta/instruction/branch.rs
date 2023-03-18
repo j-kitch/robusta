@@ -134,6 +134,20 @@ pub fn if_le(thread: &mut Thread) {
     }
 }
 
+pub fn if_gt(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+    let value = frame.operand_stack.pop().int();
+
+    if value.0 > 0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
 pub fn if_ge(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 

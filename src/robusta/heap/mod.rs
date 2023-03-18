@@ -5,7 +5,7 @@ use rand::{RngCore, thread_rng};
 
 use crate::collection::once::OnceMap;
 use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
-use crate::java::{CategoryOne, FieldType, Int, Reference, Value};
+use crate::java::{FieldType, Int, Reference, Value};
 use crate::method_area::Class;
 use crate::method_area::const_pool::FieldKey;
 

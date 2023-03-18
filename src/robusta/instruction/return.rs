@@ -38,6 +38,32 @@ pub fn i_return(thread: &mut Thread) {
     cur_frame.operand_stack.push(int);
 }
 
+pub fn f_return(thread: &mut Thread) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let float = cur_frame.operand_stack.pop();
+
+    exit_monitor(thread);
+
+    thread.stack.pop();
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    cur_frame.operand_stack.push(float);
+}
+
+pub fn d_return(thread: &mut Thread) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let double = cur_frame.operand_stack.pop();
+
+    exit_monitor(thread);
+
+    thread.stack.pop();
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    cur_frame.operand_stack.push(double);
+}
+
 pub fn a_throw(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let throwable_ref = frame.operand_stack.pop().reference();
