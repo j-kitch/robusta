@@ -1,12 +1,12 @@
 use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store};
-use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_ne, if_lt, if_ne, if_null};
+use crate::instruction::branch::{goto, if_eq, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::dup::dup;
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, iload, iload_n, istore, istore_n};
-use crate::instruction::math::{i_add, i_inc};
+use crate::instruction::math::{i_add, i_inc, i_sub};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{iconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, i_return, r#return};
@@ -85,13 +85,16 @@ pub fn instruction(thread: &mut Thread) {
         0x57 => pop(thread),
         0x59 => dup(thread),
         0x60 => i_add(thread),
+        0x64 => i_sub(thread),
         0x84 => i_inc(thread),
         0x9A => if_ne(thread),
         0x9B => if_lt(thread),
         0x99 => if_eq(thread),
         0xA0 => if_int_cmp_ne(thread),
+        0xA1 => if_int_cmp_lt(thread),
         0xA2 => if_int_cmp_ge(thread),
         0xA4 => if_int_cmp_le(thread),
+        0xA6 => if_ref_cmp_ne(thread),
         0xA7 => goto(thread),
         0xAC => i_return(thread),
         0xB0 => a_return(thread),
@@ -111,6 +114,7 @@ pub fn instruction(thread: &mut Thread) {
         0xC2 => monitor_enter(thread),
         0xC3 => monitor_exit(thread),
         0xC6 => if_null(thread),
+        0xC7 => if_non_null(thread),
         _ => panic!("not implemented opcode 0x{:0x?}", opcode)
     }
 }
@@ -156,13 +160,16 @@ fn op_name(code: u8) -> &'static str {
         0x57 => "pop",
         0x59 => "dup",
         0x60 => "iadd",
+        0x64 => "isub",
         0x84 => "iinc",
         0x9A => "ifne",
         0x9B => "iflt",
         0x99 => "ifeq",
         0xA0 => "if_icmpne",
+        0xA1 => "if_icmplt",
         0xA2 => "if_icmpge",
         0xA4 => "if_icmple",
+        0xA6 => "if_acmpne",
         0xA7 => "goto",
         0xAC => "ireturn",
         0xB0 => "areturn",
@@ -182,6 +189,7 @@ fn op_name(code: u8) -> &'static str {
         0xC2 => "monitorenter",
         0xC3 => "monitorexit",
         0xC6 => "ifnull",
+        0xC7 => "ifnonnull",
         _ => panic!("not implemented opcode 0x{:0x?}", code)
     }
 }
