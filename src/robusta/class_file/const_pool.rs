@@ -97,6 +97,25 @@ pub struct NameAndType {
 }
 
 #[derive(Debug, PartialEq)]
+/// The `CONSTANT_MethodHandle_info` structure.
+pub struct MethodHandle {
+    pub reference_kind: u8,
+    pub reference_idx: u16,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MethodType {
+    pub descriptor: u16,
+}
+
+#[derive(Debug, PartialEq)]
+/// The `CONSTANT_InvokeDynamic_info` structure.
+pub struct InvokeDynamic {
+    pub bootstrap_method_attr: u16,
+    pub name_and_type: u16,
+}
+
+#[derive(Debug, PartialEq)]
 /// An entry in the Class File's constant pool.
 ///
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4).
@@ -112,6 +131,9 @@ pub enum Const {
     MethodRef(MethodRef),
     InterfaceMethodRef(InterfaceMethodRef),
     NameAndType(NameAndType),
+    MethodHandle(MethodHandle),
+    MethodType(MethodType),
+    InvokeDynamic(InvokeDynamic),
 }
 
 impl Const {

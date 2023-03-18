@@ -40,6 +40,7 @@ pub struct ClassFile {
     /// or non-zero, a valid index into `const_pool`, which must be a `Const::Class` representing
     /// the super class of this type.
     pub super_class: u16,
+    pub interfaces: Vec<u16>,
     /// The fields supplied in this class file.
     pub fields: Vec<Field>,
     /// The methods supplied in the class file.

@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::io::Read;
 
 use crate::class_file::{ClassAttribute, ClassFile, Code, CodeAttribute, const_pool, ExHandler, Field, LineNumber, LineNumberTable, MAGIC, Method, MethodAttribute, SourceFile, UnknownAttribute};
-use crate::class_file::const_pool::{Class, Const, Double, FieldRef, Float, Integer, InterfaceMethodRef, Long, MethodRef, NameAndType, Utf8};
+use crate::class_file::const_pool::{Class, Const, Double, FieldRef, Float, Integer, InterfaceMethodRef, InvokeDynamic, Long, MethodHandle, MethodRef, MethodType, NameAndType, Utf8};
 
 /// Parse a class file structure from a reader.
 pub fn parse(reader: &mut dyn Read) -> ClassFile {
@@ -36,6 +36,7 @@ impl<'a> Parser<'a> {
             access_flags: 0,
             this_class: 0,
             super_class: 0,
+            interfaces: vec![],
             fields: vec![],
             methods: vec![],
             attributes: vec![],
@@ -58,8 +59,9 @@ impl<'a> Parser<'a> {
         class_file.super_class = self.read_u16()?;
 
         let interfaces_count = self.read_u16()?;
-        let skip_bytes = interfaces_count as usize * 2;
-        self.read_length(skip_bytes)?;
+        for _ in 0..interfaces_count {
+            class_file.interfaces.push(self.read_u16()?);
+        }
 
         let fields_count = self.read_u16()?;
         for _ in 0..fields_count {
@@ -195,6 +197,17 @@ impl<'a> Parser<'a> {
             12 => Ok(Const::NameAndType(NameAndType {
                 name: self.read_u16()?,
                 descriptor: self.read_u16()?,
+            })),
+            15 => Ok(Const::MethodHandle(MethodHandle {
+                reference_kind: self.read_u8()?,
+                reference_idx: self.read_u16()?,
+            })),
+            16 => Ok(Const::MethodType(MethodType {
+                descriptor: self.read_u16()?,
+            })),
+            18 => Ok(Const::InvokeDynamic(InvokeDynamic {
+                bootstrap_method_attr: self.read_u16()?,
+                name_and_type: self.read_u16()?,
             })),
             _ => Err(LoadError::simple(format!("unknown tag {}", tag).as_str()))
         }

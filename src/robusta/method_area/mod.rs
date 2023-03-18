@@ -262,6 +262,12 @@ impl MethodArea {
                 Some(*super_class)
             };
 
+            let interfaces: Vec<*const Class> = class_file.interfaces.iter().map(|index| {
+                let name = pool.get_class(*index);
+                let class = name.resolve(|key| self.load_class(&key.name));
+                *class
+            }).collect();
+
             let mut instance_fields: Vec<Field> = class_file.fields.iter()
                 .filter(|f| (f.access_flags & ACCESS_FLAG_STATIC) == 0)
                 .map(|f| {
@@ -339,7 +345,7 @@ impl MethodArea {
                 flags: ClassFlags { bits: class_file.access_flags },
                 const_pool: pool,
                 super_class,
-                interfaces: vec![], // TODO: Implement
+                interfaces,
                 instance_fields,
                 static_fields,
                 methods,
