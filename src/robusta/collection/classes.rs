@@ -45,7 +45,7 @@ impl Classes {
     pub fn initialize<F>(&self, name: &str, initialize: F)
         where F: FnOnce(&str)
     {
-        let (creator, waiter) = self.find_status(name);
+        let (creator, waiter) = self.find_init(name);
         if let Some(creator) = creator {
             // no other thread will read the status of the class, so we can insert it into the
             // data structures that we want here!
@@ -73,6 +73,21 @@ impl Classes {
             (None, load.waiter())
         }
     }
+
+    fn find_init(&self, name: &str) -> (Option<ClassCreator>, ClassWaiter) {
+        let mut initialized = self.initialized.write();
+        if !initialized.contains_key(name) {
+            let load = ClassLoad::new();
+            let creator = load.creator();
+            let waiter = load.waiter();
+            initialized.insert(name.to_string(), load);
+            (Some(creator), waiter)
+        } else {
+            let load = initialized.get(name).unwrap();
+            (None, load.waiter())
+        }
+    }
+
 }
 
 struct Value {

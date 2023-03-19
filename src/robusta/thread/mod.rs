@@ -97,7 +97,6 @@ unsafe impl Sync for Thread {}
 
 impl Thread {
     pub fn enter_monitor(&mut self, object_ref: Reference) {
-        debug!(target: log::THREAD, "Entering monitor {}", object_ref.0);
         if self.locks.contains_key(&object_ref) {
             let sync = self.locks.get_mut(&object_ref).unwrap();
             sync.enter();
@@ -109,18 +108,15 @@ impl Thread {
             self.safe.exit();
             self.locks.insert(object_ref, sync);
         }
-        debug!(target: log::THREAD, "Entered monitor {}", object_ref.0);
     }
 
     pub fn exit_monitor(&mut self, object_ref: Reference) {
-        debug!(target: log::THREAD, "Exiting monitor {}", object_ref.0);
         let sync = self.locks.get_mut(&object_ref).unwrap();
         let should_remove = sync.exit();
         if should_remove {
             let sync = self.locks.remove(&object_ref).unwrap();
             drop(sync);
         }
-        debug!(target: log::THREAD, "Exited monitor {}", object_ref.0);
     }
 
     pub fn as_mut<'a>(self: &'a Arc<Self>) -> &'a mut Thread {

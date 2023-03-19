@@ -3,11 +3,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use maplit::hashset;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::classes::{Classes, ClassRef};
-use crate::collection::once::OnceMap;
 use crate::heap::Heap;
 use crate::java::{Double, FieldType, Float, Int, Long, MethodType, Reference, Value};
 use crate::loader::{ClassFileLoader, Loader};
@@ -220,13 +219,10 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {
-        debug!("Resolving method {} {} {}", &method_key.class, &method_key.name, method_key.descriptor.descriptor());
             let class = self.load_class(&method_key.class);
             let method = class.find_method(method_key).unwrap();
-        debug!("Resolved method {} {} {}", &method_key.class, &method_key.name, method_key.descriptor.descriptor());
             method as *const Method
         });
-        debug!("Returning resolved method");
         *method
     }
 
@@ -253,13 +249,11 @@ impl MethodArea {
     }
 
     pub fn load_class(&self, class_name: &str) -> ClassRef {
-        info!("loading class {}", class_name);
         let class = self.classes.load_class(class_name, |name| {
             debug!(target: log::LOADER, class=name, "Loading class");
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);
 
-            info!("F");
             let super_class = if class_file.super_class == 0 { None } else {
                 let super_class = pool.get_class(class_file.super_class);
                 let super_class = super_class.resolve(|key| &*self.load_class(&key.name));
@@ -361,15 +355,11 @@ impl MethodArea {
             debug!(target: log::LOADER, class=name, "Loaded class");
             class
         });
-        info!("A");
         class.self_referential();
-        info!("B");
         if !class.static_fields.is_empty() {
             let heap = unsafe { self.heap.as_ref().unwrap() };
             heap.get_static(&*class);
         }
-        info!("C");
-        info!("loaded class {}", class_name);
         class
     }
 
@@ -398,9 +388,7 @@ impl MethodArea {
             return;
         }
 
-        debug!("About to try to initialize class {}", &class.name);
         self.classes.initialize(&class.name, |_| {
-        debug!("Starting initialize class {}", &class.name);
             if let Some(parent) = class.super_class {
                 let parent = unsafe { parent.as_ref().unwrap() };
                 self.initialize(thread, parent);
@@ -417,7 +405,6 @@ impl MethodArea {
                     thread.next();
                 }
             }
-            debug!("Finished initialize class {}", &class.name);
         });
     }
 }

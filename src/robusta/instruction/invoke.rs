@@ -64,14 +64,10 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
 
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(cur_frame.const_pool, method_idx);
-    debug!("Returned resolved method!");
     let method = unsafe { method.as_ref().unwrap() };
 
-    debug!("Invoke foo 1");
     let cur_frame = thread.stack.last_mut().unwrap();
-    debug!("Invoke foo 2");
     let args = cur_frame.pop_args(is_static, &method.descriptor);
-    debug!("Invoke foo 3");
 
     let method = if is_static || !is_virtual {
         method as *const Method
@@ -86,18 +82,14 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
             descriptor: method.descriptor.clone(),
         }).unwrap() as *const Method
     };
-    debug!("Invoke foo 4");
 
     let method = unsafe { method.as_ref().unwrap() };
     let class = unsafe { method.class.as_ref().unwrap() };
     if is_static {
-    debug!("Invoke foo 5");
         let rt = thread.runtime.clone();
         rt.method_area.initialize(thread, class);
-    debug!("Invoke foo 6");
     }
 
-    debug!("Invoke foo 7");
     if method.is_synchronized {
         let this_ref = if is_static {
             thread.runtime.heap.get_static(class)
@@ -107,15 +99,12 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
         thread.enter_monitor(this_ref);
     }
 
-    debug!("Invoke foo 8");
     if method.is_native {
         debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking native method");
         let native_method = thread.find_native(method).unwrap();
         thread.push_native(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args, native_method);
-    debug!("Invoke foo 9");
     } else {
         debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking method");
         thread.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args);
-    debug!("Invoke foo 9");
     }
 }
