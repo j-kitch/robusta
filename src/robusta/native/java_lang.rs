@@ -227,7 +227,7 @@ fn string_intern(args: &Args) -> Option<Value> {
 
 fn object_get_class(args: &Args) -> Option<Value> {
     let object_ref = args.params[0].reference();
-    let object_obj = args.runtime.heap.get_object(object_ref);
+    let object_obj = args.runtime.heap.get(object_ref);
 
     let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
 
@@ -570,8 +570,8 @@ pub fn get_primitive_class(args: &Args) -> Option<Value> {
     let string_ref = args.params[0].reference();
     let primitive = args.runtime.heap.get_string(string_ref);
 
-    let primitive_class = args.runtime.method_area.load_class(&primitive);
-    let primitive_object = args.runtime.method_area.load_class_object(&*primitive_class);
+    let primitive_class = args.runtime.method_area.load_outer_class(&primitive);
+    let primitive_object = args.runtime.method_area.load_class_object(primitive_class);
 
     Some(Value::Reference(primitive_object))
 }

@@ -134,10 +134,10 @@ impl Heap {
         }).clone()
     }
 
-    pub fn insert_class_object(&self, class: &ObjectClass, class_class: &ObjectClass, string_class: &ObjectClass) -> Reference {
-        self.class_objects.get_or_init(class.name.clone(), |_| {
+    pub fn insert_class_object(&self, class: Class, class_class: &ObjectClass, string_class: &ObjectClass) -> Reference {
+        self.class_objects.get_or_init(class.name(), |_| {
             // Name
-            let name_ref = self.insert_string_const(&class.name, string_class);
+            let name_ref = self.insert_string_const(&class.name(), string_class);
 
             // Class
             let object_ref = self.new_object(class_class);
@@ -213,7 +213,7 @@ impl Heaped {
             Heaped::Object(object) => Class::Object(ClassRef::new(object.class() as *const ObjectClass)),
             Heaped::Array(array) => {
                 let header = unsafe { array.header.as_ref().unwrap() };
-                header.component.clone()
+                Class::Array(Box::new(header.component.clone()))
             }
         }
     }

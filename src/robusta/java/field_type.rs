@@ -53,6 +53,26 @@ impl FieldType {
         }
     }
 
+    pub fn component_type(&self) -> String {
+        match self {
+            FieldType::Array(component) => {
+                match component.as_ref() {
+                    FieldType::Boolean => "boolean".to_string(),
+                    FieldType::Byte => "byte".to_string(),
+                    FieldType::Short => "short".to_string(),
+                    FieldType::Char => "char".to_string(),
+                    FieldType::Int => "int".to_string(),
+                    FieldType::Float => "float".to_string(),
+                    FieldType::Long => "long".to_string(),
+                    FieldType::Double => "double".to_string(),
+                    FieldType::Reference(name) => name.to_string(),
+                    FieldType::Array(component) => format!("[{}", component.component_type())
+                }
+            }
+            _ => panic!("error")
+        }
+    }
+
     /// A field type might involve (at most 1) class names in the signature.
     ///
     /// For class loading we need to be aware of any class names in the type.

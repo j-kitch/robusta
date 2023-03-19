@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use maplit::hashset;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::classes::{Classes, ClassRef};
@@ -154,7 +154,7 @@ impl MethodArea {
             }
             Const::Class(reference) => {
                 let class = reference.resolve(|key| self.load_outer_class(&key.name));
-                let class_object = self.load_class_object(&class.obj());
+                let class_object = self.load_class_object(class.clone());
                 Value::Reference(class_object)
             }
             _ => panic!("Expected to load a category 1 const, but not found")
@@ -181,7 +181,7 @@ impl MethodArea {
         class.clone()
     }
 
-    fn load_outer_class(&self, name: &str) -> Class {
+    pub fn load_outer_class(&self, name: &str) -> Class {
         match name {
             "boolean" => Class::Primitive(Primitive::Boolean),
             "byte" => Class::Primitive(Primitive::Byte),
@@ -193,7 +193,8 @@ impl MethodArea {
             "double" => Class::Primitive(Primitive::Double),
             _ => {
                 if name.starts_with('[') {
-                    Class::Array(Box::new(self.load_outer_class(&name[1..])))
+                    let field_type = FieldType::from_descriptor(name).unwrap();
+                    Class::Array(Box::new(self.load_outer_class(&field_type.component_type())))
                 } else {
                     Class::Object(self.load_class(name))
                 }
@@ -355,7 +356,7 @@ impl MethodArea {
         heap.insert_string_const(string, &*string_class)
     }
 
-    pub fn load_class_object(&self, class: &ObjectClass) -> Reference {
+    pub fn load_class_object(&self, class: Class) -> Reference {
         let heap = unsafe { self.heap.as_ref().unwrap() };
         let string_class = self.load_class("java.lang.String");
         let class_class = self.load_class("java.lang.Class");
