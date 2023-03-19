@@ -11,7 +11,7 @@ use std::time::Duration;
 use tracing::{debug, trace};
 
 use crate::heap::{Heap, Heaped};
-use crate::heap::allocator::{ArrayHeader, ArrayType, HEAP_SIZE, ObjectHeader};
+use crate::heap::allocator::{ArrayHeader, HEAP_SIZE, ObjectHeader};
 use crate::java::Reference;
 use crate::log;
 use crate::runtime::Runtime;

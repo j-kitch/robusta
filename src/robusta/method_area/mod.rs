@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use maplit::hashset;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::classes::{Classes, ClassRef};
@@ -82,8 +82,25 @@ impl Class {
     pub fn name(&self) -> String {
         match self {
             Class::Primitive(primitive) => primitive.name(),
-            Class::Array(component) => format!("[{}", component.name()),
+            Class::Array(component) => format!("[{}", component.binary_name()),
             Class::Object(class) => class.name.clone(),
+        }
+    }
+
+    pub fn binary_name(&self) -> String {
+        match self {
+            Class::Primitive(primitive) => match primitive {
+                Primitive::Boolean => "Z".to_string(),
+                Primitive::Byte => "B".to_string(),
+                Primitive::Char => "C".to_string(),
+                Primitive::Short => "S".to_string(),
+                Primitive::Int => "I".to_string(),
+                Primitive::Float => "F".to_string(),
+                Primitive::Long => "J".to_string(),
+                Primitive::Double => "D".to_string(),
+            }
+            Class::Object(class_ref) => format!("L{};", &class_ref.name),
+            Class::Array(component) => format!("[{}", component.binary_name()),
         }
     }
 

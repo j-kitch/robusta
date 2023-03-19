@@ -191,6 +191,7 @@ unsafe impl Send for ArrayHeader {}
 
 unsafe impl Sync for ArrayHeader {}
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ArrayType {
     BooleanOrByte,
@@ -203,6 +204,7 @@ pub enum ArrayType {
     Reference,
 }
 
+#[allow(dead_code)]
 impl ArrayType {
     pub fn from(field: &FieldType) -> ArrayType {
         match field {

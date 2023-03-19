@@ -2,10 +2,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 
 use rand::{RngCore, thread_rng};
-use crate::collection::classes::ClassRef;
 
+use crate::collection::classes::ClassRef;
 use crate::collection::once::OnceMap;
-use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
+use crate::heap::allocator::{Allocator, Array, Object};
 use crate::java::{FieldType, Int, Reference, Value};
 use crate::method_area::{Class, ObjectClass};
 use crate::method_area::const_pool::FieldKey;

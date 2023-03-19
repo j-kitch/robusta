@@ -1,4 +1,3 @@
-use crate::heap::allocator::ArrayType;
 use crate::java::{ Int, Value};
 use crate::thread::Thread;
 

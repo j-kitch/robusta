@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::mem::size_of;
 use std::sync::Arc;
 use std::thread::{Builder, sleep};
 use std::time::Duration;
@@ -8,9 +9,10 @@ use rand::{RngCore, thread_rng};
 use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::collection::wait::ThreadWait;
+use crate::heap::allocator::ArrayHeader;
 use crate::java::{Double, FieldType, Int, Long, MethodType, Value};
 use crate::method_area;
-use crate::method_area::{ObjectClass, ClassFlags, Class};
+use crate::method_area::{ClassFlags, ObjectClass};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -41,6 +43,38 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "arrayBaseOffset".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)I").unwrap(),
+            },
+            Arc::new(array_base_offset),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "arrayIndexScale".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)I").unwrap(),
+            },
+            Arc::new(array_index_scale),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "addressSize".to_string(),
+                descriptor: MethodType::from_descriptor("()I").unwrap(),
+            },
+            Arc::new(address_size),
+        ),
+        stateless(
+            Method {
+                class: "sun.reflect.Reflection".to_string(),
+                name: "getCallerClass".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
+            },
+            Arc::new(get_caller_class),
         ),
         stateless(
             Method {
@@ -599,4 +633,50 @@ fn long_bits_to_double(args: &Args) -> Option<Value> {
     let bytes = long.to_be_bytes();
     let double = f64::from_be_bytes(bytes);
     Some(Value::Double(Double(double)))
+}
+
+fn array_base_offset(_: &Args) -> Option<Value> {
+    let offset = size_of::<ArrayHeader>() as i32;
+    Some(Value::Int(Int(offset)))
+}
+
+fn array_index_scale(args: &Args) -> Option<Value> {
+    let class_ref = args.params[1].reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let scale = match name.as_str() {
+        "[Z" | "[B" => 1,
+        "[C" | "[S" => 2,
+        "[I" | "[F" | "[Ljava.lang.Object;" => 4,
+        "[J" | "[D" => 8,
+        _ => panic!("not implemented"),
+    };
+
+    Some(Value::Int(Int(scale)))
+}
+
+fn address_size(_: &Args) -> Option<Value> {
+    Some(Value::Int(Int(size_of::<*const u8>() as i32)))
+}
+
+fn get_caller_class(args: &Args) -> Option<Value> {
+    let thread = unsafe { args.thread.as_ref().unwrap() };
+    let class_name = thread.stack.iter().rev()
+        .skip(1) // skip this frame
+        .skip_while(|f| f.class.starts_with('<')) // skip internal frames
+        .next()
+        .map(|f| &f.class)
+        .unwrap();
+
+    let class = args.runtime.method_area.load_outer_class(class_name);
+    let class_ref = args.runtime.method_area.load_class_object(class);
+
+    Some(Value::Reference(class_ref))
 }
