@@ -2,12 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 
 use rand::{RngCore, thread_rng};
+use crate::collection::classes::ClassRef;
 
 use crate::collection::once::OnceMap;
 use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
 use crate::java::{FieldType, Int, Reference, Value};
-use crate::method_area::Class;
+use crate::method_area::{Class, ObjectClass};
 use crate::method_area::const_pool::FieldKey;
+use crate::method_area::Primitive::Char;
 
 pub mod allocator;
 mod hash_code;
@@ -49,7 +51,7 @@ impl Heap {
         }
     }
 
-    pub fn new_object(&self, class: &Class) -> Reference {
+    pub fn new_object(&self, class: &ObjectClass) -> Reference {
         let object = self.allocator.new_object(class);
         self.insert(Heaped::Object(object))
     }
@@ -65,7 +67,7 @@ impl Heap {
         references.insert(reference, heaped);
     }
 
-    pub fn get_static(&self, class: &Class) -> Reference {
+    pub fn get_static(&self, class: &ObjectClass) -> Reference {
         let x = self.static_objects.get_or_init(class.name.clone(), |_| {
             if class.static_width == 0 {
                 return Reference(0);
@@ -76,7 +78,7 @@ impl Heap {
         x
     }
 
-    pub fn new_array(&self, arr_type: ArrayType, length: Int) -> Reference {
+    pub fn new_array(&self, arr_type: Class, length: Int) -> Reference {
         let array = self.allocator.new_array(arr_type, length);
         self.insert(Heaped::Array(array))
     }
@@ -109,11 +111,11 @@ impl Heap {
         }
     }
 
-    pub fn insert_string_const(&self, string: &str, class: &Class) -> Reference {
+    pub fn insert_string_const(&self, string: &str, class: &ObjectClass) -> Reference {
         self.string_constants.get_or_init(string.to_string(), |string| {
             // Chars
             let chars: Vec<u16> = string.encode_utf16().collect();
-            let chars_ref = self.new_array(ArrayType::Char, Int(chars.len() as i32));
+            let chars_ref = self.new_array(Class::Primitive(Char), Int(chars.len() as i32));
             let char_array = self.get_array(chars_ref);
             let char_array = char_array.as_chars_mut();
             char_array.copy_from_slice(&chars);
@@ -132,7 +134,7 @@ impl Heap {
         }).clone()
     }
 
-    pub fn insert_class_object(&self, class: &Class, class_class: &Class, string_class: &Class) -> Reference {
+    pub fn insert_class_object(&self, class: &ObjectClass, class_class: &ObjectClass, string_class: &ObjectClass) -> Reference {
         self.class_objects.get_or_init(class.name.clone(), |_| {
             // Name
             let name_ref = self.insert_string_const(&class.name, string_class);
@@ -203,4 +205,16 @@ impl Heap {
 pub enum Heaped {
     Object(Object),
     Array(Array),
+}
+
+impl Heaped {
+    pub fn class(&self) -> Class {
+        match self {
+            Heaped::Object(object) => Class::Object(ClassRef::new(object.class() as *const ObjectClass)),
+            Heaped::Array(array) => {
+                let header = unsafe { array.header.as_ref().unwrap() };
+                header.component.clone()
+            }
+        }
+    }
 }

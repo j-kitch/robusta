@@ -10,7 +10,7 @@ use crate::collection::once::Once;
 use crate::collection::wait::ThreadWait;
 use crate::java::{Double, FieldType, Int, Long, MethodType, Value};
 use crate::method_area;
-use crate::method_area::{Class, ClassFlags};
+use crate::method_area::{ObjectClass, ClassFlags, Class};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -254,7 +254,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
         .take_while(|f| {
             let method = unsafe { f.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
-            !class.is_instance_of(&*throwable_class) && method.name.eq("<init>")
+            !class.is_instance_of(&throwable_class) && method.name.eq("<init>")
         });
 
     let elems: Vec<StackElem> = stack.map(|frame| {
@@ -281,7 +281,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     }).collect();
 
     // Can we create a class that delegates to all our methods for us?
-    let mut class = Class {
+    let mut class = ObjectClass {
         name: format!("<fill-in-stack-trace-{:?}-{}>", std::thread::current().id(), thread_rng().next_u64()),
         flags: ClassFlags { bits: 0 },
         const_pool: ConstPool {
@@ -299,7 +299,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     };
 
     let mut method = method_area::Method {
-        class: 0 as *const Class, // TODO: Fill in later!
+        class: 0 as *const ObjectClass, // TODO: Fill in later!
         is_static: true,
         is_native: false,
         is_synchronized: false,

@@ -1,4 +1,5 @@
 use crate::java::{ Value};
+use crate::method_area::{Class, Primitive};
 use crate::thread::Thread;
 
 /// Instruction `new` creates a new object in the heap.
@@ -14,10 +15,9 @@ pub fn new(thread: &mut Thread) {
 
     let cur_frame = thread.stack.last_mut().unwrap();
     let class = thread.runtime.method_area.resolve_class(cur_frame.const_pool, class_idx);
-    let class = unsafe { class.as_ref().unwrap() };
-    rt.method_area.initialize(thread, class);
+    rt.method_area.initialize(thread, &class.obj());
 
-    let new_ref = thread.runtime.heap.new_object(class);
+    let new_ref = thread.runtime.heap.new_object(&class.obj());
 
     let cur_frame = thread.stack.last_mut().unwrap();
     cur_frame.operand_stack.push(Value::Reference(new_ref));
@@ -30,7 +30,7 @@ pub fn new_array(thread: &mut Thread) {
     let count = cur_frame.operand_stack.pop().int();
 
     let arr_ref = match array_type {
-        5 => thread.runtime.heap.new_array(crate::heap::allocator::ArrayType::Char, count),
+        5 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Char), count),
         _ => panic!("newarray has not been implemented for array type {}", array_type)
     };
 

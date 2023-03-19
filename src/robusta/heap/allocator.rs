@@ -9,7 +9,7 @@ use crate::heap::hash_code::HashCode;
 use crate::heap::sync::ObjectLock;
 use crate::java::{Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
-use crate::method_area::{Class, Field};
+use crate::method_area::{ObjectClass, Field, Class, Primitive};
 use crate::method_area::const_pool::FieldKey;
 use crate::runtime::Runtime;
 
@@ -49,7 +49,7 @@ unsafe impl Send for Object {}
 unsafe impl Sync for Object {}
 
 impl Object {
-    pub fn class(&self) -> &Class {
+    pub fn class(&self) -> &ObjectClass {
         let header = self.header();
         unsafe { header.class.as_ref().unwrap() }
     }
@@ -71,7 +71,7 @@ impl Object {
     pub fn set_field(&self, field: &FieldKey, value: Value) {
         let field = self.class().find_field(field);
 
-        write_value(self.data, field.offset, &field.descriptor, value)
+        write_value_2(self.data, field.offset, &field.descriptor, value)
     }
 
     pub fn get_static(&self, field: &FieldKey) -> Value {
@@ -83,7 +83,7 @@ impl Object {
     pub fn set_static(&self, field: &FieldKey, value: Value) {
         let field = self.class().find_static(field);
 
-        write_value(self.data, field.offset, &field.descriptor, value)
+        write_value_2(self.data, field.offset, &field.descriptor, value)
     }
 
     pub fn hash_code(&self) -> Int {
@@ -98,7 +98,7 @@ impl Object {
 /// TODO: This will be used for GC information.
 pub struct ObjectHeader {
     /// The class of this object
-    pub class: *const Class,
+    pub class: *const ObjectClass,
     pub hash_code: Int,
     pub lock: ObjectLock,
 }
@@ -124,27 +124,27 @@ impl Array {
 
     pub fn length(&self) -> Int {
         let header = self.header();
-        let length = header.length / header.component.width();
+        let length = header.length / header.component.component_width();
         Int(length as i32)
     }
 
     pub fn set_element(&self, index: Int, value: Value) {
         let header = self.header();
-        let index = index.0 as usize * header.component.width();
-        write_value(self.data, index, &header.component.to_field(), value)
+        let index = index.0 as usize * header.component.component_width();
+        write_value(self.data, index, &header.component, value)
     }
 
     pub fn get_element(&self, index: Int) -> Value {
-        let offset = index.0 as usize * self.header().component.width();
-        read_value(self.data, offset, &self.header().component.to_field())
+        let offset = index.0 as usize * self.header().component.component_width();
+        read_value_2(self.data, offset, &self.header().component)
     }
 
     pub fn as_chars_slice(&self) -> &[u16] {
         let header = self.header();
-        if header.component.ne(&ArrayType::Char) {
+        if !header.component.is_char_slice() {
             panic!("cannot export as chars slice")
         }
-        let length = header.length / header.component.width();
+        let length = header.length / header.component.component_width();
         let pointer: *mut u16 = self.data.cast();
         unsafe {
             from_raw_parts(pointer.cast_const(), length)
@@ -162,10 +162,10 @@ impl Array {
 
     pub fn as_chars_mut(&self) -> &mut [u16] {
         let header = self.header();
-        if header.component.ne(&ArrayType::Char) {
+        if !header.component.is_char_slice() {
             panic!("cannot export as chars slice")
         }
-        let length = header.length / header.component.width();
+        let length = header.length / header.component.component_width();
         let pointer: *mut u16 = self.data.cast();
         unsafe {
             from_raw_parts_mut(pointer, length)
@@ -180,7 +180,7 @@ impl Array {
 /// TODO: This will be used for GC information.
 pub struct ArrayHeader {
     /// The type of the values in the array.
-    pub component: ArrayType,
+    pub component: Class,
     /// The length (in bytes) of the array data.
     pub length: usize,
     pub hash_code: Int,
@@ -291,7 +291,7 @@ impl Allocator {
         trace!(target: log::HEAP, used=format!("{}mb {:.2}%", used_mbs, percentage));
     }
 
-    pub fn new_object(&self, class: &Class) -> Object {
+    pub fn new_object(&self, class: &ObjectClass) -> Object {
         trace!(target: log::HEAP, class=class.name.as_str(), "Allocating object");
         let header_size = size_of::<ObjectHeader>();
         let data_size = class.instance_width;
@@ -299,7 +299,7 @@ impl Allocator {
 
         let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
 
-        let class_ptr = class as *const Class;
+        let class_ptr = class as *const ObjectClass;
 
         unsafe {
             let object = Object {
@@ -320,7 +320,7 @@ impl Allocator {
         }
     }
 
-    pub fn new_static_object(&self, class: &Class) -> Object {
+    pub fn new_static_object(&self, class: &ObjectClass) -> Object {
         trace!(target: log::HEAP, class=class.name.as_str(), "Allocating static object");
         let header_size = size_of::<ObjectHeader>();
         let data_size = class.static_width;
@@ -328,7 +328,7 @@ impl Allocator {
 
         let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
 
-        let class_ptr = class as *const Class;
+        let class_ptr = class as *const ObjectClass;
 
         unsafe {
             let object = Object {
@@ -349,10 +349,10 @@ impl Allocator {
         }
     }
 
-    pub fn new_array(&self, component: ArrayType, length: Int) -> Array {
-        trace!(target: log::HEAP, component=component.descriptor(), length=length.0, "Allocating array");
+    pub fn new_array(&self, component: Class, length: Int) -> Array {
+        trace!(target: log::HEAP, component=component.name(), length=length.0, "Allocating array");
         let header_size = size_of::<ArrayHeader>();
-        let data_size = length.0 as usize * component.width();
+        let data_size = length.0 as usize * component.component_width();
         let size = header_size + data_size;
 
         let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), size);
@@ -398,7 +398,7 @@ impl Allocator {
     // }
 }
 
-fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
+fn write_value_2(data_start: *mut u8, offset: usize, field: &FieldType, value: Value) {
     unsafe {
         let pointer: *mut u8 = data_start.add(offset);
         match field {
@@ -441,6 +441,102 @@ fn write_value(data_start: *mut u8, offset: usize, field: &FieldType, value: Val
                 let value = value.reference().0;
                 let pointer = pointer as *mut u32;
                 pointer.write(value)
+            }
+        }
+    }
+}
+
+fn write_value(data_start: *mut u8, offset: usize, class: &Class, value: Value) {
+    unsafe {
+        let pointer: *mut u8 = data_start.add(offset);
+        match class {
+            Class::Primitive(primitive) => match primitive {
+                Primitive::Boolean | Primitive::Byte => {
+                    let value = value.int().0 as i8;
+                    let pointer = pointer as *mut i8;
+                    pointer.write(value)
+                }
+                Primitive::Char => {
+                    let value = value.int().0 as u16;
+                    let pointer = pointer as *mut u16;
+                    pointer.write(value)
+                }
+                Primitive::Short => {
+                    let value = value.int().0 as i16;
+                    let pointer = pointer as *mut i16;
+                    pointer.write(value)
+                }
+                Primitive::Int => {
+                    let value = value.int().0;
+                    let pointer = pointer as *mut i32;
+                    pointer.write(value)
+                }
+                Primitive::Float => {
+                    let value = value.float().0;
+                    let pointer = pointer as *mut f32;
+                    pointer.write(value)
+                }
+                Primitive::Long => {
+                    let value = value.long().0;
+                    let pointer = pointer as *mut i64;
+                    pointer.write(value)
+                }
+                Primitive::Double => {
+                    let value = value.double().0;
+                    let pointer = pointer as *mut f64;
+                    pointer.write(value)
+                }
+            }
+            Class::Array(_) | Class::Object(_) => {
+                let value = value.reference().0;
+                let pointer = pointer as *mut u32;
+                pointer.write(value)
+            }
+        }
+    }
+}
+
+fn read_value_2(data_start: *mut u8, offset: usize, class: &Class) -> Value {
+    unsafe {
+        let pointer = data_start.add(offset);
+        match class {
+            Class::Primitive(primitive) => match primitive {
+                Primitive::Boolean => {
+                    let pointer: *mut i8 = pointer.cast();
+                    Value::Int(Int(pointer.read() as i32))
+                }
+                Primitive::Byte => {
+                    let pointer: *mut i8 = pointer.cast();
+                    Value::Int(Int(pointer.read() as i32))
+                }
+                Primitive::Char => {
+                    let pointer: *mut u16 = pointer.cast();
+                    Value::Int(Int(pointer.read() as i32))
+                }
+                Primitive::Short => {
+                    let pointer: *mut i16 = pointer.cast();
+                    Value::Int(Int(pointer.read() as i32))
+                }
+                Primitive::Int => {
+                    let pointer: *mut i32 = pointer.cast();
+                    Value::Int(Int(pointer.read()))
+                }
+                Primitive::Long => {
+                    let pointer: *mut i64 = pointer.cast();
+                    Value::Long(Long(pointer.read() as i64))
+                }
+                Primitive::Float => {
+                    let pointer: *mut f32 = pointer.cast();
+                    Value::Float(Float(pointer.read() as f32))
+                }
+                Primitive::Double => {
+                    let pointer: *mut f64 = pointer.cast();
+                    Value::Double(Double(pointer.read()))
+                }
+            }
+            Class::Object(_) | Class::Array(_) => {
+                let pointer: *mut u32 = pointer.cast();
+                Value::Reference(Reference(pointer.read()))
             }
         }
     }

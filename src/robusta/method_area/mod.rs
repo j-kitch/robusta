@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -27,6 +28,103 @@ unsafe impl Send for MethodArea {}
 
 unsafe impl Sync for MethodArea {}
 
+#[derive(Clone, Eq, PartialEq)]
+pub enum Primitive {
+    Boolean,
+    Byte,
+    Short,
+    Char,
+    Int,
+    Float,
+    Long,
+    Double,
+}
+
+impl Primitive {
+    pub fn width(&self) -> usize {
+        match self {
+            Primitive::Boolean | Primitive::Byte => 1,
+            Primitive::Short | Primitive::Char => 2,
+            Primitive::Int | Primitive::Float => 4,
+            Primitive::Long | Primitive::Double => 8,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Primitive::Boolean => "boolean".to_string(),
+            Primitive::Byte => "byte".to_string(),
+            Primitive::Short => "short".to_string(),
+            Primitive::Char => "char".to_string(),
+            Primitive::Int => "int".to_string(),
+            Primitive::Float => "float".to_string(),
+            Primitive::Long => "long".to_string(),
+            Primitive::Double => "double".to_string(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum Class {
+    Primitive(Primitive),
+    Array(Box<Class>),
+    Object(ClassRef),
+}
+
+impl Class {
+    pub fn is_reference(&self) -> bool {
+        match self {
+            Class::Array(_) | Class::Object(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Class::Primitive(primitive) => primitive.name(),
+            Class::Array(component) => format!("[{}", component.name()),
+            Class::Object(class) => class.name.clone(),
+        }
+    }
+
+    pub fn is_char_slice(&self) -> bool {
+        match self {
+            Class::Primitive(primitive) => primitive == &Primitive::Char,
+            _ => false,
+        }
+    }
+    pub fn obj(&self) -> ClassRef {
+        match self {
+            Class::Object(class_ref) => class_ref.clone(),
+            _ => panic!("error")
+        }
+    }
+
+    pub fn is_instance_of(&self, other: &Class) -> bool {
+        match self {
+            Class::Primitive(primitive) => match other {
+                Class::Primitive(other) => primitive == other,
+                _ => false,
+            },
+            Class::Array(component) => match other {
+                Class::Array(other) => component.is_instance_of(other),
+                _ => false,
+            }
+            Class::Object(object) => match other {
+                Class::Object(other) => object.is_instance_of(other),
+                _ => false,
+            }
+        }
+    }
+
+    pub fn component_width(&self) -> usize {
+        match self {
+            Class::Primitive(primitive) => primitive.width(),
+            Class::Array(_) | Class::Object(_) => 4,
+        }
+    }
+}
+
 impl MethodArea {
     pub fn new(heap: *const Heap) -> Self {
         MethodArea {
@@ -39,141 +137,10 @@ impl MethodArea {
         }
     }
 
-    pub fn load_primitive_classes(&self) {
-        self.classes.load_class("boolean", |_| {
-            Class {
-                name: "boolean".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("byte", |_| {
-            Class {
-                name: "byte".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("char", |_| {
-            Class {
-                name: "char".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("short", |_| {
-            Class {
-                name: "short".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("int", |_| {
-            Class {
-                name: "int".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("float", |_| {
-            Class {
-                name: "float".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("long", |_| {
-            Class {
-                name: "long".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-        self.classes.load_class("double", |_| {
-            Class {
-                name: "double".to_string(),
-                flags: ClassFlags { bits: 0 },
-                const_pool: ConstPool { pool: HashMap::new() },
-                super_class: None,
-                interfaces: vec![],
-                instance_fields: vec![],
-                static_fields: vec![],
-                methods: vec![],
-                attributes: vec![],
-                instance_width: 0,
-                static_width: 0,
-                source_file: None,
-            }
-        });
-    }
-
-    pub fn insert_gen_class(&self, class: Class) -> *const Class {
+    pub fn insert_gen_class(&self, class: ObjectClass) -> *const ObjectClass {
         let class = self.classes.load_class(&class.name.clone(), |_| class);
         class.self_referential();
-        &*class as *const Class
+        &*class as *const ObjectClass
     }
 
     pub fn resolve_category_one(&self, pool: *const ConstPool, index: u16) -> Value {
@@ -186,8 +153,8 @@ impl MethodArea {
                 Value::Reference(*reference)
             }
             Const::Class(reference) => {
-                let class = reference.resolve(|key| &*self.load_class(&key.name));
-                let class_object = self.load_class_object(unsafe { (*class).as_ref().unwrap() });
+                let class = reference.resolve(|key| self.load_outer_class(&key.name));
+                let class_object = self.load_class_object(&class.obj());
                 Value::Reference(class_object)
             }
             _ => panic!("Expected to load a category 1 const, but not found")
@@ -205,14 +172,33 @@ impl MethodArea {
 
     /// Resolve a class symbolic reference in the constant pool, and return a reference to the
     /// class.
-    pub fn resolve_class(&self, pool: *const ConstPool, index: u16) -> *const Class {
+    pub fn resolve_class(&self, pool: *const ConstPool, index: u16) -> Class {
         let pool = unsafe { pool.as_ref().unwrap() };
         let class_const = pool.get_class(index);
         let class = class_const.resolve(|class_key| {
-            let class = self.load_class(&class_key.name);
-            &*class as *const Class
+            self.load_outer_class(&class_key.name)
         });
-        *class
+        class.clone()
+    }
+
+    fn load_outer_class(&self, name: &str) -> Class {
+        match name {
+            "boolean" => Class::Primitive(Primitive::Boolean),
+            "byte" => Class::Primitive(Primitive::Byte),
+            "char" => Class::Primitive(Primitive::Char),
+            "short" => Class::Primitive(Primitive::Short),
+            "int" => Class::Primitive(Primitive::Int),
+            "float" => Class::Primitive(Primitive::Float),
+            "long" => Class::Primitive(Primitive::Long),
+            "double" => Class::Primitive(Primitive::Double),
+            _ => {
+                if name.starts_with('[') {
+                    Class::Array(Box::new(self.load_outer_class(&name[1..])))
+                } else {
+                    Class::Object(self.load_class(name))
+                }
+            }
+        }
     }
 
     pub fn resolve_method(&self, pool: *const ConstPool, index: u16) -> *const Method {
@@ -256,14 +242,14 @@ impl MethodArea {
 
             let super_class = if class_file.super_class == 0 { None } else {
                 let super_class = pool.get_class(class_file.super_class);
-                let super_class = super_class.resolve(|key| &*self.load_class(&key.name));
-                Some(*super_class)
+                let super_class = super_class.resolve(|key| self.load_outer_class(&key.name));
+                Some(super_class.obj())
             };
 
-            let interfaces: Vec<*const Class> = class_file.interfaces.iter().map(|index| {
+            let interfaces: Vec<ClassRef> = class_file.interfaces.iter().map(|index| {
                 let name = pool.get_class(*index);
-                let class = name.resolve(|key| &*self.load_class(&key.name));
-                *class
+                let class = name.resolve(|key| self.load_outer_class(&key.name));
+                class.obj()
             }).collect();
 
             let mut instance_fields: Vec<Field> = class_file.fields.iter()
@@ -274,12 +260,12 @@ impl MethodArea {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { class: 0 as *const Class, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                    Field { class: 0 as *const ObjectClass, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
                 }).collect();
 
             // Sort to get a better order for object packing.
             instance_fields.sort_by(|a, b| a.width.cmp(&b.width).reverse());
-            let mut instance_offset = unsafe { super_class.map_or(0, |c| (*c).instance_width) };
+            let mut instance_offset = super_class.map_or(0, |c| (*c).instance_width);
             for field in &mut instance_fields {
                 field.offset = instance_offset;
                 instance_offset += field.width;
@@ -293,7 +279,7 @@ impl MethodArea {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { class: 0 as *const Class, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                    Field { class: 0 as *const ObjectClass, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
                 }).collect();
 
             // Sort to get a better order for object packing.
@@ -323,7 +309,7 @@ impl MethodArea {
 
                     let descriptor = class_file.get_const_utf8(m.descriptor);
                     let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Method { class: 0 as *const Class, is_static, is_native, is_synchronized, name, descriptor, code: m.code().map(|c| c.clone()) }
+                    Method { class: 0 as *const ObjectClass, is_static, is_native, is_synchronized, name, descriptor, code: m.code().map(|c| c.clone()) }
                 }).collect();
 
             let source_file = class_file.attributes.iter()
@@ -338,7 +324,7 @@ impl MethodArea {
                     }
                 });
 
-            let class = Class {
+            let class = ObjectClass {
                 name: name.to_string(),
                 flags: ClassFlags { bits: class_file.access_flags },
                 const_pool: pool,
@@ -369,14 +355,14 @@ impl MethodArea {
         heap.insert_string_const(string, &*string_class)
     }
 
-    pub fn load_class_object(&self, class: &Class) -> Reference {
+    pub fn load_class_object(&self, class: &ObjectClass) -> Reference {
         let heap = unsafe { self.heap.as_ref().unwrap() };
         let string_class = self.load_class("java.lang.String");
         let class_class = self.load_class("java.lang.Class");
         heap.insert_class_object(class, &*class_class, &*string_class)
     }
 
-    pub fn initialize(&self, thread: &mut Thread, class: &Class) {
+    pub fn initialize(&self, thread: &mut Thread, class: &ObjectClass) {
         let already_init = thread.stack.iter().any(|f| {
             if f.method == 0 as *const Method {
                 return false;
@@ -389,9 +375,8 @@ impl MethodArea {
         }
 
         self.classes.initialize(&class.name, |_| {
-            if let Some(parent) = class.super_class {
-                let parent = unsafe { parent.as_ref().unwrap() };
-                self.initialize(thread, parent);
+            if let Some(parent) = &class.super_class {
+                self.initialize(thread, &parent);
             }
             if let Some(clinit) = class.methods.iter().find(|m| m.name.eq("<clinit>")) {
                 let depth = thread.stack.len();
@@ -409,12 +394,12 @@ impl MethodArea {
     }
 }
 
-pub struct Class {
+pub struct ObjectClass {
     pub name: String,
     pub flags: ClassFlags,
     pub const_pool: ConstPool,
-    pub super_class: Option<*const Class>,
-    pub interfaces: Vec<*const Class>,
+    pub super_class: Option<ClassRef>,
+    pub interfaces: Vec<ClassRef>,
     pub instance_fields: Vec<Field>,
     pub static_fields: Vec<Field>,
     pub methods: Vec<Method>,
@@ -425,22 +410,22 @@ pub struct Class {
 }
 
 pub struct Hierarchy {
-    current: Option<*const Class>,
+    current: Option<ClassRef>,
 }
 
 impl Iterator for Hierarchy {
-    type Item = *const Class;
+    type Item = ClassRef;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let class = self.current;
-        self.current = self.current.and_then(|class| unsafe { (*class).super_class });
+        let class = self.current.clone();
+        self.current = self.current.and_then(|class| class.super_class);
         class
     }
 }
 
-impl Class {
+impl ObjectClass {
     fn self_referential(&self) {
-        let class = self as *const Class;
+        let class = self as *const ObjectClass;
         for field in &self.instance_fields {
             let mut_ptr = (field as *const Field).cast_mut();
             unsafe {
@@ -462,23 +447,22 @@ impl Class {
     }
 
     pub fn parents(&self) -> Hierarchy {
-        Hierarchy { current: Some(self as *const Class) }
+        Hierarchy { current: Some(ClassRef::new(self as *const ObjectClass)) }
     }
 
-    pub fn parents_and_interfaces(&self) -> HashSet<*const Class> {
+    pub fn parents_and_interfaces(&self) -> HashSet<ClassRef> {
         let mut classes = hashset! {};
         let mut visited = hashset! {};
 
-        classes.insert(self as *const Class);
+        classes.insert(ClassRef::new(self as *const ObjectClass));
 
         while visited.len() < classes.len() {
             let next_class = classes.difference(&visited).next().unwrap().clone();
-            let class = unsafe { next_class.as_ref().unwrap() };
 
-            if let Some(parent) = class.super_class {
-                classes.insert(parent);
-                for interface in &class.interfaces {
-                    classes.insert(*interface);
+            if let Some(parent) = &next_class.super_class {
+                classes.insert(parent.clone());
+                for interface in &next_class.interfaces {
+                    classes.insert(interface.clone());
                 }
             }
 
@@ -490,6 +474,7 @@ impl Class {
 
     pub fn find_field(&self, key: &FieldKey) -> &Field {
         self.parents()
+            .map(|class| class.deref() as *const ObjectClass)
             .flat_map(|class| unsafe { (*class).instance_fields.iter() })
             .find(|fld| fld.name.eq(&key.name) && fld.descriptor.eq(&key.descriptor))
             .unwrap()
@@ -503,13 +488,13 @@ impl Class {
 
     pub fn find_method(&self, key: &MethodKey) -> Option<&Method> {
         self.parents()
+            .map(|class| class.deref() as *const ObjectClass)
             .flat_map(|class| unsafe { (*class).methods.iter() })
             .find(|mthd| mthd.name.eq(&key.name) && mthd.descriptor.eq(&key.descriptor))
     }
 
-    pub fn is_instance_of(&self, other: &Class) -> bool {
+    pub fn is_instance_of(&self, other: &ObjectClass) -> bool {
         self.parents_and_interfaces().iter().any(|c| {
-            let c = unsafe { c.as_ref().unwrap() };
             c.name.eq(&other.name)
         })
     }
@@ -520,7 +505,7 @@ pub struct ClassFlags {
 }
 
 pub struct Field {
-    pub class: *const Class,
+    pub class: *const ObjectClass,
     pub is_static: bool,
     pub name: String,
     pub descriptor: FieldType,
@@ -529,7 +514,7 @@ pub struct Field {
 }
 
 pub struct Method {
-    pub class: *const Class,
+    pub class: *const ObjectClass,
     pub is_static: bool,
     pub is_native: bool,
     pub is_synchronized: bool,

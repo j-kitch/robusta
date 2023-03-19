@@ -224,7 +224,7 @@ impl CopyCollector {
                     heap.set(next_object, Heaped::Array(array));
 
                     // If its an array of references, we want to add all of those to the set.
-                    if header.component == ArrayType::Reference {
+                    if header.component.is_reference() {
                         remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| Reference(*u32)));
                     }
                 }
@@ -250,7 +250,6 @@ impl CopyCollector {
 
                     // For every reference in the objects fields, add to set.
                     for parent in class.parents() {
-                        let parent = unsafe { parent.as_ref().unwrap() };
                         for field in &parent.instance_fields {
                             if field.descriptor.is_reference() {
                                 let reference = object.field_from(field);

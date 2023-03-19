@@ -10,7 +10,7 @@ use crate::heap::sync::Synchronized;
 use crate::instruction::instruction;
 use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
-use crate::method_area::{Class, Method};
+use crate::method_area::{ObjectClass, Method};
 use crate::method_area::const_pool::ConstPool;
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
@@ -131,7 +131,7 @@ impl Thread {
     }
 
     /// A native method needs to be able to invoke the thread stack again to get a result.
-    pub fn native_invoke(&mut self, class: *const Class, method: *const Method, args: Vec<Value>) -> Option<Value> {
+    pub fn native_invoke(&mut self, class: *const ObjectClass, method: *const Method, args: Vec<Value>) -> Option<Value> {
         let class = unsafe { class.as_ref().unwrap() };
         let method2 = unsafe { method.as_ref().unwrap() };
         let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };

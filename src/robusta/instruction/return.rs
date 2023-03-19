@@ -83,8 +83,7 @@ pub fn a_throw(thread: &mut Thread) {
             let is_handler = handler.catch_type == 0 || {
                 let pool = current_frame.const_pool;
                 let catch_class = thread.runtime.method_area.resolve_class(pool, handler.catch_type);
-                let catch_class = unsafe { catch_class.as_ref().unwrap() };
-                throw_class.is_instance_of(catch_class)
+                throw_class.is_instance_of(&catch_class.obj())
             };
             if is_handler {
                 current_frame.pc = handler.handler_pc as usize;

@@ -69,7 +69,6 @@ impl VirtualMachine {
         debug!(target: log::JVM, "Starting Robusta");
 
         let runtime = Runtime::new();
-        runtime.method_area.load_primitive_classes();
         runtime.method_area.load_class("sun.misc.Launcher");
 
         // Required Initialization

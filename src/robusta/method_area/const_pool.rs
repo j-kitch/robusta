@@ -117,7 +117,7 @@ impl ConstPool {
         self.pool.get(&index).unwrap()
     }
 
-    pub fn get_class(&self, index: u16) -> &SymbolicReference<ClassKey, *const Class> {
+    pub fn get_class(&self, index: u16) -> &SymbolicReference<ClassKey, Class> {
         match self.pool.get(&index).unwrap() {
             Const::Class(reference) => reference,
             _ => panic!("Expected to find a class at index {} in the constant pool", index)
@@ -140,7 +140,7 @@ impl ConstPool {
 }
 
 pub enum Const {
-    Class(SymbolicReference<ClassKey, *const Class>),
+    Class(SymbolicReference<ClassKey, Class>),
     Field(SymbolicReference<FieldKey, *const Field>),
     Method(SymbolicReference<MethodKey, *const Method>),
     String(SymbolicReference<String, Reference>),

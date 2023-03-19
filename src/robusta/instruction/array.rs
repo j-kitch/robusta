@@ -6,10 +6,10 @@ pub fn a_new_array(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let const_pool = frame.const_pool;
     let class_idx = frame.read_u16();
-    let _ = thread.runtime.method_area.resolve_class(const_pool, class_idx);
+    let class = thread.runtime.method_area.resolve_class(const_pool, class_idx);
     let frame = thread.stack.last_mut().unwrap();
     let count = frame.operand_stack.pop().int();
-    let array_ref = thread.runtime.heap.new_array(ArrayType::Reference, count);
+    let array_ref = thread.runtime.heap.new_array(class, count);
     let frame = thread.stack.last_mut().unwrap();
     frame.operand_stack.push(Value::Reference(array_ref));
 }

@@ -5,7 +5,7 @@ use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
 
 use parking_lot::RwLock;
 
-use crate::method_area::Class;
+use crate::method_area::ObjectClass;
 
 pub struct Classes {
     loading: RwLock<HashMap<String, ClassLoad>>,
@@ -23,7 +23,7 @@ impl Classes {
     }
 
     pub fn load_class<F>(&self, name: &str, load_class: F) -> ClassRef
-        where F: FnOnce(&str) -> Class
+        where F: FnOnce(&str) -> ObjectClass
     {
         let (creator, waiter) = self.find_status(name);
         if let Some(creator) = creator {
@@ -91,29 +91,38 @@ impl Classes {
 }
 
 struct Value {
-    class: Arc<Class>
+    class: Arc<ObjectClass>
 }
 
 impl Value {
     pub fn borrow(&self) -> ClassRef {
         ClassRef {
-            class: self.class.as_ref() as *const Class
+            class: self.class.as_ref() as *const ObjectClass
         }
     }
 }
 
-impl From<Class> for Value {
-    fn from(value: Class) -> Self {
+impl From<ObjectClass> for Value {
+    fn from(value: ObjectClass) -> Self {
         Value { class: Arc::new(value) }
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ClassRef {
-    class: *const Class
+    class: *const ObjectClass
+}
+
+impl ClassRef {
+    pub fn new(obj_class: *const ObjectClass) -> Self {
+        ClassRef {
+            class: obj_class
+        }
+    }
 }
 
 impl Deref for ClassRef {
-    type Target = Class;
+    type Target = ObjectClass;
 
     fn deref(&self) -> &Self::Target {
         unsafe { self.class.as_ref().unwrap() }

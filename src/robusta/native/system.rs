@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::java::{MethodType, Value};
 use crate::method_area;
-use crate::method_area::Class;
+use crate::method_area::ObjectClass;
 use crate::method_area::const_pool::MethodKey;
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -38,7 +38,7 @@ fn register_natives(args: &Args) -> Option<Value> {
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
-    thread.native_invoke(&*system_class as *const Class, init_method as *const method_area::Method, vec![]);
+    thread.native_invoke(&*system_class as *const ObjectClass, init_method as *const method_area::Method, vec![]);
 
     None
 }

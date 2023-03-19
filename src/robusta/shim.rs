@@ -2,11 +2,11 @@ use maplit::hashmap;
 use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::java::MethodType;
-use crate::method_area::{Class, ClassFlags, Method};
+use crate::method_area::{ObjectClass, ClassFlags, Method};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, MethodKey, SymbolicReference};
 
-pub fn create_main_thread() -> Class {
-    Class {
+pub fn create_main_thread() -> ObjectClass {
+    ObjectClass {
         name: "<main-thread>".to_string(),
         flags: ClassFlags { bits: 0 },
         const_pool: ConstPool {
@@ -67,7 +67,7 @@ pub fn create_main_thread() -> Class {
         static_fields: vec![],
         methods: vec![
             Method {
-                class: 0 as *const Class,
+                class: 0 as *const ObjectClass,
                 is_static: true,
                 is_native: false,
                 is_synchronized: false,
