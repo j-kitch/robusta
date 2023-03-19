@@ -3,6 +3,7 @@ use std::hash::Hash;
 use std::sync::{RwLock, RwLockReadGuard};
 
 use chashmap::CHashMap;
+use tracing::debug;
 
 use crate::java::Reference;
 
@@ -57,9 +58,13 @@ impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
     pub fn get_or_init<F>(&self, key: K, f: F) -> &V
         where F: FnOnce(&K) -> V
     {
+        debug!("Ensure value");
         self.ensure_value(&key);
+        debug!("Getting once");
         let once = self.map.get(&key).unwrap();
+        debug!("Calling get or init");
         let value = once.get_or_init(|| Box::new(f(&key)));
+        debug!("Getting value out");
         let pointer = value.as_ref() as *const V;
         unsafe { pointer.as_ref().unwrap() }
     }

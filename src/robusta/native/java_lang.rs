@@ -201,7 +201,7 @@ fn integer_to_string(args: &Args) -> Option<Value> {
     let int = args.params[0].int();
 
     let string_rep = format!("{}", int.0);
-    let string_ref = args.runtime.heap.insert_string_const(&string_rep, args.runtime.method_area.load_class("java.lang.String"));
+    let string_ref = args.runtime.heap.insert_string_const(&string_rep, &*args.runtime.method_area.load_class("java.lang.String"));
 
     Some(Value::Reference(string_ref))
 }
@@ -254,7 +254,7 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
         .take_while(|f| {
             let method = unsafe { f.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
-            !class.is_instance_of(throwable_class) && method.name.eq("<init>")
+            !class.is_instance_of(&*throwable_class) && method.name.eq("<init>")
         });
 
     let elems: Vec<StackElem> = stack.map(|frame| {
@@ -571,7 +571,7 @@ pub fn get_primitive_class(args: &Args) -> Option<Value> {
     let primitive = args.runtime.heap.get_string(string_ref);
 
     let primitive_class = args.runtime.method_area.load_class(&primitive);
-    let primitive_object = args.runtime.method_area.load_class_object(primitive_class);
+    let primitive_object = args.runtime.method_area.load_class_object(&*primitive_class);
 
     Some(Value::Reference(primitive_object))
 }

@@ -1,6 +1,6 @@
-pub const JVM: &'static str = "jvm";
-pub const LOADER: &'static str = "class-loader";
-pub const THREAD: &'static str = "thread";
+pub const JVM: &'static str = "java";
+pub const LOADER: &'static str = "load";
+pub const THREAD: &'static str = "thrd";
 pub const HEAP: &'static str = "heap";
-pub const INSTR: &'static str = "instruction";
-pub const GC: &'static str = "gc";
+pub const INSTR: &'static str = "inst";
+pub const GC: &'static str = "gcol";

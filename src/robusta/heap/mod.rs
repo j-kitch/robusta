@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 
 use rand::{RngCore, thread_rng};
+use tracing::debug;
 
 use crate::collection::once::OnceMap;
 use crate::heap::allocator::{Allocator, Array, ArrayType, Object};
@@ -66,10 +67,16 @@ impl Heap {
     }
 
     pub fn get_static(&self, class: &Class) -> Reference {
-        self.static_objects.get_or_init(class.name.clone(), |_| {
+        debug!("Starting get static {}", &class.name);
+        let x = self.static_objects.get_or_init(class.name.clone(), |_| {
+            if class.static_width == 0 {
+                return Reference(0);
+            }
             let object = self.allocator.new_static_object(class);
             self.insert(Heaped::Object(object))
-        }).clone()
+        }).clone();
+        debug!("Finished get static {}", &class.name);
+        x
     }
 
     pub fn new_array(&self, arr_type: ArrayType, length: Int) -> Reference {

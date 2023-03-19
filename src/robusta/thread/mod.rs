@@ -109,6 +109,7 @@ impl Thread {
             self.safe.exit();
             self.locks.insert(object_ref, sync);
         }
+        debug!(target: log::THREAD, "Entered monitor {}", object_ref.0);
     }
 
     pub fn exit_monitor(&mut self, object_ref: Reference) {
@@ -119,6 +120,7 @@ impl Thread {
             let sync = self.locks.remove(&object_ref).unwrap();
             drop(sync);
         }
+        debug!(target: log::THREAD, "Exited monitor {}", object_ref.0);
     }
 
     pub fn as_mut<'a>(self: &'a Arc<Self>) -> &'a mut Thread {

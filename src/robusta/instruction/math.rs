@@ -1,4 +1,3 @@
-use std::ops::BitXor;
 use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
