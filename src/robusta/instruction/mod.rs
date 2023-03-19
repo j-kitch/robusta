@@ -4,7 +4,7 @@ use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_ge, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
-use crate::instruction::dup::dup;
+use crate::instruction::dup::{dup, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
@@ -95,6 +95,7 @@ pub fn instruction(thread: &mut Thread) {
         0x4C => astore_n(thread, 1),
         0x4D => astore_n(thread, 2),
         0x4E => astore_n(thread, 3),
+        0x5A => dup_x1(thread),
         0x53 => a_array_store(thread),
         0x55 => char_array_store(thread),
         0x57 => pop(thread),
@@ -203,6 +204,7 @@ fn op_name(code: u8) -> &'static str {
         0x4C => "astore_1",
         0x4D => "astore_2",
         0x4E => "astore_3",
+        0x5A => "dup_x1",
         0x53 => "aastore",
         0x55 => "castore",
         0x57 => "pop",
