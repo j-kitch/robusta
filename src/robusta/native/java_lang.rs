@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::mem::size_of;
+use std::ops::Deref;
 use std::sync::Arc;
-use std::thread::{Builder, sleep};
+use std::thread::{Builder, current, sleep};
 use std::time::Duration;
 
 use rand::{RngCore, thread_rng};
@@ -10,7 +11,7 @@ use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::collection::wait::ThreadWait;
 use crate::heap::allocator::ArrayHeader;
-use crate::java::{Double, FieldType, Int, Long, MethodType, Value};
+use crate::java::{Double, FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
 use crate::method_area::{ClassFlags, ObjectClass};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
@@ -179,6 +180,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(fill_in_stack_trace),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "forName0".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;").unwrap(),
+            },
+            Arc::new(for_name_0),
         ),
         stateless(
             Method {
@@ -599,9 +608,88 @@ pub fn thread_join_millis(args: &Args) -> Option<Value> {
 }
 
 pub fn current_thread(args: &Args) -> Option<Value> {
-    let thread = unsafe { args.thread.as_ref().unwrap() };
-    let thread_ref = thread.reference.as_ref().unwrap();
-    Some(Value::Reference(*thread_ref))
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let is_main_thread = current().name().unwrap().eq("main");
+    if is_main_thread && thread.reference.is_none() {
+        // TODO: We are called in Thread.<clinit>
+        // We need to create a main thread instance ourselves directly!
+
+        // Create main thread group & thread.
+        let thread_group_class = args.runtime.method_area.load_outer_class("java.lang.ThreadGroup");
+        let thread_group_class = thread_group_class.obj();
+        let thread_group_init_system = thread_group_class.find_method(&MethodKey {
+            class: "java.lang.ThreadGroup".to_string(),
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+        }).unwrap();
+        let thread_group_init_main = thread_group_class.find_method(&MethodKey {
+            class: "java.lang.ThreadGroup".to_string(),
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("(Ljava/lang/Void;Ljava/lang/ThreadGroup;Ljava/lang/String;)V").unwrap(),
+        }).unwrap();
+
+        let system_thread_group = args.runtime.heap.new_object(&thread_group_class);
+        let main_thread_group = args.runtime.heap.new_object(&thread_group_class);
+        let main_string = args.runtime.heap.insert_string_const(
+            "main",
+            &args.runtime.method_area.load_class("java.lang.String"));
+
+        // Init System Thread Group
+        thread.native_invoke(
+            thread_group_class.deref() as *const ObjectClass,
+            thread_group_init_system as *const method_area::Method,
+            vec![Value::Reference(system_thread_group)]);
+
+        // Init Main Thread Group
+        thread.native_invoke(
+            thread_group_class.deref() as *const ObjectClass,
+            thread_group_init_main as *const method_area::Method,
+            vec![
+                Value::Reference(main_thread_group),
+                Value::Reference(Reference(0)),
+                Value::Reference(system_thread_group),
+                Value::Reference(main_string),
+            ],
+        );
+
+        // Create our main thread.
+        let thread_class = args.runtime.method_area.load_class("java.lang.Thread");
+        let main_thread_ref = args.runtime.heap.new_object(&thread_class);
+        let main_thread_obj = args.runtime.heap.get_object(main_thread_ref);
+
+        let main_string = args.runtime.heap.insert_string_const(
+            "main",
+            args.runtime.method_area.load_class("java.lang.String").deref()
+        );
+
+        // Set the values that we require for the parent.
+        main_thread_obj.set_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "priority".to_string(),
+            descriptor: FieldType::Int,
+        }, Value::Int(Int(5)));
+
+        main_thread_obj.set_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "name".to_string(),
+            descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+        }, Value::Reference(main_string));
+
+        main_thread_obj.set_field(&FieldKey {
+            class: "java.lang.Thread".to_string(),
+            name: "group".to_string(),
+            descriptor: FieldType::from_descriptor("Ljava/lang/ThreadGroup;").unwrap(),
+        }, Value::Reference(main_thread_group));
+
+        thread.reference = Some(main_thread_ref);
+
+        Some(Value::Reference(main_thread_ref))
+    } else {
+        // Get the thread ref from the thread.
+        let thread_ref = thread.reference.unwrap();
+        Some(Value::Reference(thread_ref))
+    }
 }
 
 pub fn no_op(_: &Args) -> Option<Value> {
@@ -687,4 +775,20 @@ fn get_caller_class(args: &Args) -> Option<Value> {
     let class_ref = args.runtime.method_area.load_class_object(class);
 
     Some(Value::Reference(class_ref))
+}
+
+fn for_name_0(args: &Args) -> Option<Value> {
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let name_ref = args.params[0].reference();
+    let name = args.runtime.heap.get_string(name_ref);
+    let initialize = args.params[1].int().0 != 0;
+
+    let class = args.runtime.method_area.load_outer_class(&name);
+    if initialize {
+        args.runtime.method_area.initialize(thread, class.obj().deref());
+    }
+
+    let class_obj = args.runtime.method_area.load_class_object(class);
+    Some(Value::Reference(class_obj))
 }
