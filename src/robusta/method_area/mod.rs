@@ -22,7 +22,6 @@ pub struct MethodArea {
     loader: ClassFileLoader,
     heap: *const Heap,
     classes: Classes,
-    initialized: OnceMap<String, ()>,
 }
 
 unsafe impl Send for MethodArea {}
@@ -38,7 +37,6 @@ impl MethodArea {
             ]),
             heap,
             classes: Classes::new(),
-            initialized: OnceMap::new(),
         }
     }
 
@@ -401,7 +399,7 @@ impl MethodArea {
         }
 
         debug!("About to try to initialize class {}", &class.name);
-        self.initialized.get_or_init(class.name.clone(), |_| {
+        self.classes.initialize(&class.name, |_| {
         debug!("Starting initialize class {}", &class.name);
             if let Some(parent) = class.super_class {
                 let parent = unsafe { parent.as_ref().unwrap() };

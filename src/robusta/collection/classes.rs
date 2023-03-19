@@ -9,6 +9,7 @@ use crate::method_area::Class;
 
 pub struct Classes {
     loading: RwLock<HashMap<String, ClassLoad>>,
+    initialized: RwLock<HashMap<String, ClassLoad>>,
     classes: RwLock<HashMap<String, Value>>,
 }
 
@@ -16,6 +17,7 @@ impl Classes {
     pub fn new() -> Self {
         Classes {
             loading: RwLock::new(HashMap::new()),
+            initialized: RwLock::new(HashMap::new()),
             classes: RwLock::new(HashMap::new()),
         }
     }
@@ -38,6 +40,21 @@ impl Classes {
         let classes = self.classes.read();
         let class = classes.get(name).unwrap();
         class.borrow()
+    }
+
+    pub fn initialize<F>(&self, name: &str, initialize: F)
+        where F: FnOnce(&str)
+    {
+        let (creator, waiter) = self.find_status(name);
+        if let Some(creator) = creator {
+            // no other thread will read the status of the class, so we can insert it into the
+            // data structures that we want here!
+            initialize(name);
+            creator.done();
+        }
+
+        // At this point, we simply need to wait for the status to be good.
+        waiter.wait();
     }
 
     /// If the class is loaded, return a loading status that tells us it is ready!
@@ -151,4 +168,5 @@ impl ClassWaiter {
         }
     }
 }
+
 
