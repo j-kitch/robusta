@@ -208,12 +208,15 @@ pub enum Heaped {
 }
 
 impl Heaped {
-    pub fn class(&self) -> Class {
+    pub fn class(&self, object: Class) -> Class {
         match self {
             Heaped::Object(object) => Class::Object(ClassRef::new(object.class() as *const ObjectClass)),
             Heaped::Array(array) => {
                 let header = unsafe { array.header.as_ref().unwrap() };
-                Class::Array(Box::new(header.component.clone()))
+                Class::Array{
+                    component: Box::new(header.component.clone()),
+                    object: Box::new(object),
+                }
             }
         }
     }

@@ -20,4 +20,10 @@ public class Robusta {
     public static void throwThrowable(Throwable throwable) throws Throwable {
         throw throwable;
     }
+
+    public static void printStackTrace(Throwable throwable) {
+        for (StackTraceElement element : throwable.getStackTrace()) {
+            printerr(element.getFileName() + ":" + element.getLineNumber() + ": " + element.getClassName() + "." + element.getMethodName());
+        }
+    }
 }

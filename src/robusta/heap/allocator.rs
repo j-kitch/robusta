@@ -489,7 +489,7 @@ fn write_value(data_start: *mut u8, offset: usize, class: &Class, value: Value) 
                     pointer.write(value)
                 }
             }
-            Class::Array(_) | Class::Object(_) => {
+            Class::Array{ .. } | Class::Object(_) => {
                 let value = value.reference().0;
                 let pointer = pointer as *mut u32;
                 pointer.write(value)
@@ -536,7 +536,7 @@ fn read_value_2(data_start: *mut u8, offset: usize, class: &Class) -> Value {
                     Value::Double(Double(pointer.read()))
                 }
             }
-            Class::Object(_) | Class::Array(_) => {
+            Class::Object(_) | Class::Array { .. } => {
                 let pointer: *mut u32 = pointer.cast();
                 Value::Reference(Reference(pointer.read()))
             }

@@ -354,7 +354,9 @@ fn object_get_class(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get(object_ref);
 
-    let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
+    let class_ref = args.runtime.method_area.load_class_object(object_obj.class(
+        args.runtime.method_area.load_outer_class("java.lang.Object")
+    ));
 
     (Some(Value::Reference(class_ref)), None)
 }
@@ -1000,7 +1002,7 @@ fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let parent_ref = match this_class {
         Class::Primitive(_) => Reference(0),
-        Class::Array(_) => {
+        Class::Array { object, component } => {
             let class = args.runtime.method_area.load_outer_class("java.lang.Object");
             args.runtime.method_area.load_class_object(class)
         },

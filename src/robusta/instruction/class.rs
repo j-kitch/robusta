@@ -15,7 +15,7 @@ pub fn check_cast(thread: &mut Thread) {
 
     let heaped = thread.runtime.heap.get(reference);
 
-    if heaped.class().is_instance_of(&class) {
+    if heaped.class(thread.runtime.method_area.load_outer_class("java.lang.Object")).is_instance_of(&class) {
         frame.operand_stack.push(Value::Reference(reference));
     } else {
         panic!("Checkcast failed");
@@ -35,7 +35,7 @@ pub fn instance_of(thread: &mut Thread) {
     }
 
     let heaped = thread.runtime.heap.get(reference);
-    let this_class = heaped.class();
+    let this_class = heaped.class(thread.runtime.method_area.load_outer_class("java.lang.Object"));
 
     let result = if this_class.is_instance_of(&class) {
         Value::Int(Int(1))

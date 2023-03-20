@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use maplit::hashset;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::classes::{Classes, ClassRef};
@@ -67,14 +67,22 @@ impl Primitive {
 #[derive(Clone)]
 pub enum Class {
     Primitive(Primitive),
-    Array(Box<Class>),
+    Array{object: Box<Class>, component: Box<Class>},
     Object(ClassRef),
 }
 
 impl Class {
+    pub fn find_method(&self, key: &MethodKey) -> Option<&Method> {
+        match self {
+            Class::Object(class_ref) => class_ref.find_method(key),
+            Class::Array{object, component} => object.find_method(key),
+            _ => None,
+        }
+    }
+
     pub fn is_reference(&self) -> bool {
         match self {
-            Class::Array(_) | Class::Object(_) => true,
+            Class::Array{ .. } | Class::Object(_) => true,
             _ => false,
         }
     }
@@ -82,7 +90,7 @@ impl Class {
     pub fn name(&self) -> String {
         match self {
             Class::Primitive(primitive) => primitive.name(),
-            Class::Array(component) => format!("[{}", component.binary_name()),
+            Class::Array{ component, .. } => format!("[{}", component.binary_name()),
             Class::Object(class) => class.name.clone(),
         }
     }
@@ -100,7 +108,7 @@ impl Class {
                 Primitive::Double => "D".to_string(),
             }
             Class::Object(class_ref) => format!("L{};", &class_ref.name),
-            Class::Array(component) => format!("[{}", component.binary_name()),
+            Class::Array{ component, ..} => format!("[{}", component.binary_name()),
         }
     }
 
@@ -123,8 +131,8 @@ impl Class {
                 Class::Primitive(other) => primitive == other,
                 _ => false,
             },
-            Class::Array(component) => match other {
-                Class::Array(other) => component.is_instance_of(other),
+            Class::Array{component,..} => match other {
+                Class::Array{component: other, .. } => component.is_instance_of(other),
                 _ => false,
             }
             Class::Object(object) => match other {
@@ -137,7 +145,7 @@ impl Class {
     pub fn component_width(&self) -> usize {
         match self {
             Class::Primitive(primitive) => primitive.width(),
-            Class::Array(_) | Class::Object(_) => 4,
+            Class::Array{..} | Class::Object(_) => 4,
         }
     }
 }
@@ -211,7 +219,10 @@ impl MethodArea {
             _ => {
                 if name.starts_with('[') {
                     let field_type = FieldType::from_descriptor(name).unwrap();
-                    Class::Array(Box::new(self.load_outer_class(&field_type.component_type())))
+                    Class::Array {
+                        component: Box::new(self.load_outer_class(&field_type.component_type())),
+                        object: Box::new(self.load_outer_class("java.lang.Object")),
+                    }
                 } else {
                     Class::Object(self.load_class(name))
                 }
@@ -223,7 +234,7 @@ impl MethodArea {
         let pool = unsafe { pool.as_ref().unwrap() };
         let method_const = pool.get_method(index);
         let method = method_const.resolve(|method_key| {
-            let class = self.load_class(&method_key.class);
+            let class = self.load_outer_class(&method_key.class);
             let method = class.find_method(method_key).unwrap();
             method as *const Method
         });
@@ -253,6 +264,9 @@ impl MethodArea {
     }
 
     pub fn load_class(&self, class_name: &str) -> ClassRef {
+        if class_name.eq("[Ljava.lang.StackTraceElement;") {
+            let _b = 2;
+        }
         let class = self.classes.load_class(class_name, |name| {
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);

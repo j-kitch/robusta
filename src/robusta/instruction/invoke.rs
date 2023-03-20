@@ -1,4 +1,4 @@
-use tracing::debug;
+use tracing::{debug, info, trace};
 
 use crate::log;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
@@ -61,7 +61,6 @@ pub fn invoke_interface(thread: &mut Thread) {
 fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let method_idx = cur_frame.read_u16();
-
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(cur_frame.const_pool, method_idx);
     let method = unsafe { method.as_ref().unwrap() };
@@ -73,11 +72,11 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
         method as *const Method
     } else {
         let object_ref = args[0].reference();
-        let object = thread.runtime.heap.get_object(object_ref);
-        let object_class = object.class();
+        let object = thread.runtime.heap.get(object_ref);
+        let object_class = object.class(thread.runtime.method_area.load_outer_class("java.lang.Object"));
 
         object_class.find_method(&MethodKey {
-            class: object.class().name.clone(),
+            class: object_class.name(),
             name: method.name.clone(),
             descriptor: method.descriptor.clone(),
         }).unwrap() as *const Method

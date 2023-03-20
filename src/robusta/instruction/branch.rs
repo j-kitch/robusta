@@ -97,6 +97,22 @@ pub fn if_ref_cmp_ne(thread: &mut Thread) {
     }
 }
 
+pub fn if_ref_cmp_eq(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let offset = frame.read_i16();
+
+    let value2 = frame.operand_stack.pop().reference();
+    let value1 = frame.operand_stack.pop().reference();
+
+    if value1.0 == value2.0 {
+        let mut pc = frame.pc as i64;
+        pc -= 3;
+        pc += offset as i64;
+        frame.pc = pc as usize;
+    }
+}
+
 pub fn goto(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let offset = frame.read_i16();
