@@ -288,6 +288,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.Class".to_string(),
+                name: "getModifiers".to_string(),
+                descriptor: MethodType::from_descriptor("()I").unwrap(),
+            },
+            Arc::new(get_modifiers),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Thread".to_string(),
                 name: "start0".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
@@ -578,6 +586,23 @@ fn field_offset(args: &Args) -> (Option<Value>, Option<Value>) {
 }
 
 fn get_class_access_flags(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class_ref = args.params[0].reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+    let class = args.runtime.method_area.load_class(&name);
+
+    let flags = class.flags.bits as i32;
+
+    (Some(Value::Int(Int(flags))), None)
+}
+
+fn get_modifiers(args: &Args) -> (Option<Value>, Option<Value>) {
     let class_ref = args.params[0].reference();
     let class_obj = args.runtime.heap.get_object(class_ref);
 
