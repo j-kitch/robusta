@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, format};
 
 use crate::java::{Double, Float, Int, Long, ParseError, Reference, Value};
 use crate::java::type_parser::TypeParser;
@@ -32,6 +32,32 @@ pub enum FieldType {
 }
 
 impl FieldType {
+    pub fn as_class(&self) -> String {
+        match self {
+            FieldType::Boolean => "boolean".to_string(),
+            FieldType::Byte => "byte".to_string(),
+            FieldType::Short => "short".to_string(),
+            FieldType::Char => "char".to_string(),
+            FieldType::Int => "int".to_string(),
+            FieldType::Float => "float".to_string(),
+            FieldType::Long => "long".to_string(),
+            FieldType::Double => "double".to_string(),
+            FieldType::Reference(name) => name.to_string(),
+            FieldType::Array(component) => match component.as_ref() {
+                FieldType::Boolean => "[Z".to_string(),
+                FieldType::Byte => "[B".to_string(),
+                FieldType::Short => "[S".to_string(),
+                FieldType::Char => "[C".to_string(),
+                FieldType::Int => "[I".to_string(),
+                FieldType::Float => "[F".to_string(),
+                FieldType::Long => "[L".to_string(),
+                FieldType::Double => "[D".to_string(),
+                FieldType::Reference(name) => format!("[L{};", name),
+                FieldType::Array(_) => format!("[{}", component.as_class())
+            }
+        }
+    }
+
     /// Parse the `FieldType` instance from a field descriptor.
     ///
     /// For further reference, see [the JVM spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2).

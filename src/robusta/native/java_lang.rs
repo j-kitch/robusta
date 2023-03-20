@@ -225,6 +225,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.Class".to_string(),
+                name: "getDeclaredFields0".to_string(),
+                descriptor: MethodType::from_descriptor("(Z)[Ljava/lang/reflect/Field;").unwrap(),
+            },
+            Arc::new(get_declared_fields),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Thread".to_string(),
                 name: "start0".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
@@ -328,6 +336,77 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
             Arc::new(array_copy),
         ),
     ]
+}
+
+fn get_declared_fields(args: &Args) -> (Option<Value>, Option<Value>) {
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let class_ref = args.params[0].reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+    let class_name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let class_name = args.runtime.heap.get_string(class_name_ref);
+    let class = args.runtime.method_area.load_outer_class(&class_name);
+
+    let field_class = args.runtime.method_area.load_outer_class("java.lang.reflect.Field");
+    let field_class_obj = field_class.obj();
+    let field_init = field_class_obj.find_method(&MethodKey {
+        class: "java.lang.reflect.Field".to_string(),
+        name: "<init>".to_string(),
+        descriptor: MethodType::from_descriptor("(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B)V").unwrap(),
+    }).unwrap();
+
+    let mut all_fields = vec![];
+
+    if let Class::Object(class) = class {
+        let fields = class.instance_fields.iter()
+            .chain(class.static_fields.iter());
+        for field in fields {
+            let declaring_class = class_ref;
+            let name = args.runtime.heap.insert_string_const(
+                &field.name,
+                args.runtime.method_area.load_class("java.lang.String").deref());
+            let field_type = args.runtime.method_area.load_outer_class(&field.descriptor.as_class());
+            let field_type = args.runtime.method_area.load_class_object(field_type);
+            let modifiers = Int(0);
+            let slot = Int(0);
+            let signature = Reference(0);
+            let annotations = Reference(0);
+
+            let field = args.runtime.heap.new_object(&field_class_obj);
+
+            let (_, ex) = thread.native_invoke(
+                field_class_obj.deref() as *const ObjectClass,
+                field_init as *const method_area::Method,
+                vec![
+                    Value::Reference(field),
+                    Value::Reference(declaring_class),
+                    Value::Reference(name),
+                    Value::Reference(field_type),
+                    Value::Int(modifiers),
+                    Value::Int(slot),
+                    Value::Reference(signature),
+                    Value::Reference(annotations),
+                ],
+            );
+            if ex.is_some() {
+                return (None, ex);
+            }
+            all_fields.push(field);
+        }
+    }
+
+    let fields_array_ref = args.runtime.heap.new_array(field_class, Int(all_fields.len() as i32));
+    let fields_array = args.runtime.heap.get_array(fields_array_ref);
+
+    for (idx, field) in all_fields.iter().enumerate() {
+        fields_array.set_element(Int(idx as i32), Value::Reference(*field));
+    }
+
+    (Some(Value::Reference(fields_array_ref)), None)
 }
 
 fn integer_to_string(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -770,7 +849,7 @@ pub fn current_thread(args: &Args) -> (Option<Value>, Option<Value>) {
 
         let main_string = args.runtime.heap.insert_string_const(
             "main",
-            args.runtime.method_area.load_class("java.lang.String").deref()
+            args.runtime.method_area.load_class("java.lang.String").deref(),
         );
 
         // Set the values that we require for the parent.
@@ -910,7 +989,7 @@ fn get_control_context(args: &Args) -> (Option<Value>, Option<Value>) {
     let acc_init = acc_class.find_method(&MethodKey {
         class: "java.security.AccessControlContext".to_string(),
         name: "<init>".to_string(),
-        descriptor: MethodType::from_descriptor("([Ljava/security/ProtectionDomain;)V").unwrap()
+        descriptor: MethodType::from_descriptor("([Ljava/security/ProtectionDomain;)V").unwrap(),
     }).unwrap();
 
     let pro_dom_class = args.runtime.method_area.load_outer_class("java.security.ProtectionDomain");
@@ -924,7 +1003,7 @@ fn get_control_context(args: &Args) -> (Option<Value>, Option<Value>) {
         vec![
             Value::Reference(acc_ref),
             Value::Reference(domains_ref),
-        ]
+        ],
     );
     if ex.is_some() {
         return (None, ex);
@@ -1034,7 +1113,7 @@ fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {
         Class::Array { object, component } => {
             let class = args.runtime.method_area.load_outer_class("java.lang.Object");
             args.runtime.method_area.load_class_object(class)
-        },
+        }
         Class::Object(obj) => {
             if let Some(parent) = &obj.super_class {
                 let parent_class = args.runtime.method_area.load_outer_class(&parent.name);
