@@ -58,6 +58,12 @@ impl Object {
         heap.get_string(str_ref)
     }
 
+    pub fn get_ref(&self, name: &str) -> Reference {
+        let class = unsafe { self.header().class.as_ref().unwrap() };
+        let field = class.instance_fields.iter().find(|f| f.name.eq(name)).unwrap();
+        self.field_from(field).reference()
+    }
+
     pub fn class(&self) -> &ObjectClass {
         let header = self.header();
         unsafe { header.class.as_ref().unwrap() }

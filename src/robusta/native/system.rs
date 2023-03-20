@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use crate::java::{FieldType, Int, MethodType, Reference, Value};
 use crate::method_area;
-use crate::method_area::ObjectClass;
+use crate::method_area::{Class, ObjectClass};
 use crate::method_area::const_pool::{FieldKey, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -56,8 +56,74 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/lang/Object;J)I").unwrap(),
             },
             Arc::new(get_int_volatile),
+        ),
+        stateless(
+            Method {
+                class: "sun.reflect.NativeConstructorAccessorImpl".to_string(),
+                name: "newInstance0".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;").unwrap(),
+            },
+            Arc::new(new_instance),
         )
     ]
+}
+
+fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {
+    let constr_ref = args.params[0].reference();
+    let args_arr_ref = args.params[1].reference();
+
+    let constr_obj = args.runtime.heap.get_object(constr_ref);
+
+    let class_ref = constr_obj.get_ref("clazz");
+    let class = args.runtime.heap.get_object(class_ref);
+    let name = class.get_string("name", &args.runtime.heap);
+    let class = args.runtime.method_area.load_outer_class(&name);
+    let class = class.obj();
+    let constr = if args_arr_ref.0 == 0 {
+        class.find_method(&MethodKey {
+            class: class.name.clone(),
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+        }).unwrap()
+    } else {
+        let param_types_ref = constr_obj.get_ref("parameterTypes");
+        let param_types = args.runtime.heap.get_array(param_types_ref);
+        let param_types: Vec<String> = (0..param_types.length().0)
+            .map(|idx| param_types.get_element(Int(idx)).reference())
+            .map(|class_ref| args.runtime.heap.get_object(class_ref))
+            .map(|class_obj| class_obj.class().name.clone())
+            .collect();
+        let signature = format!("({})V", param_types.join(""));
+        let constr = class.find_method(&MethodKey {
+            class: class.name.clone(),
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor(&signature).unwrap(),
+        }).unwrap();
+        constr
+    };
+
+    let object_ref = args.runtime.heap.new_object(class.deref());
+
+    let constr_args = if constr.descriptor.parameters.len() > 0 {
+        let args_arr = args.runtime.heap.get_array(args_arr_ref);
+        let mut constr_args = vec![];
+        constr_args.push(Value::Reference(object_ref));
+        for idx in 0..args_arr.length().0 {
+            constr_args.push(args_arr.get_element(Int(idx)));
+        }
+        constr_args
+    } else {
+        vec![Value::Reference(object_ref)]
+    };
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let (_, ex) = thread.native_invoke(class.deref() as *const ObjectClass, constr as *const method_area::Method, constr_args);
+    if ex.is_some() {
+        (None, ex)
+    } else {
+        (Some(Value::Reference(object_ref)), None)
+    }
 }
 
 fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {

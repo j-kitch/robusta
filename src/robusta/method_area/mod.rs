@@ -544,7 +544,9 @@ impl ObjectClass {
     }
 
     pub fn find_static(&self, key: &FieldKey) -> &Field {
-        self.static_fields.iter()
+        self.parents()
+            .map(|class| class.deref() as *const ObjectClass)
+            .flat_map(|class| unsafe { (*class).static_fields.iter() })
             .find(|f| f.name.eq(&key.name) && f.descriptor.eq(&key.descriptor))
             .unwrap()
     }

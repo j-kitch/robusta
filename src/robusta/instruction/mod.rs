@@ -1,6 +1,6 @@
 use tracing::trace;
 pub use new::new;
-use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store, int_array_load, int_array_store};
+use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, byte_array_load, byte_array_store, char_array_load, char_array_store, int_array_load, int_array_store};
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_eq, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_eq, if_ref_cmp_ne, lcmp};
 use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::conv::{float_to_int, int_to_char, int_to_float, int_to_long};
@@ -89,6 +89,7 @@ pub fn instruction(thread: &mut Thread) {
         0x2D => aload_n(thread, 3),
         0x2E => int_array_load(thread),
         0x32 => a_array_load(thread),
+        0x33 => byte_array_load(thread),
         0x34 => char_array_load(thread),
         0x36 => istore(thread),
         0x3A => astore(thread),
@@ -102,6 +103,7 @@ pub fn instruction(thread: &mut Thread) {
         0x4E => astore_n(thread, 3),
         0x4F => int_array_store(thread),
         0x53 => a_array_store(thread),
+        0x54 => byte_array_store(thread),
         0x55 => char_array_store(thread),
         0x57 => pop(thread),
         0x59 => dup(thread),
@@ -216,6 +218,7 @@ fn op_name(code: u8) -> &'static str {
         0x2D => "aload_3",
         0x2E => "iaload",
         0x32 => "aaload",
+        0x33 => "baload",
         0x34 => "caload",
         0x36 => "istore",
         0x3A => "astore",
@@ -229,6 +232,7 @@ fn op_name(code: u8) -> &'static str {
         0x4E => "astore_3",
         0x4F => "iastore",
         0x53 => "aastore",
+        0x54 => "bastore",
         0x55 => "castore",
         0x57 => "pop",
         0x59 => "dup",

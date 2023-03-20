@@ -36,6 +36,18 @@ pub fn char_array_load(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(char_int));
 }
 
+pub fn byte_array_store(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value = frame.operand_stack.pop();
+    let index = frame.operand_stack.pop().int();
+    let arr_ref = frame.operand_stack.pop().reference();
+
+    let arr = thread.runtime.heap.get_array(arr_ref);
+
+    arr.set_element(index, value);
+}
+
 pub fn char_array_store(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -86,6 +98,19 @@ pub fn a_array_load(thread: &mut Thread) {
 }
 
 pub fn int_array_load(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let index = frame.operand_stack.pop().int();
+    let arr_ref = frame.operand_stack.pop().reference();
+
+    let arr = thread.runtime.heap.get_array(arr_ref);
+
+    let elem = arr.get_element(index);
+
+    frame.operand_stack.push(elem);
+}
+
+pub fn byte_array_load(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
     let index = frame.operand_stack.pop().int();
