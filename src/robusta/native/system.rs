@@ -1,6 +1,7 @@
 use std::ops::Deref;
+use std::ptr;
 use std::sync::Arc;
-use crate::java::{FieldType, Int, MethodType, Reference, Value};
+use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
 use crate::method_area::{Class, ObjectClass};
 use crate::method_area::const_pool::{FieldKey, MethodKey};
@@ -59,6 +60,14 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "allocateMemory".to_string(),
+                descriptor: MethodType::from_descriptor("(J)J").unwrap(),
+            },
+            Arc::new(allocate_memory),
+        ),
+        stateless(
+            Method {
                 class: "sun.reflect.NativeConstructorAccessorImpl".to_string(),
                 name: "newInstance0".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;").unwrap(),
@@ -66,6 +75,17 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
             Arc::new(new_instance),
         )
     ]
+}
+
+fn allocate_memory(args: &Args) -> (Option<Value>, Option<Value>) {
+    let bytes = args.params[1].long().0 as usize;
+
+    let raw_ptr = args.runtime.heap.allocator.raw(bytes);
+
+    let ptr = unsafe { raw_ptr as usize };
+    let ptr = ptr as i64;
+
+    (Some(Value::Long(Long(ptr))), None)
 }
 
 fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {

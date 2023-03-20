@@ -21,6 +21,14 @@ pub fn istore_n(thread: &mut Thread, n: u16) {
     cur_frame.local_vars.store_value(n, value);
 }
 
+pub fn lstore_n(thread: &mut Thread, n: u16) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+    let value = cur_frame.operand_stack.pop();
+
+    cur_frame.local_vars.store_value(n, value);
+}
+
+
 /// iload_<n>
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.iload_n).
@@ -55,6 +63,13 @@ pub fn istore(thread: &mut Thread) {
     let index = frame.read_u8();
     let value = frame.operand_stack.pop().int();
     frame.local_vars.store_value(index as u16, Value::Int(value));
+}
+
+pub fn lstore(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.operand_stack.pop().long();
+    frame.local_vars.store_value(index as u16, Value::Long(value));
 }
 
 pub fn astore(thread: &mut Thread) {

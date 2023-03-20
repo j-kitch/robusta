@@ -7,7 +7,7 @@ use crate::instruction::conv::{float_to_int, int_to_char, int_to_float, int_to_l
 use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
-use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload, lload_n};
+use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload, lload_n, lstore, lstore_n};
 use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_neg, i_sub, iand, ior, irem, ishl, ishr, iushr, ixor, l_add, l_sub, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
@@ -92,11 +92,16 @@ pub fn instruction(thread: &mut Thread) {
         0x33 => byte_array_load(thread),
         0x34 => char_array_load(thread),
         0x36 => istore(thread),
+        0x37 => lstore(thread),
         0x3A => astore(thread),
         0x3B => istore_n(thread, 0),
         0x3C => istore_n(thread, 1),
         0x3D => istore_n(thread, 2),
         0x3E => istore_n(thread, 3),
+        0x3F => lstore_n(thread, 0),
+        0x40 => lstore_n(thread, 1),
+        0x41 => lstore_n(thread, 2),
+        0x42 => lstore_n(thread, 3),
         0x4B => astore_n(thread, 0),
         0x4C => astore_n(thread, 1),
         0x4D => astore_n(thread, 2),
@@ -221,11 +226,16 @@ fn op_name(code: u8) -> &'static str {
         0x33 => "baload",
         0x34 => "caload",
         0x36 => "istore",
+        0x37 => "lstore",
         0x3A => "astore",
         0x3B => "istore_0",
         0x3C => "istore_1",
         0x3D => "istore_2",
         0x3E => "istore_3",
+        0x3F => "lstore_0",
+        0x40 => "lstore_1",
+        0x41 => "lstore_2",
+        0x42 => "lstore_3",
         0x4B => "astore_0",
         0x4C => "astore_1",
         0x4D => "astore_2",

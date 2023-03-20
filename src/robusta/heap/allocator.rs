@@ -334,6 +334,11 @@ impl Allocator {
         new_object
     }
 
+    pub fn raw(&self, bytes: usize) -> *mut u8 {
+        let start_ptr = self.allocate(self.rt.as_ref().unwrap().clone(), bytes);
+        start_ptr
+    }
+
     pub fn new_object(&self, class: &ObjectClass) -> Object {
         trace!(target: log::HEAP, class=class.name.as_str(), "Allocating object");
         let header_size = size_of::<ObjectHeader>();
