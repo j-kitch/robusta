@@ -67,6 +67,7 @@ pub fn create_main_thread() -> ObjectClass {
         static_fields: vec![],
         methods: vec![
             Method {
+                flags: 0,
                 class: 0 as *const ObjectClass,
                 is_static: true,
                 is_native: false,

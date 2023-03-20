@@ -363,7 +363,16 @@ impl MethodArea {
 
                     let descriptor = class_file.get_const_utf8(m.descriptor);
                     let descriptor = MethodType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Method { class: 0 as *const ObjectClass, is_static, is_native, is_synchronized, name, descriptor, code: m.code().map(|c| c.clone()) }
+                    Method {
+                        class: 0 as *const ObjectClass,
+                        flags: m.access_flags,
+                        is_static,
+                        is_native,
+                        is_synchronized,
+                        name,
+                        descriptor,
+                        code: m.code().map(|c| c.clone()),
+                    }
                 }).collect();
 
             let source_file = class_file.attributes.iter()
@@ -570,6 +579,7 @@ pub struct Field {
 
 pub struct Method {
     pub class: *const ObjectClass,
+    pub flags: u16,
     pub is_static: bool,
     pub is_native: bool,
     pub is_synchronized: bool,

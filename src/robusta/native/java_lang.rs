@@ -248,6 +248,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.Class".to_string(),
+                name: "getDeclaredConstructors0".to_string(),
+                descriptor: MethodType::from_descriptor("(Z)[Ljava/lang/reflect/Constructor;").unwrap(),
+            },
+            Arc::new(get_declared_constructors),
+        ),
+        stateless(
+            Method {
                 class: "sun.misc.Unsafe".to_string(),
                 name: "objectFieldOffset".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/reflect/Field;)J").unwrap(),
@@ -454,6 +462,88 @@ fn get_declared_fields(args: &Args) -> (Option<Value>, Option<Value>) {
     }
 
     (Some(Value::Reference(fields_array_ref)), None)
+}
+
+fn get_declared_constructors(args: &Args) -> (Option<Value>, Option<Value>) {
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let class_class = args.runtime.method_area.load_outer_class("java.lang.Class");
+
+    let class_ref = args.params[0].reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+    let class_name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let class_name = args.runtime.heap.get_string(class_name_ref);
+    let class = args.runtime.method_area.load_outer_class(&class_name);
+
+    let constr_class = args.runtime.method_area.load_outer_class("java.lang.reflect.Constructor");
+    let constr_class_obj = constr_class.obj();
+    let constr_init = constr_class_obj.find_method(&MethodKey {
+        class: "java.lang.reflect.Constructor".to_string(),
+        name: "<init>".to_string(),
+        descriptor: MethodType::from_descriptor("(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V").unwrap(),
+    }).unwrap();
+
+    let mut all_constructors = vec![];
+
+    if let Class::Object(class) = class {
+        for method in &class.methods {
+            if method.name.ne("<init>") {
+                continue;
+            }
+            let declaring_class = class_ref;
+            let param_classes: Vec<Reference> = method.descriptor.parameters.iter()
+                .map(|ft| args.runtime.method_area.load_outer_class(&ft.as_class()))
+                .map(|class| args.runtime.method_area.load_class_object(class))
+                .collect();
+            let params_array_ref = args.runtime.heap.new_array(class_class.clone(), Int(param_classes.len() as i32));
+            let params_array = args.runtime.heap.get_array(params_array_ref);
+            for (idx, param) in param_classes.iter().enumerate() {
+                params_array.set_element(Int(idx as i32), Value::Reference(*param));
+            }
+            let checked_exceptions = args.runtime.heap.new_array(class_class.clone(), Int(0));
+
+            let modifiers = Int(method.flags as i32);
+            let slot = Int(0);
+            let signature = Reference(0);
+            let annotations = Reference(0);
+            let param_annotations = Reference(0);
+
+            let constr = args.runtime.heap.new_object(&constr_class_obj);
+
+            let (_, ex) = thread.native_invoke(
+                constr_class_obj.deref() as *const ObjectClass,
+                constr_init as *const method_area::Method,
+                vec![
+                    Value::Reference(constr),
+                    Value::Reference(declaring_class),
+                    Value::Reference(params_array_ref),
+                    Value::Reference(checked_exceptions),
+                    Value::Int(modifiers),
+                    Value::Int(slot),
+                    Value::Reference(signature),
+                    Value::Reference(annotations),
+                    Value::Reference(param_annotations),
+                ],
+            );
+            if ex.is_some() {
+                return (None, ex);
+            }
+            all_constructors.push(constr);
+        }
+    }
+
+    let constr_array_ref = args.runtime.heap.new_array(constr_class, Int(all_constructors.len() as i32));
+    let constr_array = args.runtime.heap.get_array(constr_array_ref);
+
+    for (idx, constr) in all_constructors.iter().enumerate() {
+        constr_array.set_element(Int(idx as i32), Value::Reference(*constr));
+    }
+
+    (Some(Value::Reference(constr_array_ref)), None)
 }
 
 fn field_offset(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -673,6 +763,7 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
         is_static: true,
         is_native: false,
         is_synchronized: false,
+        flags: 0,
         name: "<fill-in-stack-trace>".to_string(),
         descriptor: MethodType::from_descriptor("()[Ljava/lang/StackTraceElement;").unwrap(),
         code: Some(Code {
