@@ -1,4 +1,5 @@
-use crate::method_area;
+use tracing::debug;
+use crate::{log, method_area};
 use crate::java::{MethodType, Value};
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::thread::Thread;
@@ -90,6 +91,9 @@ pub fn a_throw(thread: &mut Thread) {
             current_frame.native_ex = Some(throwable_ref);
             return;
         }
+        if current_frame.class.starts_with('<') {
+
+        }
         let method = unsafe { current_frame.method.as_ref().unwrap() };
         let code = method.code.as_ref().unwrap();
         let ex_table = &code.ex_table;
@@ -120,7 +124,7 @@ pub fn a_throw(thread: &mut Thread) {
     // Invoke throwable printStackTrace
     let throwable_method = throw_class.find_method(&MethodKey {
         class: "java.lang.Throwable".to_string(),
-        name: "stackTraceAndExit".to_string(),
+        name: "printStackTrace".to_string(),
         descriptor: MethodType::from_descriptor("()V").unwrap(),
     }).unwrap();
 
@@ -131,6 +135,8 @@ pub fn a_throw(thread: &mut Thread) {
         &method_class.const_pool as *const ConstPool,
         throwable_method as *const method_area::Method,
         vec![Value::Reference(throwable_ref)]);
+
+    debug!(target: log::THREAD, "Invoking java.lang.Throwable.printStackTrace()V");
 }
 
 fn exit_monitor(thread: &mut Thread) {

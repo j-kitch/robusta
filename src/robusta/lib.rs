@@ -72,7 +72,7 @@ impl VirtualMachine {
         runtime.method_area.load_class("sun.misc.Launcher");
 
         // Required Initialization
-        let main_thread_ref = {
+        {
             let create_thread_class = runtime.method_area.insert_gen_class(shim::create_main_thread());
             let class_ref = unsafe { create_thread_class.as_ref().unwrap() };
             let method = &class_ref.methods[0];
@@ -83,27 +83,14 @@ impl VirtualMachine {
 
             let jvm_init_t = jvm_init_thread.as_mut();
 
-            jvm_init_t.stack.insert(0, Frame {
-                class: "<result>".to_string(),
-                const_pool: 0 as *const ConstPool,
-                method: 0 as *const Method,
-                operand_stack: OperandStack::new(),
-                local_vars: LocalVars::new(),
-                pc: 0,
-                native_roots: HashSet::new(),
-                native_args: vec![],
-                native: None,
-                native_ex: None,
-            });
-
-            while jvm_init_t.stack.len() > 1 {
+            while jvm_init_t.stack.len() > 0 {
                 jvm_init_t.next();
             }
 
             // Always safe.
             jvm_init_t.safe.enter();
 
-            jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
+            // jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
         };
 
         let main_class = runtime.method_area.load_class(main_class);
@@ -115,7 +102,7 @@ impl VirtualMachine {
 
         let main_thread = Thread::new(
             "main".to_string(),
-            Some(main_thread_ref),
+            None,
             runtime.clone(),
             main_class.name.clone(),
             &main_class.const_pool as *const ConstPool,
