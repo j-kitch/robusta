@@ -32,6 +32,14 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
     cur_frame.operand_stack.push(Value::Int(int));
 }
 
+pub fn lload_n(thread: &mut Thread, n: u16) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let long = cur_frame.local_vars.load_value(n);
+
+    cur_frame.operand_stack.push(long);
+}
+
 /// aload_<n>
 ///
 /// See [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.aload_n).

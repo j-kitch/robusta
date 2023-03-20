@@ -256,6 +256,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "compareAndSwapInt".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Object;JII)Z").unwrap(),
+            },
+            Arc::new(compare_and_swap_int),
+        ),
+        stateless(
+            Method {
                 class: "sun.reflect.Reflection".to_string(),
                 name: "getClassAccessFlags".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)I").unwrap(),
@@ -498,6 +506,28 @@ fn compare_and_swap(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let result = unsafe {
         let ptr: *mut u32 = object.data.add(offset).cast();
+        let current = ptr.read_volatile();
+        if current == expected {
+            ptr.write_volatile(x);
+            1
+        } else {
+            0
+        }
+    };
+
+    (Some(Value::Int(Int(result))), None)
+}
+
+fn compare_and_swap_int(args: &Args) -> (Option<Value>, Option<Value>) {
+    let o = args.params[1].reference();
+    let offset = args.params[2].long().0 as usize;
+    let expected = args.params[3].int().0;
+    let x = args.params[4].int().0;
+
+    let object = args.runtime.heap.get_object(o);
+
+    let result = unsafe {
+        let ptr: *mut i32 = object.data.add(offset).cast();
         let current = ptr.read_volatile();
         if current == expected {
             ptr.write_volatile(x);

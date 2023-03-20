@@ -7,7 +7,7 @@ use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
 use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
-use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
+use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload, lload_n};
 use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_neg, i_sub, iand, ior, irem, ishl, iushr, ixor, l_add, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
@@ -75,6 +75,10 @@ pub fn instruction(thread: &mut Thread) {
         0x1B => iload_n(thread, 1),
         0x1C => iload_n(thread, 2),
         0x1D => iload_n(thread, 3),
+        0x1E => lload_n(thread, 0),
+        0x1F => lload_n(thread, 1),
+        0x20 => lload_n(thread, 2),
+        0x21 => lload_n(thread, 3),
         0x22 => fload_n(thread, 0),
         0x23 => fload_n(thread, 1),
         0x24 => fload_n(thread, 2),
@@ -194,6 +198,10 @@ fn op_name(code: u8) -> &'static str {
         0x1B => "iload_1",
         0x1C => "iload_2",
         0x1D => "iload_3",
+        0x1E => "lload_0",
+        0x1F => "lload_1",
+        0x20 => "lload_2",
+        0x21 => "lload_3",
         0x22 => "fload_0",
         0x23 => "fload_1",
         0x24 => "fload_2",
