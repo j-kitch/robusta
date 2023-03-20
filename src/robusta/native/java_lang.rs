@@ -292,6 +292,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()Ljava/security/AccessControlContext;").unwrap(),
             },
             Arc::new(get_control_context),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "isAssignableFrom".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)Z").unwrap(),
+            },
+            Arc::new(is_assignable_from),
         )
     ]
 }
@@ -929,4 +937,32 @@ fn stack_trace_elem(args: &Args) -> (Option<Value>, Option<Value>) {
     let stack_elem = backtrace_arr.get_element(index);
 
     (Some(stack_elem), None)
+}
+
+fn is_assignable_from(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class_ref = args.params[0].reference();
+    let class_inst = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_inst.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let other_inst = args.runtime.heap.get_object(args.params[1].reference());
+    let other_name_ref = other_inst.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let other_name = args.runtime.heap.get_string(other_name_ref);
+
+    let this_class = args.runtime.method_area.load_outer_class(&name);
+    let other_class = args.runtime.method_area.load_outer_class(&other_name);
+
+    let is_assignable = other_class.is_instance_of(&this_class);
+    let is_assignable = if is_assignable { 1 } else { 0 };
+
+    (Some(Value::Int(Int(is_assignable))), None)
 }
