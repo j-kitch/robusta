@@ -254,7 +254,6 @@ impl MethodArea {
 
     pub fn load_class(&self, class_name: &str) -> ClassRef {
         let class = self.classes.load_class(class_name, |name| {
-            debug!(target: log::LOADER, class=name, "Loading class");
             let class_file = self.loader.find(name).unwrap();
             let pool = ConstPool::new(&class_file);
 

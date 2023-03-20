@@ -245,6 +245,22 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
             },
             Arc::new(current_thread),
         ),
+        stateless(
+            Method {
+                class: "java.security.AccessController".to_string(),
+                name: "getStackAccessControlContext".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/security/AccessControlContext;").unwrap(),
+            },
+            Arc::new(get_control_context),
+        ),
+        stateless(
+            Method {
+                class: "java.security.AccessController".to_string(),
+                name: "getInheritedAccessControlContext".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/security/AccessControlContext;").unwrap(),
+            },
+            Arc::new(get_control_context),
+        )
     ]
 }
 
@@ -791,4 +807,31 @@ fn for_name_0(args: &Args) -> Option<Value> {
 
     let class_obj = args.runtime.method_area.load_class_object(class);
     Some(Value::Reference(class_obj))
+}
+
+fn get_control_context(args: &Args) -> Option<Value> {
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+    let acc_class = args.runtime.method_area.load_outer_class("java.security.AccessControlContext");
+    let acc_class = acc_class.obj();
+    let acc_init = acc_class.find_method(&MethodKey {
+        class: "java.security.AccessControlContext".to_string(),
+        name: "<init>".to_string(),
+        descriptor: MethodType::from_descriptor("([Ljava/security/ProtectionDomain;)V").unwrap()
+    }).unwrap();
+
+    let pro_dom_class = args.runtime.method_area.load_outer_class("java.security.ProtectionDomain");
+
+    let acc_ref = args.runtime.heap.new_object(&acc_class);
+    let domains_ref = args.runtime.heap.new_array(pro_dom_class, Int(0));
+
+    thread.native_invoke(
+        acc_class.deref() as *const ObjectClass,
+        acc_init as *const method_area::Method,
+        vec![
+            Value::Reference(acc_ref),
+            Value::Reference(domains_ref),
+        ]
+    );
+
+    Some(Value::Reference(acc_ref))
 }
