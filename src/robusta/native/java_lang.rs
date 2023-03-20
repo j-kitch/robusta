@@ -88,6 +88,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.Class".to_string(),
+                name: "isInterface".to_string(),
+                descriptor: MethodType::from_descriptor("()Z").unwrap(),
+            },
+            Arc::new(is_interface),
+        ),
+        stateless(
+            Method {
                 class: "java.io.FileInputStream".to_string(),
                 name: "initIDs".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
@@ -1242,6 +1250,24 @@ fn is_primitive(args: &Args) -> (Option<Value>, Option<Value>) {
     let is_primitive = if is_primitive { 1 } else { 0 };
 
     (Some(Value::Int(Int(is_primitive))), None)
+}
+
+fn is_interface(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class_ref = args.params[0].reference();
+    let class_inst = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_inst.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let class = args.runtime.method_area.load_outer_class(&name);
+    let is_interface = class.is_interface();
+    let is_interface = if is_interface { 1 } else { 0 };
+
+    (Some(Value::Int(Int(is_interface))), None)
 }
 
 fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {

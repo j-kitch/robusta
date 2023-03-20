@@ -1,5 +1,6 @@
+use std::ops::Deref;
 use std::sync::Arc;
-use crate::java::{FieldType, Int, MethodType, Value};
+use crate::java::{FieldType, Int, MethodType, Reference, Value};
 use crate::method_area;
 use crate::method_area::ObjectClass;
 use crate::method_area::const_pool::{FieldKey, MethodKey};
@@ -75,7 +76,29 @@ fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {
 }
 
 fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
-    (Some(args.params[0]), None)
+    // We need to insert some normal properties now!
+    let file_encoding = args.runtime.method_area.load_string("file.encoding");
+    let utf8 = args.runtime.method_area.load_string("UTF-8");
+
+    let props = args.params[0].reference();
+    let properties_class = args.runtime.method_area.load_class("java.util.Properties");
+    let properties_set = properties_class.find_method(&MethodKey {
+        class: "java.util.Properties".to_string(),
+        name: "setProperty".to_string(),
+        descriptor: MethodType::from_descriptor("(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;").unwrap()
+    }).unwrap();
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+    let (_, ex) = thread.native_invoke(properties_class.deref() as *const ObjectClass, properties_set as *const method_area::Method, vec![
+        Value::Reference(props),
+        Value::Reference(file_encoding),
+        Value::Reference(utf8)
+    ]);
+
+    if ex.is_some() {
+        return (None, ex);
+    }
+    (Some(Value::Reference(Reference(0))), None)
 }
 
 fn set_in_0(args: &Args) -> (Option<Value>, Option<Value>) {

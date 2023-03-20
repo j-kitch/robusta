@@ -72,6 +72,13 @@ pub enum Class {
 }
 
 impl Class {
+    pub fn is_interface(&self) -> bool {
+        match self {
+            Class::Object(object) => (object.flags.bits & 0x0200) != 0,
+            _ => false,
+        }
+    }
+
     pub fn find_method(&self, key: &MethodKey) -> Option<&Method> {
         match self {
             Class::Object(class_ref) => class_ref.find_method(key),

@@ -152,7 +152,17 @@ impl Thread {
 
         let depth = self.stack.len();
 
+        if method2.is_synchronized {
+            let monitor_ref = if method2.is_static {
+                self.runtime.heap.get_static(class)
+            } else {
+                args[0].reference().clone()
+            };
+            self.enter_monitor(monitor_ref);
+        }
+
         self.push_frame(class.name.clone(), &class.const_pool as *const ConstPool, method, args);
+
 
         while self.stack.len() > depth {
             self.next();

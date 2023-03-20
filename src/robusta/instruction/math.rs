@@ -127,6 +127,19 @@ pub fn ishl(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn ishr(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let s = value2 & 0b11111;
+
+    let result = value1 >> s;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn lshl(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
