@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::mem::size_of;
 use std::ops::Deref;
+use std::ptr;
 use std::sync::Arc;
 use std::thread::{Builder, current, sleep};
 use std::time::Duration;
@@ -308,7 +310,15 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
             },
             Arc::new(get_super_class),
-        )
+        ),
+        stateless(
+            Method {
+                class: "java.lang.System".to_string(),
+                name: "arraycopy".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Object;ILjava/lang/Object;II)V").unwrap(),
+            },
+            Arc::new(array_copy),
+        ),
     ]
 }
 
@@ -1005,4 +1015,39 @@ fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {
     };
 
     (Some(Value::Reference(parent_ref)), None)
+}
+
+fn array_copy(args: &Args) -> (Option<Value>, Option<Value>) {
+    let src = args.params[0].reference();
+    let src_pos = args.params[1].int().0;
+    let dest = args.params[2].reference();
+    let dest_pos = args.params[3].int().0;
+    let length = args.params[4].int().0;
+
+    let src_array = args.runtime.heap.get_array(src);
+    let dest_array = args.runtime.heap.get_array(dest);
+
+    let src_comp = unsafe { &src_array.header.as_ref().unwrap().component };
+    let dest_comp = unsafe { &dest_array.header.as_ref().unwrap().component };
+
+    if !src_comp.is_instance_of(dest_comp) {
+        // TODO: We're ignoring these for now :/
+        // panic!("cannot do this!");
+    }
+
+    let width = src_comp.component_width();
+
+    unsafe {
+        let start_offset = (src_pos as usize) * width;
+        let src_start = src_array.data.add(start_offset);
+
+        let dest_offset = (dest_pos as usize) * width;
+        let dest_start = dest_array.data.add(dest_offset);
+
+        let bytes = (length as usize) * width;
+
+        ptr::copy(src_start.cast_const(), dest_start, bytes);
+    }
+
+    (None, None)
 }
