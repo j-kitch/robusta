@@ -486,7 +486,7 @@ fn class_get_component_type(args: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(comp_class_instance)), None)
 }
 
-fn available_processors(args: &Args) -> (Option<Value>, Option<Value>) {
+fn available_processors(_: &Args) -> (Option<Value>, Option<Value>) {
     let cores = available_parallelism().unwrap().get();
     (Some(Value::Int(Int(cores as i32))), None)
 }
@@ -1072,6 +1072,11 @@ fn thread_start(args: &Args) -> (Option<Value>, Option<Value>) {
         descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
     }).reference();
     let name = args.runtime.heap.get_string(name_ref);
+
+    if name.eq("Reference Handler") {
+        // TODO: Handle this thread!
+        return (None, None);
+    }
 
     let runtime = args.runtime.clone();
     let class = thread_obj.class().name.clone();

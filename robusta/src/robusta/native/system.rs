@@ -1,9 +1,4 @@
-use std::{fs, ptr};
-use std::ffi::c_int;
-use std::fs::File;
-use std::io::ErrorKind;
 use std::ops::Deref;
-use std::os::macos::raw::stat;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -11,7 +6,7 @@ use maplit::hashmap;
 
 use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
-use crate::method_area::{Class, ObjectClass};
+use crate::method_area::ObjectClass;
 use crate::method_area::const_pool::{FieldKey, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -169,7 +164,7 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/lang/ClassLoader;)[Ljava/net/URL;").unwrap(),
             },
             Arc::new(lookup_cache_urls),
-        )
+        ),
         // stateless(
         //     Method {
         //         class: "sun.misc.Unsafe".to_string(),
@@ -196,11 +191,11 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
 //     (Some(Value::Int(Int(scale))), None)
 // }
 
-fn signal_handle_0(args: &Args) -> (Option<Value>, Option<Value>) {
+fn signal_handle_0(_: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Long(Long(0))), None)
 }
 
-fn lookup_cache_urls(args: &Args) -> (Option<Value>, Option<Value>) {
+fn lookup_cache_urls(_: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(Reference(0))), None)
 }
 
@@ -284,7 +279,7 @@ fn allocate_memory(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let raw_ptr = args.runtime.heap.allocator.raw(bytes);
 
-    let ptr = unsafe { raw_ptr as usize };
+    let ptr = raw_ptr as usize;
     let ptr = ptr as i64;
 
     (Some(Value::Long(Long(ptr))), None)
@@ -458,9 +453,9 @@ fn map_library_name(args: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(libname)), None)
 }
 
-fn find_builtin(args: &Args) -> (Option<Value>, Option<Value>) {
-    let name = args.params[0].reference();
-    let name = args.runtime.heap.get_string(name);
+fn find_builtin(_: &Args) -> (Option<Value>, Option<Value>) {
+    // let name = args.params[0].reference();
+    // let name = args.runtime.heap.get_string(name);
     // (Some(Value::Reference(name)), None)
     (Some(Value::Reference(Reference(0))), None)
 }

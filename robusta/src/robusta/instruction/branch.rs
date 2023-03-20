@@ -293,7 +293,7 @@ pub fn lookup_switch(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let start_pc = frame.pc - 1;
 
-    let offset = (frame.pc % 4);
+    let offset = frame.pc % 4;
     let padding_required = (4 - offset) % 4;
     for _ in 0..padding_required {
         frame.read_u8();
