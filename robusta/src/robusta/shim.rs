@@ -78,9 +78,10 @@ pub fn create_main_thread() -> ObjectClass {
                     max_stack: 0,
                     max_locals: 0,
                     code: vec![
-                        0xBB, 0, 1, // new Launcher
-                        0x59,
-                        0xB7, 0, 2
+                        0xBB, 0, 1,     // new Launcher
+                        0x59,           // dup
+                        0xB7, 0, 2,     // invoke init
+                        0xB1,
 
                         // 0xBB, 0, 1,     // new ThreadGroup
                         // 0x59,           // dup ThreadGroup ref

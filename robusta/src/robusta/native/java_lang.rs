@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::mem::size_of;
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::ptr;
 use std::sync::Arc;
-use std::thread::{Builder, current, sleep};
-use std::time::Duration;
+use std::thread::{available_parallelism, Builder, current, sleep};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rand::{RngCore, thread_rng};
 
@@ -45,6 +46,38 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.io.UnixFileSystem".to_string(),
+                name: "canonicalize0".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/String;").unwrap(),
+            },
+            Arc::new(unix_canonicalize),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.System".to_string(),
+                name: "currentTimeMillis".to_string(),
+                descriptor: MethodType::from_descriptor("()J").unwrap(),
+            },
+            Arc::new(current_time_millis),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
+                name: "notifyAll".to_string(),
+                descriptor: MethodType::from_descriptor("()V").unwrap(),
+            },
+            Arc::new(no_op),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Runtime".to_string(),
+                name: "availableProcessors".to_string(),
+                descriptor: MethodType::from_descriptor("()I").unwrap(),
+            },
+            Arc::new(available_processors),
         ),
         stateless(
             Method {
@@ -173,6 +206,22 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/Class;").unwrap(),
             },
             Arc::new(get_primitive_class),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "isArray".to_string(),
+                descriptor: MethodType::from_descriptor("()Z").unwrap(),
+            },
+            Arc::new(class_is_array),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "getComponentType".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
+            },
+            Arc::new(class_get_component_type),
         ),
         stateless(
             Method {
@@ -407,6 +456,53 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
             Arc::new(array_copy),
         ),
     ]
+}
+
+fn class_is_array(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class = args.params[0].reference();
+    let class_object = args.runtime.heap.get_object(class);
+    let name = class_object.get_string("name", &args.runtime.heap);
+
+    let is_array = name.starts_with('[');
+    let is_array = if is_array { 1 } else { 0 };
+
+    (Some(Value::Int(Int(is_array))), None)
+}
+
+fn class_get_component_type(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class = args.params[0].reference();
+    let class_object = args.runtime.heap.get_object(class);
+    let name = class_object.get_string("name", &args.runtime.heap);
+
+    let class_class = args.runtime.method_area.load_outer_class(&name);
+
+    let comp = match class_class {
+        Class::Array { component, .. } => component.as_ref().clone(),
+        _ => panic!("error")
+    };
+
+    let comp_class_instance = args.runtime.method_area.load_class_object(comp);
+
+    (Some(Value::Reference(comp_class_instance)), None)
+}
+
+fn available_processors(args: &Args) -> (Option<Value>, Option<Value>) {
+    let cores = available_parallelism().unwrap().get();
+    (Some(Value::Int(Int(cores as i32))), None)
+}
+
+fn unix_canonicalize(args: &Args) -> (Option<Value>, Option<Value>) {
+    let path = args.params[1].reference();
+    let path = args.runtime.heap.get_string(path);
+    let path = PathBuf::from(&path);
+    let path = path.canonicalize().unwrap().to_str().unwrap().to_string();
+    let path = args.runtime.method_area.load_string(&path);
+    (Some(Value::Reference(path)), None)
+}
+
+fn current_time_millis(_: &Args) -> (Option<Value>, Option<Value>) {
+    let millis = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
+    (Some(Value::Long(Long(millis))), None)
 }
 
 fn get_declared_fields(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -1202,9 +1298,8 @@ fn array_index_scale(args: &Args) -> (Option<Value>, Option<Value>) {
     let scale = match name.as_str() {
         "[Z" | "[B" => 1,
         "[C" | "[S" => 2,
-        "[I" | "[F" | "[Ljava.lang.Object;" => 4,
         "[J" | "[D" => 8,
-        _ => panic!("not implemented"),
+        _ => 4,
     };
 
     (Some(Value::Int(Int(scale))), None)

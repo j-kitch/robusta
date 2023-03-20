@@ -1,11 +1,14 @@
+use std::{fs, ptr};
+use std::ffi::c_int;
 use std::fs::File;
 use std::io::ErrorKind;
 use std::ops::Deref;
-use std::{fs, ptr};
 use std::os::macos::raw::stat;
 use std::path::PathBuf;
 use std::sync::Arc;
+
 use maplit::hashmap;
+
 use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
 use crate::method_area::{Class, ObjectClass};
@@ -142,11 +145,92 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/lang/String;Z)V").unwrap(),
             },
             Arc::new(load_library),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Signal".to_string(),
+                name: "findSignal".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)I").unwrap(),
+            },
+            Arc::new(find_signal),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Signal".to_string(),
+                name: "handle0".to_string(),
+                descriptor: MethodType::from_descriptor("(IJ)J").unwrap(),
+            },
+            Arc::new(signal_handle_0),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.URLClassPath".to_string(),
+                name: "getLookupCacheURLs".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/ClassLoader;)[Ljava/net/URL;").unwrap(),
+            },
+            Arc::new(lookup_cache_urls),
         )
+        // stateless(
+        //     Method {
+        //         class: "sun.misc.Unsafe".to_string(),
+        //         name: "arrayIndexScale".to_string(),
+        //         descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)I").unwrap(),
+        //     },
+        //     Arc::new(array_index_scale),
+        // ),
     ]
 }
 
-fn load_library(_: &Args) -> (Option<Value>, Option<Value>) {
+// fn array_index_scale(args: &Args) -> (Option<Value>, Option<Value>) {
+//     let class = args.params[1].reference();
+//     let class = args.runtime.heap.get_object(class);
+//     let name = class.get_string("name", &args.runtime.heap);
+//
+//     let scale = match name.as_str() {
+//         "[Z" | "[B" => 1,
+//         "[C" | "[S" => 2,
+//         "[J" | "[D" => 8,
+//         _ => 4,
+//     };
+//
+//     (Some(Value::Int(Int(scale))), None)
+// }
+
+fn signal_handle_0(args: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Long(Long(0))), None)
+}
+
+fn lookup_cache_urls(args: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Reference(Reference(0))), None)
+}
+
+fn find_signal(args: &Args) -> (Option<Value>, Option<Value>) {
+    let signal = args.params[0].reference();
+    let signal = args.runtime.heap.get_string(signal);
+
+    let int = match signal.as_str() {
+        "HUP" => signal_hook::consts::SIGHUP,
+        "INT" => signal_hook::consts::SIGINT,
+        "TERM" => signal_hook::consts::SIGTERM,
+        _ => panic!("unknown signal {}", signal)
+    };
+
+    let int = int as i32;
+
+    (Some(Value::Int(Int(int))), None)
+}
+
+fn load_library(args: &Args) -> (Option<Value>, Option<Value>) {
+    // TODO: Just set loaded to true internally!
+    let library = args.params[0].reference();
+    let library = args.runtime.heap.get_object(library);
+
+    library.set_field(&FieldKey {
+        class: "java.lang.ClassLoader$NativeLibrary".to_string(),
+        name: "loaded".to_string(),
+        descriptor: FieldType::Boolean,
+    }, Value::Int(Int(1)));
+
     (None, None)
 }
 
@@ -312,7 +396,7 @@ fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
     let properties_set = properties_class.find_method(&MethodKey {
         class: "java.util.Properties".to_string(),
         name: "setProperty".to_string(),
-        descriptor: MethodType::from_descriptor("(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;").unwrap()
+        descriptor: MethodType::from_descriptor("(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;").unwrap(),
     }).unwrap();
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
@@ -323,7 +407,7 @@ fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
         let (_, ex) = thread.native_invoke(properties_class.deref() as *const ObjectClass, properties_set as *const method_area::Method, vec![
             Value::Reference(props),
             Value::Reference(key),
-            Value::Reference(val)
+            Value::Reference(val),
         ]);
         if ex.is_some() {
             return (None, ex);
@@ -377,7 +461,6 @@ fn map_library_name(args: &Args) -> (Option<Value>, Option<Value>) {
 fn find_builtin(args: &Args) -> (Option<Value>, Option<Value>) {
     let name = args.params[0].reference();
     let name = args.runtime.heap.get_string(name);
-    println!("Looking for library {}", name);
     // (Some(Value::Reference(name)), None)
     (Some(Value::Reference(Reference(0))), None)
 }
