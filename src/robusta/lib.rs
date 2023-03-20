@@ -57,6 +57,7 @@ impl VirtualMachine {
 
         let subscriber = fmt()
             .without_time()
+            .with_ansi(false)
             .with_span_events(FmtSpan::FULL)
             .with_target(true)
             .with_level(true)

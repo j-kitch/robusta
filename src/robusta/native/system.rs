@@ -134,8 +134,20 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/io/File;)I").unwrap(),
             },
             Arc::new(get_boolean_attributes_0),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.ClassLoader$NativeLibrary".to_string(),
+                name: "load".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;Z)V").unwrap(),
+            },
+            Arc::new(load_library),
         )
     ]
+}
+
+fn load_library(_: &Args) -> (Option<Value>, Option<Value>) {
+    (None, None)
 }
 
 fn get_boolean_attributes_0(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -355,13 +367,17 @@ fn map_library_name(args: &Args) -> (Option<Value>, Option<Value>) {
     let name = args.params[0].reference();
     let name = args.runtime.heap.get_string(name);
 
-    let libname = format!("lib{}.dylib", name);
+    let libname = format!("/Users/kitch/Code/robusta/target/lib{}.dylib", name);
     let libname = args.runtime.method_area.load_string(&libname);
 
     (Some(Value::Reference(libname)), None)
 }
 
-fn find_builtin(_: &Args) -> (Option<Value>, Option<Value>) {
+fn find_builtin(args: &Args) -> (Option<Value>, Option<Value>) {
+    let name = args.params[0].reference();
+    let name = args.runtime.heap.get_string(name);
+    println!("Looking for library {}", name);
+    // (Some(Value::Reference(name)), None)
     (Some(Value::Reference(Reference(0))), None)
 }
 
