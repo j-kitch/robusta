@@ -226,7 +226,7 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Thread".to_string(),
-                name: "nativeStart".to_string(),
+                name: "start0".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
             Arc::new(thread_start),
@@ -940,7 +940,16 @@ fn set_priority_0(_: &Args) -> (Option<Value>, Option<Value>) {
 fn thread_is_alive(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.as_ref().unwrap() };
 
-    let is_alive = if thread.stack.len() > 0 { 1 } else { 0 };
+    let thread_ref = args.params[0].reference();
+    let thread_obj = args.runtime.heap.get_object(thread_ref);
+
+    let thread_status = thread_obj.get_field(&FieldKey {
+        class: "java.lang.Thread".to_string(),
+        name: "threadStatus".to_string(),
+        descriptor: FieldType::Int,
+    }).int();
+
+    let is_alive = if thread_status.0 != 0 { 1 } else { 0 };
 
     (Some(Value::Int(Int(is_alive))), None)
 }
