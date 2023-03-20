@@ -525,6 +525,7 @@ impl ObjectClass {
     }
 
     pub fn is_instance_of(&self, other: &ObjectClass) -> bool {
+        info!("Is {} an instance of {}", &self.name, &other.name);
         self.parents_and_interfaces().iter().any(|c| {
             c.name.eq(&other.name)
         })

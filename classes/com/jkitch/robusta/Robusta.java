@@ -24,7 +24,7 @@ public class Robusta {
     public static void printStackTrace(Throwable throwable) {
         printerr(throwable.toString());
         for (StackTraceElement element : throwable.getStackTrace()) {
-            printerr(element.getFileName() + ":" + element.getLineNumber() + ": " + element.getClassName() + "." + element.getMethodName());
+            printerr("\t" + element.getFileName() + ":" + element.getLineNumber() + ": " + element.getClassName() + "." + element.getMethodName());
         }
     }
 }

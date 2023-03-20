@@ -394,7 +394,7 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
-    let stack = thread.stack.iter()
+    let stack = thread.stack.iter().rev()
         .filter(|f| !f.class.starts_with('<'))
         .filter(|f| {
             !(f.class.eq("com.jkitch.robusta.Robusta") &&
@@ -403,10 +403,11 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
         .skip_while(|f| {
             let method = unsafe { f.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
-            class.is_instance_of(&throwable_class) && method.name.eq("<init>")
+            class.is_instance_of(&throwable_class) &&
+                (method.name.eq("<init>") || method.name.eq("fillInStackTrace"))
         });
 
-    let elems: Vec<StackElem> = stack.map(|frame| {
+    let mut elems: Vec<StackElem> = stack.map(|frame| {
         let method = unsafe { frame.method.as_ref().unwrap() };
         let class = unsafe { method.class.as_ref().unwrap() };
         StackElem {
@@ -428,6 +429,8 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
             },
         }
     }).collect();
+
+    elems.reverse();
 
     // Can we create a class that delegates to all our methods for us?
     let mut class = ObjectClass {

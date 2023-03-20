@@ -30,7 +30,14 @@ pub fn new_array(thread: &mut Thread) {
     let count = cur_frame.operand_stack.pop().int();
 
     let arr_ref = match array_type {
+        4 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Boolean), count),
         5 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Char), count),
+        6 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Float), count),
+        7 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Double), count),
+        8 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Byte), count),
+        9 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Short), count),
+        10 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Int), count),
+        11 => thread.runtime.heap.new_array(Class::Primitive(Primitive::Long), count),
         _ => panic!("newarray has not been implemented for array type {}", array_type)
     };
 
