@@ -288,3 +288,29 @@ pub fn lcmp(thread: &mut Thread) {
 
     frame.operand_stack.push(Value::Int(Int(result)));
 }
+
+pub fn lookup_switch(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let start_pc = frame.pc - 1;
+
+    let offset = (frame.pc % 4);
+    let padding_required = (4 - offset) % 4;
+    for _ in 0..padding_required {
+        frame.read_u8();
+    }
+
+    let default = frame.read_i32();
+    let n_pairs = frame.read_i32();
+    let mut pairs = vec![];
+    for _ in 0..n_pairs {
+        pairs.push((frame.read_i32(), frame.read_i32()));
+    }
+
+    let key = frame.operand_stack.pop().int().0;
+    let offset = pairs.iter().find(|(k,_)| *k == key).map(|(_,off)| *off).unwrap_or_else(|| default);
+
+    let mut pc = start_pc as i64;
+    pc += offset as i64;
+    let pc = pc as usize;
+    frame.pc = pc;
+}

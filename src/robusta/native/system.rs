@@ -1,6 +1,11 @@
+use std::fs::File;
+use std::io::ErrorKind;
 use std::ops::Deref;
-use std::ptr;
+use std::{fs, ptr};
+use std::os::macos::raw::stat;
+use std::path::PathBuf;
 use std::sync::Arc;
+use maplit::hashmap;
 use crate::java::{FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
 use crate::method_area::{Class, ObjectClass};
@@ -52,6 +57,22 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.System".to_string(),
+                name: "mapLibraryName".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/String;").unwrap(),
+            },
+            Arc::new(map_library_name),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.ClassLoader".to_string(),
+                name: "findBuiltinLib".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/String;)Ljava/lang/String;").unwrap(),
+            },
+            Arc::new(find_builtin),
+        ),
+        stateless(
+            Method {
                 class: "sun.misc.Unsafe".to_string(),
                 name: "getIntVolatile".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/Object;J)I").unwrap(),
@@ -68,13 +89,98 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "freeMemory".to_string(),
+                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
+            },
+            Arc::new(free_memory),
+        ),
+        stateless(
+            Method {
+                class: "java.util.concurrent.atomic.AtomicLong".to_string(),
+                name: "VMSupportsCS8".to_string(),
+                descriptor: MethodType::from_descriptor("()Z").unwrap(),
+            },
+            Arc::new(vm_supports_cs8),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "getByte".to_string(),
+                descriptor: MethodType::from_descriptor("(J)B").unwrap(),
+            },
+            Arc::new(get_byte),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "putLong".to_string(),
+                descriptor: MethodType::from_descriptor("(JJ)V").unwrap(),
+            },
+            Arc::new(put_long),
+        ),
+        stateless(
+            Method {
                 class: "sun.reflect.NativeConstructorAccessorImpl".to_string(),
                 name: "newInstance0".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;").unwrap(),
             },
             Arc::new(new_instance),
+        ),
+        stateless(
+            Method {
+                class: "java.io.UnixFileSystem".to_string(),
+                name: "getBooleanAttributes0".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/io/File;)I").unwrap(),
+            },
+            Arc::new(get_boolean_attributes_0),
         )
     ]
+}
+
+fn get_boolean_attributes_0(args: &Args) -> (Option<Value>, Option<Value>) {
+    let file_ref = args.params[1].reference();
+    let file = args.runtime.heap.get_object(file_ref);
+
+    let path_ref = file.get_ref("path");
+    let path = args.runtime.heap.get_string(path_ref);
+
+    let path = PathBuf::from(&path);
+
+    let mut status = 0;
+    if path.exists() {
+        status += 0x1;
+    }
+    if path.is_file() {
+        status += 0x2;
+    }
+    if path.is_dir() {
+        status += 0x4;
+    }
+    if path.file_name().unwrap().to_str().unwrap().starts_with('.') {
+        status += 0x8;
+    }
+
+    (Some(Value::Int(Int(status))), None)
+}
+
+fn get_byte(args: &Args) -> (Option<Value>, Option<Value>) {
+    let address = args.params[1].long().0;
+    let x = unsafe {
+        let ptr = address as usize as *const i8;
+        ptr.read()
+    };
+    (Some(Value::Int(Int(x as i32))), None)
+}
+
+fn put_long(args: &Args) -> (Option<Value>, Option<Value>) {
+    let address = args.params[1].long().0;
+    let x = args.params[2].long().0;
+    unsafe {
+        let ptr = address as usize as *mut i64;
+        ptr.write(x);
+    }
+    (None, None)
 }
 
 fn allocate_memory(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -86,6 +192,23 @@ fn allocate_memory(args: &Args) -> (Option<Value>, Option<Value>) {
     let ptr = ptr as i64;
 
     (Some(Value::Long(Long(ptr))), None)
+}
+
+fn free_memory(_: &Args) -> (Option<Value>, Option<Value>) {
+    // TODO: Handle this manual raw memory properly!
+    // let bytes = args.params[1].long().0 as usize;
+    //
+    // let raw_ptr = args.runtime.heap.allocator.raw(bytes);
+    //
+    // let ptr = unsafe { raw_ptr as usize };
+    // let ptr = ptr as i64;
+    //
+    // (Some(Value::Long(Long(ptr))), None)
+    (None, None)
+}
+
+fn vm_supports_cs8(_: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Int(Int(0))), None)
 }
 
 fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -163,8 +286,13 @@ fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {
 
 fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
     // We need to insert some normal properties now!
-    let file_encoding = args.runtime.method_area.load_string("file.encoding");
-    let utf8 = args.runtime.method_area.load_string("UTF-8");
+    let initial_props = hashmap! {
+        "file.encoding" => "UTF-8",
+        "file.separator" => "/",
+        "path.separator" => ":",
+        "java.home" => "/Users/kitch/Code/robusta/",
+        "java.library.path" => "/Users/kitch/Code/robusta/target/debug"
+    };
 
     let props = args.params[0].reference();
     let properties_class = args.runtime.method_area.load_class("java.util.Properties");
@@ -175,14 +303,18 @@ fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
     }).unwrap();
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
-    let (_, ex) = thread.native_invoke(properties_class.deref() as *const ObjectClass, properties_set as *const method_area::Method, vec![
-        Value::Reference(props),
-        Value::Reference(file_encoding),
-        Value::Reference(utf8)
-    ]);
 
-    if ex.is_some() {
-        return (None, ex);
+    for (key, val) in initial_props {
+        let key = args.runtime.method_area.load_string(key);
+        let val = args.runtime.method_area.load_string(val);
+        let (_, ex) = thread.native_invoke(properties_class.deref() as *const ObjectClass, properties_set as *const method_area::Method, vec![
+            Value::Reference(props),
+            Value::Reference(key),
+            Value::Reference(val)
+        ]);
+        if ex.is_some() {
+            return (None, ex);
+        }
     }
     (Some(Value::Reference(Reference(0))), None)
 }
@@ -217,6 +349,20 @@ fn set_out_0(args: &Args) -> (Option<Value>, Option<Value>) {
     }, Value::Reference(print_stream));
 
     (None, None)
+}
+
+fn map_library_name(args: &Args) -> (Option<Value>, Option<Value>) {
+    let name = args.params[0].reference();
+    let name = args.runtime.heap.get_string(name);
+
+    let libname = format!("lib{}.dylib", name);
+    let libname = args.runtime.method_area.load_string(&libname);
+
+    (Some(Value::Reference(libname)), None)
+}
+
+fn find_builtin(_: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Reference(Reference(0))), None)
 }
 
 fn set_err_0(args: &Args) -> (Option<Value>, Option<Value>) {

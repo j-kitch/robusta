@@ -356,6 +356,13 @@ impl Frame {
         &method.code.as_ref().unwrap().code
     }
 
+    pub fn read_i32(&mut self) -> i32 {
+        let bytes = &self.code()[self.pc..self.pc + 4];
+        let i32 = i32::from_be_bytes(bytes.try_into().unwrap());
+        self.pc += 4;
+        i32
+    }
+
     pub fn read_u8(&mut self) -> u8 {
         let byte = self.code()[self.pc];
         self.pc += 1;
