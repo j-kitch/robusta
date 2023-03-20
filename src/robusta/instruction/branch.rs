@@ -272,3 +272,19 @@ pub fn fcmp(thread: &mut Thread, nan: i32) {
 
     frame.operand_stack.push(Value::Int(Int(result)));
 }
+
+pub fn lcmp(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let value2 = frame.operand_stack.pop().long().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let result = if value1 > value2 {
+        1
+    } else if value1 == value2 {
+        0
+    } else {
+        -1
+    };
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}

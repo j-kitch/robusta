@@ -44,6 +44,17 @@ pub fn i_sub(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn l_sub(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long();
+    let value1 = frame.operand_stack.pop().long();
+
+    let (result, _) = value1.0.overflowing_sub(value2.0);
+
+    frame.operand_stack.push(Value::Long(Long(result)));
+}
+
 pub fn i_mul(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
