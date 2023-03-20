@@ -303,7 +303,8 @@ fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
         "file.separator" => "/",
         "path.separator" => ":",
         "java.home" => "/Users/kitch/Code/robusta/",
-        "java.library.path" => "/Users/kitch/Code/robusta/target/debug"
+        "java.library.path" => "/Users/kitch/Code/robusta/target/debug",
+        "sun.boot.library.path" => "/Users/kitch/Code/robusta/target/debug"
     };
 
     let props = args.params[0].reference();
@@ -367,7 +368,7 @@ fn map_library_name(args: &Args) -> (Option<Value>, Option<Value>) {
     let name = args.params[0].reference();
     let name = args.runtime.heap.get_string(name);
 
-    let libname = format!("/Users/kitch/Code/robusta/target/lib{}.dylib", name);
+    let libname = format!("librobusta_{}.dylib", name);
     let libname = args.runtime.method_area.load_string(&libname);
 
     (Some(Value::Reference(libname)), None)
