@@ -45,15 +45,15 @@ pub fn robusta_plugins() -> Vec<Arc<dyn Plugin>> {
     ]
 }
 
-fn robusta_println_int(args: &Args) -> Option<Value> {
+fn robusta_println_int(args: &Args) -> (Option<Value>, Option<Value>) {
     let value = args.params[0].int();
 
     println!("{}", value.0);
 
-    None
+    (None, None)
 }
 
-fn robusta_println_string(args: &Args) -> Option<Value> {
+fn robusta_println_string(args: &Args) -> (Option<Value>, Option<Value>) {
     let str_ref = args.params[0].reference();
     let str_obj = args.runtime.heap.get_object(str_ref);
 
@@ -69,10 +69,10 @@ fn robusta_println_string(args: &Args) -> Option<Value> {
     let string = String::from_utf16(chars_arr).unwrap();
     println!("{}", string);
 
-    None
+    (None, None)
 }
 
-fn robusta_printerr_string(args: &Args) -> Option<Value> {
+fn robusta_printerr_string(args: &Args) -> (Option<Value>, Option<Value>) {
     let str_ref = args.params[0].reference();
     let str_obj = args.runtime.heap.get_object(str_ref);
 
@@ -88,10 +88,10 @@ fn robusta_printerr_string(args: &Args) -> Option<Value> {
     let string = String::from_utf16(chars_arr).unwrap();
     eprintln!("{}", string);
 
-    None
+    (None, None)
 }
 
-fn robusta_exit(args: &Args) -> Option<Value> {
+fn robusta_exit(args: &Args) -> (Option<Value>, Option<Value>) {
     let code = args.params[0].int().0;
     debug!(target: log::JVM, code, "Exiting JVM");
     exit(code)

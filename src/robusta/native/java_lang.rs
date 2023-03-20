@@ -177,9 +177,25 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
             Method {
                 class: "java.lang.Throwable".to_string(),
                 name: "fillInStackTrace".to_string(),
-                descriptor: MethodType::from_descriptor("()V").unwrap(),
+                descriptor: MethodType::from_descriptor("(I)Ljava/lang/Throwable;").unwrap(),
             },
             Arc::new(fill_in_stack_trace),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Throwable".to_string(),
+                name: "getStackTraceDepth".to_string(),
+                descriptor: MethodType::from_descriptor("()I").unwrap(),
+            },
+            Arc::new(stack_trace_depth),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Throwable".to_string(),
+                name: "getStackTraceElement".to_string(),
+                descriptor: MethodType::from_descriptor("(I)Ljava/lang/StackTraceElement;").unwrap(),
+            },
+            Arc::new(stack_trace_elem),
         ),
         stateless(
             Method {
@@ -232,6 +248,22 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Thread".to_string(),
+                name: "setPriority0".to_string(),
+                descriptor: MethodType::from_descriptor("(I)V").unwrap(),
+            },
+            Arc::new(set_priority_0),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
+                name: "isAlive".to_string(),
+                descriptor: MethodType::from_descriptor("()Z").unwrap(),
+            },
+            Arc::new(thread_is_alive),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Thread".to_string(),
                 name: "join".to_string(),
                 descriptor: MethodType::from_descriptor("(J)V").unwrap(),
             },
@@ -264,16 +296,16 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
     ]
 }
 
-fn integer_to_string(args: &Args) -> Option<Value> {
+fn integer_to_string(args: &Args) -> (Option<Value>, Option<Value>) {
     let int = args.params[0].int();
 
     let string_rep = format!("{}", int.0);
     let string_ref = args.runtime.heap.insert_string_const(&string_rep, &*args.runtime.method_area.load_class("java.lang.String"));
 
-    Some(Value::Reference(string_ref))
+    (Some(Value::Reference(string_ref)), None)
 }
 
-fn string_intern(args: &Args) -> Option<Value> {
+fn string_intern(args: &Args) -> (Option<Value>, Option<Value>) {
     let string_ref = args.params[0].reference();
     let string_obj = args.runtime.heap.get_object(string_ref);
 
@@ -289,28 +321,28 @@ fn string_intern(args: &Args) -> Option<Value> {
     let string = String::from_utf16(chars).unwrap();
     let string_ref = args.runtime.heap.insert_string_const(&string, string_obj.class());
 
-    Some(Value::Reference(string_ref))
+    (Some(Value::Reference(string_ref)), None)
 }
 
-fn object_get_class(args: &Args) -> Option<Value> {
+fn object_get_class(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get(object_ref);
 
     let class_ref = args.runtime.method_area.load_class_object(object_obj.class());
 
-    Some(Value::Reference(class_ref))
+    (Some(Value::Reference(class_ref)), None)
 }
 
-fn object_hash_code(args: &Args) -> Option<Value> {
+fn object_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get_object(object_ref);
 
     let hash_code = object_obj.hash_code();
 
-    Some(Value::Int(hash_code))
+    (Some(Value::Int(hash_code)), None)
 }
 
-fn fill_in_stack_trace(args: &Args) -> Option<Value> {
+fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
     let throwable_class = args.runtime.method_area.load_class("java.lang.Throwable");
 
     let throwable_ref = args.params[0].reference();
@@ -318,6 +350,11 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
     let stack = thread.stack.iter()
+        .filter(|f| !f.class.starts_with('<'))
+        .filter(|f| {
+            !(f.class.eq("com.jkitch.robusta.Robusta") &&
+                unsafe { f.method.as_ref().unwrap() }.name.eq("throwThrowable"))
+        })
         .take_while(|f| {
             let method = unsafe { f.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
@@ -516,17 +553,20 @@ fn fill_in_stack_trace(args: &Args) -> Option<Value> {
     let class = args.runtime.method_area.insert_gen_class(class);
     let method = &unsafe { class.as_ref().unwrap() }.methods[0] as *const method_area::Method;
 
-    let array_reference = thread.native_invoke(class, method, vec![]).unwrap().reference();
+    let (array_reference, ex) = thread.native_invoke(class, method, vec![]);
+    if ex.is_some() {
+        return (None, ex);
+    }
 
     // Store array reference in field
     let throwable = args.runtime.heap.get_object(throwable_ref);
     throwable.set_field(&FieldKey {
         class: "java.lang.Throwable".to_string(),
-        name: "stackTrace".to_string(),
-        descriptor: FieldType::from_descriptor("[Ljava.lang.StackTraceElement;").unwrap(),
-    }, Value::Reference(array_reference));
+        name: "backtrace".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/Object;").unwrap(),
+    }, Value::Reference(array_reference.unwrap().reference()));
 
-    None
+    (Some(Value::Reference(throwable_ref)), None)
 }
 
 struct StackElem {
@@ -536,7 +576,7 @@ struct StackElem {
     line: i32,
 }
 
-fn thread_start(args: &Args) -> Option<Value> {
+fn thread_start(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread_ref = args.params[0].reference();
     let thread_obj = args.runtime.heap.get_object(thread_ref);
 
@@ -574,18 +614,18 @@ fn thread_start(args: &Args) -> Option<Value> {
         }
     }).unwrap();
 
-    None
+    (None, None)
 }
 
-pub fn thread_sleep(args: &Args) -> Option<Value> {
+pub fn thread_sleep(args: &Args) -> (Option<Value>, Option<Value>) {
     let millis = args.params[0].long().0;
     args.enter_safe();
     sleep(Duration::from_millis(millis as u64));
     args.exit_safe();
-    None
+    (None, None)
 }
 
-pub fn thread_join(args: &Args) -> Option<Value> {
+pub fn thread_join(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread_ref = args.params[0].reference();
     let thread_obj = args.runtime.heap.get_object(thread_ref);
 
@@ -600,10 +640,10 @@ pub fn thread_join(args: &Args) -> Option<Value> {
     args.runtime.threads.get(&name).unwrap().join();
     args.exit_safe();
 
-    None
+    (None, None)
 }
 
-pub fn thread_join_millis(args: &Args) -> Option<Value> {
+pub fn thread_join_millis(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread_ref = args.params[0].reference();
     let thread_obj = args.runtime.heap.get_object(thread_ref);
 
@@ -620,10 +660,10 @@ pub fn thread_join_millis(args: &Args) -> Option<Value> {
     args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
     args.exit_safe();
 
-    None
+    (None, None)
 }
 
-pub fn current_thread(args: &Args) -> Option<Value> {
+pub fn current_thread(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
     let is_main_thread = current().name().unwrap().eq("main");
@@ -652,13 +692,16 @@ pub fn current_thread(args: &Args) -> Option<Value> {
             &args.runtime.method_area.load_class("java.lang.String"));
 
         // Init System Thread Group
-        thread.native_invoke(
+        let (_, ex) = thread.native_invoke(
             thread_group_class.deref() as *const ObjectClass,
             thread_group_init_system as *const method_area::Method,
             vec![Value::Reference(system_thread_group)]);
+        if ex.is_some() {
+            return (None, ex);
+        }
 
         // Init Main Thread Group
-        thread.native_invoke(
+        let (_, ex) = thread.native_invoke(
             thread_group_class.deref() as *const ObjectClass,
             thread_group_init_main as *const method_area::Method,
             vec![
@@ -668,6 +711,9 @@ pub fn current_thread(args: &Args) -> Option<Value> {
                 Value::Reference(main_string),
             ],
         );
+        if ex.is_some() {
+            return (None, ex);
+        }
 
         // Create our main thread.
         let thread_class = args.runtime.method_area.load_class("java.lang.Thread");
@@ -700,59 +746,59 @@ pub fn current_thread(args: &Args) -> Option<Value> {
 
         thread.reference = Some(main_thread_ref);
 
-        Some(Value::Reference(main_thread_ref))
+        (Some(Value::Reference(main_thread_ref)), None)
     } else {
         // Get the thread ref from the thread.
         let thread_ref = thread.reference.unwrap();
-        Some(Value::Reference(thread_ref))
+        (Some(Value::Reference(thread_ref)), None)
     }
 }
 
-pub fn no_op(_: &Args) -> Option<Value> {
-    None
+pub fn no_op(_: &Args) -> (Option<Value>, Option<Value>) {
+    (None, None)
 }
 
-pub fn get_primitive_class(args: &Args) -> Option<Value> {
+pub fn get_primitive_class(args: &Args) -> (Option<Value>, Option<Value>) {
     let string_ref = args.params[0].reference();
     let primitive = args.runtime.heap.get_string(string_ref);
 
     let primitive_class = args.runtime.method_area.load_outer_class(&primitive);
     let primitive_object = args.runtime.method_area.load_class_object(primitive_class);
 
-    Some(Value::Reference(primitive_object))
+    (Some(Value::Reference(primitive_object)), None)
 }
 
-fn assertion_status(_: &Args) -> Option<Value> {
-    Some(Value::Int(Int(0)))
+fn assertion_status(_: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Int(Int(0))), None)
 }
 
-fn float_to_int_bits(args: &Args) -> Option<Value> {
+fn float_to_int_bits(args: &Args) -> (Option<Value>, Option<Value>) {
     let float = args.params[0].float().0;
     let bytes = float.to_be_bytes();
     let int = i32::from_be_bytes(bytes);
-    Some(Value::Int(Int(int)))
+    (Some(Value::Int(Int(int))), None)
 }
 
-fn double_to_long_bits(args: &Args) -> Option<Value> {
+fn double_to_long_bits(args: &Args) -> (Option<Value>, Option<Value>) {
     let double = args.params[0].double().0;
     let bytes = double.to_be_bytes();
     let long = i64::from_be_bytes(bytes);
-    Some(Value::Long(Long(long)))
+    (Some(Value::Long(Long(long))), None)
 }
 
-fn long_bits_to_double(args: &Args) -> Option<Value> {
+fn long_bits_to_double(args: &Args) -> (Option<Value>, Option<Value>) {
     let long = args.params[0].long().0;
     let bytes = long.to_be_bytes();
     let double = f64::from_be_bytes(bytes);
-    Some(Value::Double(Double(double)))
+    (Some(Value::Double(Double(double))), None)
 }
 
-fn array_base_offset(_: &Args) -> Option<Value> {
+fn array_base_offset(_: &Args) -> (Option<Value>, Option<Value>) {
     let offset = size_of::<ArrayHeader>() as i32;
-    Some(Value::Int(Int(offset)))
+    (Some(Value::Int(Int(offset))), None)
 }
 
-fn array_index_scale(args: &Args) -> Option<Value> {
+fn array_index_scale(args: &Args) -> (Option<Value>, Option<Value>) {
     let class_ref = args.params[1].reference();
     let class_obj = args.runtime.heap.get_object(class_ref);
 
@@ -771,14 +817,14 @@ fn array_index_scale(args: &Args) -> Option<Value> {
         _ => panic!("not implemented"),
     };
 
-    Some(Value::Int(Int(scale)))
+    (Some(Value::Int(Int(scale))), None)
 }
 
-fn address_size(_: &Args) -> Option<Value> {
-    Some(Value::Int(Int(size_of::<*const u8>() as i32)))
+fn address_size(_: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(Value::Int(Int(size_of::<*const u8>() as i32))), None)
 }
 
-fn get_caller_class(args: &Args) -> Option<Value> {
+fn get_caller_class(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.as_ref().unwrap() };
     let class_name = thread.stack.iter().rev()
         .skip(1) // skip this frame
@@ -790,10 +836,10 @@ fn get_caller_class(args: &Args) -> Option<Value> {
     let class = args.runtime.method_area.load_outer_class(class_name);
     let class_ref = args.runtime.method_area.load_class_object(class);
 
-    Some(Value::Reference(class_ref))
+    (Some(Value::Reference(class_ref)), None)
 }
 
-fn for_name_0(args: &Args) -> Option<Value> {
+fn for_name_0(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
     let name_ref = args.params[0].reference();
@@ -806,10 +852,10 @@ fn for_name_0(args: &Args) -> Option<Value> {
     }
 
     let class_obj = args.runtime.method_area.load_class_object(class);
-    Some(Value::Reference(class_obj))
+    (Some(Value::Reference(class_obj)), None)
 }
 
-fn get_control_context(args: &Args) -> Option<Value> {
+fn get_control_context(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
     let acc_class = args.runtime.method_area.load_outer_class("java.security.AccessControlContext");
     let acc_class = acc_class.obj();
@@ -824,7 +870,7 @@ fn get_control_context(args: &Args) -> Option<Value> {
     let acc_ref = args.runtime.heap.new_object(&acc_class);
     let domains_ref = args.runtime.heap.new_array(pro_dom_class, Int(0));
 
-    thread.native_invoke(
+    let (_, ex) = thread.native_invoke(
         acc_class.deref() as *const ObjectClass,
         acc_init as *const method_area::Method,
         vec![
@@ -832,6 +878,55 @@ fn get_control_context(args: &Args) -> Option<Value> {
             Value::Reference(domains_ref),
         ]
     );
+    if ex.is_some() {
+        return (None, ex);
+    }
 
-    Some(Value::Reference(acc_ref))
+    (Some(Value::Reference(acc_ref)), None)
+}
+
+fn set_priority_0(_: &Args) -> (Option<Value>, Option<Value>) {
+    (None, None)
+}
+
+fn thread_is_alive(args: &Args) -> (Option<Value>, Option<Value>) {
+    let thread = unsafe { args.thread.as_ref().unwrap() };
+
+    let is_alive = if thread.stack.len() > 0 { 1 } else { 0 };
+
+    (Some(Value::Int(Int(is_alive))), None)
+}
+
+fn stack_trace_depth(args: &Args) -> (Option<Value>, Option<Value>) {
+    let throw_ref = args.params[0].reference();
+    let throw_obj = args.runtime.heap.get_object(throw_ref);
+
+    let backtrace_ref = throw_obj.get_field(&FieldKey {
+        class: "java.lang.Throwable".to_string(),
+        name: "backtrace".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/Object;").unwrap(),
+    }).reference();
+
+    let backtrace_arr = args.runtime.heap.get_array(backtrace_ref);
+
+    (Some(Value::Int(backtrace_arr.length())), None)
+}
+
+
+fn stack_trace_elem(args: &Args) -> (Option<Value>, Option<Value>) {
+    let throw_ref = args.params[0].reference();
+    let throw_obj = args.runtime.heap.get_object(throw_ref);
+
+    let index = args.params[1].int();
+
+    let backtrace_ref = throw_obj.get_field(&FieldKey {
+        class: "java.lang.Throwable".to_string(),
+        name: "backtrace".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/Object;").unwrap(),
+    }).reference();
+
+    let backtrace_arr = args.runtime.heap.get_array(backtrace_ref);
+    let stack_elem = backtrace_arr.get_element(index);
+
+    (Some(stack_elem), None)
 }

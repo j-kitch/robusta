@@ -11,7 +11,7 @@ use crate::instruction::instruction;
 use crate::java::{CategoryOne, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{ObjectClass, Method};
-use crate::method_area::const_pool::ConstPool;
+use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 
@@ -131,7 +131,7 @@ impl Thread {
     }
 
     /// A native method needs to be able to invoke the thread stack again to get a result.
-    pub fn native_invoke(&mut self, class: *const ObjectClass, method: *const Method, args: Vec<Value>) -> Option<Value> {
+    pub fn native_invoke(&mut self, class: *const ObjectClass, method: *const Method, args: Vec<Value>) -> (Option<Value>, Option<Value>) {
         let class = unsafe { class.as_ref().unwrap() };
         let method2 = unsafe { method.as_ref().unwrap() };
         let has_return = unsafe { method.as_ref().unwrap().descriptor.returns.is_some() };
@@ -147,6 +147,7 @@ impl Thread {
             native: None,
             native_args: vec![],
             native_roots: HashSet::new(),
+            native_ex: None,
         });
 
         let depth = self.stack.len();
@@ -159,9 +160,18 @@ impl Thread {
         }
 
         // We've hit our native stub frame with the result.
-        let result = if has_return { Some(self.stack.last_mut().unwrap().operand_stack.pop()) } else { None };
+        let frame = self.stack.last_mut().unwrap();
+        let return_value = if let Some(thrown) = frame.native_ex {
+            // We've hit an exception!
+            (None, Some(Value::Reference(thrown)))
+        } else if has_return {
+            let value = frame.operand_stack.pop();
+            (Some(value), None)
+        } else {
+            (None, None)
+        };
         self.stack.pop();
-        result
+        return_value
     }
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
@@ -186,6 +196,7 @@ impl Thread {
                     native: None,
                     native_args: vec![],
                     native_roots: HashSet::new(),
+                    native_ex: None,
                 }
             ],
         });
@@ -227,7 +238,7 @@ impl Thread {
             let args = curr_frame.native_args.clone();
             let plugin = curr_frame.native.as_ref().unwrap().clone();
             let thread = self as *const Thread;
-            let result = (plugin).call(
+            let (result, ex) = (plugin).call(
                 method,
                 &Args {
                     thread,
@@ -236,9 +247,18 @@ impl Thread {
                 }
             );
             self.stack.pop();
-            if let Some(result) = result {
-                let curr_frame = self.stack.last_mut().unwrap();
-                curr_frame.operand_stack.push(result);
+            if let Some(ex) = ex {
+                // Invoke throwing.
+                let robusta_class = self.runtime.method_area.load_class("com.jkitch.robusta.Robusta");
+                let throw_method = robusta_class.find_method(&MethodKey {
+                    class: "com.jkitch.robusta.Robusta".to_string(),
+                    name: "throwThrowable".to_string(),
+                    descriptor: MethodType::from_descriptor("(Ljava/lang/Throwable;)V").unwrap(),
+                }).unwrap();
+                self.push_frame(robusta_class.name.clone(), &robusta_class.const_pool as *const ConstPool, throw_method as *const Method, vec![ex]);
+            } else if let Some(result) = result {
+                let frame = self.stack.last_mut().unwrap();
+                frame.operand_stack.push(result);
             }
             return;
         }
@@ -259,6 +279,7 @@ impl Thread {
             native: None,
             native_args: vec![],
             native_roots: HashSet::new(),
+            native_ex: None,
         };
 
         let mut idx = 0;
@@ -281,6 +302,7 @@ impl Thread {
             native: Some(plugin),
             native_args: args.clone(),
             native_roots: HashSet::new(),
+            native_ex: None,
         };
 
         let mut idx = 0;
@@ -312,7 +334,8 @@ pub struct Frame {
     /// For native methods only.
     pub native: Option<Arc<dyn Plugin>>,
     pub native_args: Vec<Value>,
-    pub native_roots: HashSet<Reference>
+    pub native_roots: HashSet<Reference>,
+    pub native_ex: Option<Reference>,
 }
 
 unsafe impl Send for Frame {}

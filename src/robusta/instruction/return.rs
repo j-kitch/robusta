@@ -64,6 +64,19 @@ pub fn d_return(thread: &mut Thread) {
     cur_frame.operand_stack.push(double);
 }
 
+pub fn l_return(thread: &mut Thread) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let long = cur_frame.operand_stack.pop();
+
+    exit_monitor(thread);
+
+    thread.stack.pop();
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    cur_frame.operand_stack.push(long);
+}
+
 pub fn a_throw(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let throwable_ref = frame.operand_stack.pop().reference();
@@ -72,6 +85,11 @@ pub fn a_throw(thread: &mut Thread) {
 
     let mut frame = Some(frame);
     while let Some(current_frame) = frame {
+        if current_frame.class.eq("<native-callback>") {
+            // We need to stop and let the native method decide how to handle the exception!
+            current_frame.native_ex = Some(throwable_ref);
+            return;
+        }
         let method = unsafe { current_frame.method.as_ref().unwrap() };
         let code = method.code.as_ref().unwrap();
         let ex_table = &code.ex_table;

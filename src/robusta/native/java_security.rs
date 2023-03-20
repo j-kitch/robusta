@@ -26,7 +26,7 @@ pub fn java_security_plugins() -> Vec<Arc<dyn Plugin>> {
     ]
 }
 
-fn do_privileged(args: &Args) -> Option<Value> {
+fn do_privileged(args: &Args) -> (Option<Value>, Option<Value>) {
     let action_ref = args.params[0].reference();
     let action_obj = args.runtime.heap.get_object(action_ref);
     let action_class = unsafe { action_obj.header.as_ref().unwrap().class.as_ref().unwrap() };
@@ -38,16 +38,16 @@ fn do_privileged(args: &Args) -> Option<Value> {
     }).unwrap();
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
-    let result = thread.native_invoke(
+    let (result, ex) = thread.native_invoke(
         method.class,
         method as *const method_area::Method,
         vec![Value::Reference(action_ref)]
-    ).unwrap();
+    );
 
-    Some(result)
+    (result, ex)
 }
 
-fn do_privileged_2(args: &Args) -> Option<Value> {
+fn do_privileged_2(args: &Args) -> (Option<Value>, Option<Value>) {
     let action_ref = args.params[0].reference();
     let action_obj = args.runtime.heap.get_object(action_ref);
     let action_class = unsafe { action_obj.header.as_ref().unwrap().class.as_ref().unwrap() };
@@ -59,13 +59,11 @@ fn do_privileged_2(args: &Args) -> Option<Value> {
     }).unwrap();
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
-    let result = thread.native_invoke(
+    thread.native_invoke(
         method.class,
         method as *const method_area::Method,
         vec![Value::Reference(action_ref)]
-    ).unwrap();
-
-    Some(result)
+    )
 }
 
 

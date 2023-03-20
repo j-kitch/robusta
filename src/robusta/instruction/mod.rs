@@ -4,14 +4,14 @@ use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
-use crate::instruction::dup::{dup, dup_x1};
+use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
 use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_sub, iand, irem, iushr, ixor, l_add, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
-use crate::instruction::r#return::{a_return, a_throw, d_return, f_return, i_return, r#return};
+use crate::instruction::r#return::{a_return, a_throw, d_return, f_return, i_return, l_return, r#return};
 use crate::instruction::stack::{bipush, pop, sipush};
 use crate::instruction::sync::{monitor_enter, monitor_exit};
 use crate::log;
@@ -95,11 +95,12 @@ pub fn instruction(thread: &mut Thread) {
         0x4C => astore_n(thread, 1),
         0x4D => astore_n(thread, 2),
         0x4E => astore_n(thread, 3),
-        0x5A => dup_x1(thread),
         0x53 => a_array_store(thread),
         0x55 => char_array_store(thread),
         0x57 => pop(thread),
         0x59 => dup(thread),
+        0x5A => dup_x1(thread),
+        0x5C => dup2(thread),
         0x60 => i_add(thread),
         0x61 => l_add(thread),
         0x64 => i_sub(thread),
@@ -131,6 +132,7 @@ pub fn instruction(thread: &mut Thread) {
         0xA6 => if_ref_cmp_ne(thread),
         0xA7 => goto(thread),
         0xAC => i_return(thread),
+        0xAD => l_return(thread),
         0xAE => f_return(thread),
         0xAF => d_return(thread),
         0xB0 => a_return(thread),
@@ -205,11 +207,12 @@ fn op_name(code: u8) -> &'static str {
         0x4C => "astore_1",
         0x4D => "astore_2",
         0x4E => "astore_3",
-        0x5A => "dup_x1",
         0x53 => "aastore",
         0x55 => "castore",
         0x57 => "pop",
         0x59 => "dup",
+        0x5A => "dup_x1",
+        0x5C => "dup2",
         0x60 => "iadd",
         0x61 => "ladd",
         0x64 => "isub",
@@ -241,6 +244,7 @@ fn op_name(code: u8) -> &'static str {
         0xA6 => "if_acmpne",
         0xA7 => "goto",
         0xAC => "ireturn",
+        0xAD => "lreturn",
         0xAE => "freturn",
         0xAF => "dreturn",
         0xB0 => "areturn",

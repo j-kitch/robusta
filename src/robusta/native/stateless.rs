@@ -4,7 +4,7 @@ use crate::java::{MethodType, Value};
 use crate::method_area;
 use crate::native::{Args, Plugin};
 
-type Function = Arc<dyn Fn(&Args) -> Option<Value> + Sync + Send>;
+type Function = Arc<dyn Fn(&Args) -> (Option<Value>, Option<Value>) + Sync + Send>;
 
 /// Some native method implementations require no state, so there's no need to create separate
 /// internal types for those specific to their implementations.
@@ -33,7 +33,7 @@ impl Plugin for StatelessPlugin {
             self.method.descriptor.eq(&method.descriptor)
     }
 
-    fn call(&self, _: &method_area::Method, args: &Args) -> Option<Value> {
+    fn call(&self, _: &method_area::Method, args: &Args) -> (Option<Value>, Option<Value>) {
         (self.function)(args)
     }
 }

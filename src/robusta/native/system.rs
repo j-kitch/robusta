@@ -27,7 +27,7 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
     ]
 }
 
-fn register_natives(args: &Args) -> Option<Value> {
+fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {
     let system_class = args.runtime.method_area.load_class("java.lang.System");
 
     let init_method = system_class.find_method(&MethodKey {
@@ -38,11 +38,10 @@ fn register_natives(args: &Args) -> Option<Value> {
 
     let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
 
-    thread.native_invoke(&*system_class as *const ObjectClass, init_method as *const method_area::Method, vec![]);
-
-    None
+    let (_, ex) = thread.native_invoke(&*system_class as *const ObjectClass, init_method as *const method_area::Method, vec![]);
+    (None, ex)
 }
 
-fn init_properties(args: &Args) -> Option<Value> {
-    Some(args.params[0])
+fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
+    (Some(args.params[0]), None)
 }

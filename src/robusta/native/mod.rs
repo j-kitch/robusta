@@ -77,7 +77,7 @@ impl Args {
 
 pub trait Plugin {
     fn supports(&self, method: &Method) -> bool;
-    fn call(&self, method: &Method, args: &Args) -> Option<Value>;
+    fn call(&self, method: &Method, args: &Args) -> (Option<Value>, Option<Value>);
 }
 
 struct RegisterNative {
@@ -91,7 +91,7 @@ impl Plugin for RegisterNative {
             unsafe { method.class.as_ref().unwrap() }.name.ne("java.lang.System")
     }
 
-    fn call(&self, _: &Method, _: &Args) -> Option<Value> {
-        None
+    fn call(&self, _: &Method, _: &Args) -> (Option<Value>, Option<Value>) {
+        (None, None)
     }
 }

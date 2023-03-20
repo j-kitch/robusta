@@ -93,6 +93,7 @@ impl VirtualMachine {
                 native_roots: HashSet::new(),
                 native_args: vec![],
                 native: None,
+                native_ex: None,
             });
 
             while jvm_init_t.stack.len() > 1 {
