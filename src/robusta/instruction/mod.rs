@@ -1,7 +1,7 @@
 use tracing::trace;
 pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, char_array_load, char_array_store, int_array_load, int_array_store};
-use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_eq, if_ref_cmp_ne};
+use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_eq, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_eq, if_ref_cmp_ne};
 use crate::instruction::class::{check_cast, instance_of};
 use crate::instruction::conv::{float_to_int, int_to_float, int_to_long};
 use crate::instruction::dup::{dup, dup2, dup_x1};
@@ -128,6 +128,7 @@ pub fn instruction(thread: &mut Thread) {
         0x9C => if_ge(thread),
         0x9D => if_gt(thread),
         0x9E => if_le(thread),
+        0x9F => if_int_cmp_eq(thread),
         0xA0 => if_int_cmp_ne(thread),
         0xA1 => if_int_cmp_lt(thread),
         0xA2 => if_int_cmp_ge(thread),
@@ -245,6 +246,7 @@ fn op_name(code: u8) -> &'static str {
         0x9C => "ifge",
         0x9D => "ifgt",
         0x9E => "ifle",
+        0x9F => "if_icmpeq",
         0xA0 => "if_icmpne",
         0xA1 => "if_icmplt",
         0xA2 => "if_icmpge",

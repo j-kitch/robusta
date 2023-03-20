@@ -79,6 +79,7 @@ pub fn l_return(thread: &mut Thread) {
     cur_frame.operand_stack.push(long);
 }
 
+#[allow(unreachable_code)]
 pub fn a_throw(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let throwable_ref = frame.operand_stack.pop().reference();
@@ -126,7 +127,6 @@ pub fn a_throw(thread: &mut Thread) {
 
     // Debug for now!
     {
-        let ex = throwable_ref;
         let class = thread.runtime.method_area.load_outer_class("com.jkitch.robusta.Robusta");
         let cl = class.obj();
         let method = cl.find_method(&MethodKey {
@@ -147,8 +147,6 @@ pub fn a_throw(thread: &mut Thread) {
             thread.next();
         }
         exit(1);
-
-        return;
     }
 
     // Invoke throwable printStackTrace

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use maplit::hashset;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::class_file::{ACCESS_FLAG_NATIVE, ACCESS_FLAG_STATIC, ClassAttribute, Code, METHOD_ACC_SYNC};
 use crate::collection::classes::{Classes, ClassRef};
@@ -67,7 +67,7 @@ impl Primitive {
 #[derive(Clone)]
 pub enum Class {
     Primitive(Primitive),
-    Array{object: Box<Class>, component: Box<Class>},
+    Array { object: Box<Class>, component: Box<Class> },
     Object(ClassRef),
 }
 
@@ -75,14 +75,14 @@ impl Class {
     pub fn find_method(&self, key: &MethodKey) -> Option<&Method> {
         match self {
             Class::Object(class_ref) => class_ref.find_method(key),
-            Class::Array{object, component} => object.find_method(key),
+            Class::Array { object, .. } => object.find_method(key),
             _ => None,
         }
     }
 
     pub fn is_reference(&self) -> bool {
         match self {
-            Class::Array{ .. } | Class::Object(_) => true,
+            Class::Array { .. } | Class::Object(_) => true,
             _ => false,
         }
     }
@@ -90,7 +90,7 @@ impl Class {
     pub fn name(&self) -> String {
         match self {
             Class::Primitive(primitive) => primitive.name(),
-            Class::Array{ component, .. } => format!("[{}", component.binary_name()),
+            Class::Array { component, .. } => format!("[{}", component.binary_name()),
             Class::Object(class) => class.name.clone(),
         }
     }
@@ -108,7 +108,7 @@ impl Class {
                 Primitive::Double => "D".to_string(),
             }
             Class::Object(class_ref) => format!("L{};", &class_ref.name),
-            Class::Array{ component, ..} => format!("[{}", component.binary_name()),
+            Class::Array { component, .. } => format!("[{}", component.binary_name()),
         }
     }
 
@@ -131,8 +131,8 @@ impl Class {
                 Class::Primitive(other) => primitive == other,
                 _ => false,
             },
-            Class::Array{component,..} => match other {
-                Class::Array{component: other, .. } => component.is_instance_of(other),
+            Class::Array { component, .. } => match other {
+                Class::Array { component: other, .. } => component.is_instance_of(other),
                 _ => false,
             }
             Class::Object(object) => match other {
@@ -145,7 +145,7 @@ impl Class {
     pub fn component_width(&self) -> usize {
         match self {
             Class::Primitive(primitive) => primitive.width(),
-            Class::Array{..} | Class::Object(_) => 4,
+            Class::Array { .. } | Class::Object(_) => 4,
         }
     }
 }

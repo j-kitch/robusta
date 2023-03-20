@@ -3,7 +3,6 @@
 
 extern crate core;
 
-use std::collections::HashSet;
 use std::env::args;
 use std::sync::Arc;
 
@@ -17,7 +16,7 @@ use crate::java::MethodType;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
 use crate::method_area::Method;
 use crate::runtime::Runtime;
-use crate::thread::{Frame, LocalVars, OperandStack, Thread};
+use crate::thread::Thread;
 
 pub mod java;
 pub mod class_file;
@@ -78,8 +77,8 @@ impl VirtualMachine {
             let method = &class_ref.methods[0];
 
             let jvm_init_thread = Thread::new("<jvmInit>".to_string(), None, runtime.clone(),
-                class_ref.name.clone(), &class_ref.const_pool as *const ConstPool,
-                method as *const Method);
+                                              class_ref.name.clone(), &class_ref.const_pool as *const ConstPool,
+                                              method as *const Method);
 
             let jvm_init_t = jvm_init_thread.as_mut();
 

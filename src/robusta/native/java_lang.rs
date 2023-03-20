@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::mem::size_of;
 use std::ops::Deref;
 use std::ptr;
@@ -233,6 +232,30 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "objectFieldOffset".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/reflect/Field;)J").unwrap(),
+            },
+            Arc::new(field_offset),
+        ),
+        stateless(
+            Method {
+                class: "sun.misc.Unsafe".to_string(),
+                name: "compareAndSwapObject".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z").unwrap(),
+            },
+            Arc::new(compare_and_swap),
+        ),
+        stateless(
+            Method {
+                class: "sun.reflect.Reflection".to_string(),
+                name: "getClassAccessFlags".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)I").unwrap(),
+            },
+            Arc::new(get_class_access_flags),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Thread".to_string(),
                 name: "start0".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
@@ -409,6 +432,76 @@ fn get_declared_fields(args: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(fields_array_ref)), None)
 }
 
+fn field_offset(args: &Args) -> (Option<Value>, Option<Value>) {
+    let field_ref = args.params[1].reference();
+    let field_obj = args.runtime.heap.get_object(field_ref);
+
+    let name_ref = field_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let class_ref = field_obj.get_field(&FieldKey {
+        class: "java.lang.reflect.Field".to_string(),
+        name: "clazz".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/Class;").unwrap(),
+    }).reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+    let class_name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let class_name = args.runtime.heap.get_string(class_name_ref);
+
+    let class = args.runtime.method_area.load_class(&class_name);
+    let field = class.instance_fields.iter().find(|f| f.name.eq(&name)).unwrap();
+    let offset = field.offset as i64;
+
+    (Some(Value::Long(Long(offset))), None)
+}
+
+fn get_class_access_flags(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class_ref = args.params[0].reference();
+    let class_obj = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_obj.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+    let class = args.runtime.method_area.load_class(&name);
+
+    let flags = class.flags.bits as i32;
+
+    (Some(Value::Int(Int(flags))), None)
+}
+
+fn compare_and_swap(args: &Args) -> (Option<Value>, Option<Value>) {
+    let o = args.params[1].reference();
+    let offset = args.params[2].long().0 as usize;
+    let expected = args.params[3].reference().0;
+    let x = args.params[4].reference().0;
+
+    let object = args.runtime.heap.get_object(o);
+
+    let result = unsafe {
+        let ptr: *mut u32 = object.data.add(offset).cast();
+        let current = ptr.read_volatile();
+        if current == expected {
+            ptr.write_volatile(x);
+            1
+        } else {
+            0
+        }
+    };
+
+    (Some(Value::Int(Int(result))), None)
+}
+
 fn integer_to_string(args: &Args) -> (Option<Value>, Option<Value>) {
     let int = args.params[0].int();
 
@@ -513,7 +606,7 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
 
     // Can we create a class that delegates to all our methods for us?
     let mut class = ObjectClass {
-        name: format!("<fill-in-stack-trace-{:?}-{}>", std::thread::current().id(), thread_rng().next_u64()),
+        name: format!("<fill-in-stack-trace-{:?}-{}>", current().id(), thread_rng().next_u64()),
         flags: ClassFlags { bits: 0 },
         const_pool: ConstPool {
             pool: HashMap::new(),
@@ -1017,8 +1110,6 @@ fn set_priority_0(_: &Args) -> (Option<Value>, Option<Value>) {
 }
 
 fn thread_is_alive(args: &Args) -> (Option<Value>, Option<Value>) {
-    let thread = unsafe { args.thread.as_ref().unwrap() };
-
     let thread_ref = args.params[0].reference();
     let thread_obj = args.runtime.heap.get_object(thread_ref);
 
@@ -1110,7 +1201,7 @@ fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let parent_ref = match this_class {
         Class::Primitive(_) => Reference(0),
-        Class::Array { object, component } => {
+        Class::Array { .. } => {
             let class = args.runtime.method_area.load_outer_class("java.lang.Object");
             args.runtime.method_area.load_class_object(class)
         }

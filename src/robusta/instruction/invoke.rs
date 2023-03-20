@@ -1,4 +1,4 @@
-use tracing::{debug, info, trace};
+use tracing::debug;
 
 use crate::log;
 use crate::method_area::const_pool::{ConstPool, MethodKey};
