@@ -13,7 +13,7 @@ use crate::collection::wait::ThreadWait;
 use crate::heap::allocator::ArrayHeader;
 use crate::java::{Double, FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
-use crate::method_area::{ClassFlags, ObjectClass};
+use crate::method_area::{Class, ClassFlags, ObjectClass};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, FieldKey, MethodKey, SymbolicReference};
 use crate::native::{Args, Plugin};
 use crate::native::stateless::{Method, stateless};
@@ -300,6 +300,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("(Ljava/lang/Class;)Z").unwrap(),
             },
             Arc::new(is_assignable_from),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Class".to_string(),
+                name: "getSuperclass".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/lang/Class;").unwrap(),
+            },
+            Arc::new(get_super_class),
         )
     ]
 }
@@ -965,4 +973,36 @@ fn is_assignable_from(args: &Args) -> (Option<Value>, Option<Value>) {
     let is_assignable = if is_assignable { 1 } else { 0 };
 
     (Some(Value::Int(Int(is_assignable))), None)
+}
+
+fn get_super_class(args: &Args) -> (Option<Value>, Option<Value>) {
+    let class_ref = args.params[0].reference();
+    let class_inst = args.runtime.heap.get_object(class_ref);
+
+    let name_ref = class_inst.get_field(&FieldKey {
+        class: "java.lang.Class".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+
+    let this_class = args.runtime.method_area.load_outer_class(&name);
+
+    let parent_ref = match this_class {
+        Class::Primitive(_) => Reference(0),
+        Class::Array(_) => {
+            let class = args.runtime.method_area.load_outer_class("java.lang.Object");
+            args.runtime.method_area.load_class_object(class)
+        },
+        Class::Object(obj) => {
+            if let Some(parent) = &obj.super_class {
+                let parent_class = args.runtime.method_area.load_outer_class(&parent.name);
+                args.runtime.method_area.load_class_object(parent_class)
+            } else {
+                Reference(0)
+            }
+        }
+    };
+
+    (Some(Value::Reference(parent_ref)), None)
 }
