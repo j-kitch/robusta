@@ -7,6 +7,7 @@ use tracing::trace;
 
 use crate::heap::garbage_collector::CopyGeneration;
 use crate::heap::hash_code::HashCode;
+use crate::heap::Heap;
 use crate::heap::sync::ObjectLock;
 use crate::java::{Double, FieldType, Float, Int, Long, Reference, Value};
 use crate::log;
@@ -50,6 +51,13 @@ unsafe impl Send for Object {}
 unsafe impl Sync for Object {}
 
 impl Object {
+    pub fn get_string(&self, name: &str, heap: &Heap) -> String {
+        let class = unsafe { self.header().class.as_ref().unwrap() };
+        let field = class.instance_fields.iter().find(|f| f.name.eq(name)).unwrap();
+        let str_ref = self.field_from(field).reference();
+        heap.get_string(str_ref)
+    }
+
     pub fn class(&self) -> &ObjectClass {
         let header = self.header();
         unsafe { header.class.as_ref().unwrap() }

@@ -88,6 +88,17 @@ pub fn ixor(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn ior(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().int().0;
+
+    let result = value1 | value2;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn iushr(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -131,7 +142,6 @@ pub fn lshl(thread: &mut Thread) {
 
 pub fn iand(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
-
     let value2 = frame.operand_stack.pop().int().0;
     let value1 = frame.operand_stack.pop().int().0;
 

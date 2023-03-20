@@ -394,7 +394,7 @@ fn get_declared_fields(args: &Args) -> (Option<Value>, Option<Value>) {
                 args.runtime.method_area.load_class("java.lang.String").deref());
             let field_type = args.runtime.method_area.load_outer_class(&field.descriptor.as_class());
             let field_type = args.runtime.method_area.load_class_object(field_type);
-            let modifiers = Int(0);
+            let modifiers = Int(field.flags as i32);
             let slot = Int(0);
             let signature = Reference(0);
             let annotations = Reference(0);
@@ -1047,7 +1047,7 @@ fn address_size(_: &Args) -> (Option<Value>, Option<Value>) {
 fn get_caller_class(args: &Args) -> (Option<Value>, Option<Value>) {
     let thread = unsafe { args.thread.as_ref().unwrap() };
     let class_name = thread.stack.iter().rev()
-        .skip(1) // skip this frame
+        .skip(2) // skip this frame
         .skip_while(|f| f.class.starts_with('<')) // skip internal frames
         .next()
         .map(|f| &f.class)

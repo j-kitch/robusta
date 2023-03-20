@@ -291,7 +291,15 @@ impl MethodArea {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { class: 0 as *const ObjectClass, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                    Field {
+                        class: 0 as *const ObjectClass,
+                        flags: f.access_flags,
+                        is_static,
+                        name,
+                        width: descriptor.width(),
+                        descriptor,
+                        offset: 0,
+                    }
                 }).collect();
 
             // Sort to get a better order for object packing.
@@ -310,7 +318,15 @@ impl MethodArea {
                     let name = String::from_utf8(name.bytes.clone()).unwrap();
                     let descriptor = class_file.get_const_utf8(f.descriptor);
                     let descriptor = FieldType::from_descriptor(String::from_utf8(descriptor.bytes.clone()).unwrap().as_str()).unwrap();
-                    Field { class: 0 as *const ObjectClass, is_static, name, width: descriptor.width(), descriptor, offset: 0 }
+                    Field {
+                        class: 0 as *const ObjectClass,
+                        flags: f.access_flags,
+                        is_static,
+                        name,
+                        width: descriptor.width(),
+                        descriptor,
+                        offset: 0,
+                    }
                 }).collect();
 
             // Sort to get a better order for object packing.
@@ -537,6 +553,7 @@ pub struct ClassFlags {
 
 pub struct Field {
     pub class: *const ObjectClass,
+    pub flags: u16,
     pub is_static: bool,
     pub name: String,
     pub descriptor: FieldType,

@@ -8,7 +8,7 @@ use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload};
-use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_neg, i_sub, iand, irem, ishl, iushr, ixor, l_add, land, lshl};
+use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_neg, i_sub, iand, ior, irem, ishl, iushr, ixor, l_add, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, d_return, f_return, i_return, l_return, r#return};
@@ -115,6 +115,7 @@ pub fn instruction(thread: &mut Thread) {
         0x7C => iushr(thread),
         0x7E => iand(thread),
         0x7F => land(thread),
+        0x80 => ior(thread),
         0x82 => ixor(thread),
         0x84 => i_inc(thread),
         0x85 => int_to_long(thread),
@@ -233,6 +234,7 @@ fn op_name(code: u8) -> &'static str {
         0x7C => "iushr",
         0x7E => "iand",
         0x7F => "land",
+        0x80 => "ior",
         0x82 => "ixor",
         0x84 => "iinc",
         0x85 => "i2l",
