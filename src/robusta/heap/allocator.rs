@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::ptr;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 use std::sync::Arc;
 
@@ -291,6 +292,32 @@ impl Allocator {
         let max = HEAP_SIZE;
         let percentage = 100.0 * (used as f64) / (max as f64);
         trace!(target: log::HEAP, used=format!("{}mb {:.2}%", used_mbs, percentage));
+    }
+
+    pub fn copy_array(&self, array: Array) -> Array {
+        let header = array.header();
+        let array_length = Int((header.length / header.component.component_width()) as i32);
+
+        let new_arr = self.new_array(header.component.clone(), array_length);
+
+        unsafe {
+            ptr::copy_nonoverlapping(array.data.cast_const(), new_arr.data, header.length);
+        }
+
+        new_arr
+    }
+
+    pub fn copy_object(&self, object: Object) -> Object {
+        let header = object.header();
+        let class = unsafe { header.class.as_ref().unwrap() };
+
+        let new_object = self.new_object(class);
+
+        unsafe {
+            ptr::copy_nonoverlapping(object.data.cast_const(), new_object.data, class.instance_width);
+        }
+
+        new_object
     }
 
     pub fn new_object(&self, class: &ObjectClass) -> Object {

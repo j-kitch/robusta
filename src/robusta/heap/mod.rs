@@ -51,6 +51,18 @@ impl Heap {
         }
     }
 
+    pub fn copy(&self, heaped: Heaped) -> Reference {
+        let new_heaped = match heaped {
+            Heaped::Array(array) => {
+                Heaped::Array(self.allocator.copy_array(array))
+            }
+            Heaped::Object(object) => {
+                Heaped::Object(self.allocator.copy_object(object))
+            }
+        };
+        self.insert(new_heaped)
+    }
+
     pub fn new_object(&self, class: &ObjectClass) -> Reference {
         let object = self.allocator.new_object(class);
         self.insert(Heaped::Object(object))

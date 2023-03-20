@@ -1,6 +1,16 @@
 use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
+pub fn i_neg(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value = frame.operand_stack.pop().int();
+
+    let result = -value.0;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
 pub fn i_add(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 

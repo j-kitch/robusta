@@ -1,3 +1,4 @@
+use std::process::exit;
 use tracing::debug;
 use crate::{log, method_area};
 use crate::java::{MethodType, Value};
@@ -145,6 +146,7 @@ pub fn a_throw(thread: &mut Thread) {
         while thread.stack.len() > depth {
             thread.next();
         }
+        exit(1);
 
         return;
     }

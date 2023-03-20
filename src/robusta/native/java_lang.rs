@@ -170,6 +170,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Object".to_string(),
+                name: "clone".to_string(),
+                descriptor: MethodType::from_descriptor("()Ljava/lang/Object;").unwrap(),
+            },
+            Arc::new(object_clone),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
                 name: "hashCode".to_string(),
                 descriptor: MethodType::from_descriptor("()I").unwrap(),
             },
@@ -361,6 +369,15 @@ fn object_get_class(args: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(class_ref)), None)
 }
 
+fn object_clone(args: &Args) -> (Option<Value>, Option<Value>) {
+    let object_ref = args.params[0].reference();
+    let object_obj = args.runtime.heap.get(object_ref);
+
+    let copied = args.runtime.heap.copy(object_obj);
+
+    (Some(Value::Reference(copied)), None)
+}
+
 fn object_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get_object(object_ref);
@@ -383,10 +400,10 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
             !(f.class.eq("com.jkitch.robusta.Robusta") &&
                 unsafe { f.method.as_ref().unwrap() }.name.eq("throwThrowable"))
         })
-        .take_while(|f| {
+        .skip_while(|f| {
             let method = unsafe { f.method.as_ref().unwrap() };
             let class = unsafe { method.class.as_ref().unwrap() };
-            !class.is_instance_of(&throwable_class) && method.name.eq("<init>")
+            class.is_instance_of(&throwable_class) && method.name.eq("<init>")
         });
 
     let elems: Vec<StackElem> = stack.map(|frame| {
