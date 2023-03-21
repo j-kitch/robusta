@@ -1,4 +1,3 @@
-use std::process::exit;
 use tracing::debug;
 use crate::{log, method_area};
 use crate::java::{MethodType, Value};
@@ -123,30 +122,6 @@ pub fn a_throw(thread: &mut Thread) {
         // No handler found
         thread.stack.pop();
         frame = thread.stack.last_mut();
-    }
-
-    // Debug for now!
-    {
-        let class = thread.runtime.method_area.load_outer_class("com.jkitch.robusta.Robusta");
-        let cl = class.obj();
-        let method = cl.find_method(&MethodKey {
-            class: "com.jkitch.robusta.Robusta".to_string(),
-            name: "printStackTrace".to_string(),
-            descriptor: MethodType::from_descriptor("(Ljava/lang/Throwable;)V").unwrap(),
-        }).unwrap();
-
-        thread.push_frame(
-            cl.name.clone(),
-            &cl.const_pool as *const ConstPool,
-            method as *const method_area::Method,
-            vec![Value::Reference(throwable_ref)]);
-        debug!(target: log::THREAD, "Invoking Robusta.printStackTrace");
-
-        let depth = thread.stack.len() - 1;
-        while thread.stack.len() > depth {
-            thread.next();
-        }
-        exit(1);
     }
 
     // Invoke throwable printStackTrace

@@ -32,6 +32,14 @@ pub fn system_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.System".to_string(),
+                name: "identityHashCode".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Object;)I").unwrap(),
+            },
+            Arc::new(identity_hash_code),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.System".to_string(),
                 name: "setIn0".to_string(),
                 descriptor: MethodType::from_descriptor("(Ljava/io/InputStream;)V").unwrap(),
             },
@@ -362,6 +370,18 @@ fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {
 
 fn register_natives(_: &Args) -> (Option<Value>, Option<Value>) {
     (None, None)
+}
+
+fn identity_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
+    let object_ref = args.params[0].reference();
+
+    if object_ref.0 == 0 {
+        return (Some(Value::Int(Int(0))), None);
+    }
+
+    let object = args.runtime.heap.get_object(object_ref);
+    let hash_code = object.header().hash_code;
+    (Some(Value::Int(hash_code)), None)
 }
 
 fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {

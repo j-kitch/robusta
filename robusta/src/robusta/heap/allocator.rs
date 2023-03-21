@@ -69,7 +69,7 @@ impl Object {
         unsafe { header.class.as_ref().unwrap() }
     }
 
-    fn header(&self) -> &ObjectHeader {
+    pub fn header(&self) -> &ObjectHeader {
         unsafe { self.header.as_ref().unwrap() }
     }
 
