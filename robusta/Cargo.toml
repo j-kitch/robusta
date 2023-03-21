@@ -7,9 +7,6 @@ edition = "2021"
 name = "robusta"
 path = "src/robusta/lib.rs"
 
-[profile.release]
-debug = true
-
 [dependencies]
 chashmap = "2.2.2"
 crossbeam = "0.8.2"

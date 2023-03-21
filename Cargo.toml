@@ -3,3 +3,6 @@ members = [
     "robusta",
     "robusta-zip"
 ]
+
+[profile.release]
+debug = true
