@@ -1,11 +1,16 @@
-use crate::java::{Float, Int, Long, Value};
+use crate::java::{Double, Float, Int, Long, Value};
 use crate::thread::Thread;
 
 pub fn int_to_byte(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let int = frame.operand_stack.pop().int();
-    let bytes = int.0.to_be_bytes();
-    frame.operand_stack.push(Value::Int(Int(bytes[3] as i32)));
+    let byte = unsafe {
+        let ptr = &int.0 as *const i32;
+        let ptr: *const i8 = ptr.cast();
+        ptr.add(3);
+        ptr.read()
+    };
+    frame.operand_stack.push(Value::Int(Int(byte as i32)));
 }
 
 pub fn int_to_char(thread: &mut Thread) {
@@ -28,10 +33,34 @@ pub fn int_to_short(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(short as i32)));
 }
 
+pub fn int_to_double(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let int = frame.operand_stack.pop().int().0;
+    let double = int as f64;
+
+    frame.operand_stack.push(Value::Double(Double(double)));
+}
+
+pub fn long_to_int(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let long = frame.operand_stack.pop().long().0;
+    let int = unsafe {
+        let ptr = &long as *const i64;
+        let ptr: *const i32 = ptr.cast();
+        let ptr = ptr.add(1);
+        ptr.read()
+    };
+
+    frame.operand_stack.push(Value::Int(Int(int)));
+}
+
 pub fn int_to_float(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let int = frame.operand_stack.pop().int();
     let float = int.0 as f32;
+
     frame.operand_stack.push(Value::Float(Float(float)));
 }
 
