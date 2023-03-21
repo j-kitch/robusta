@@ -1,6 +1,13 @@
 use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
+pub fn int_to_byte(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let int = frame.operand_stack.pop().int();
+    let bytes = int.0.to_be_bytes();
+    frame.operand_stack.push(Value::Int(Int(bytes[3] as i32)));
+}
+
 pub fn int_to_char(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let int = frame.operand_stack.pop().int();

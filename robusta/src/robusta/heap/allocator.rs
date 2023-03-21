@@ -166,6 +166,18 @@ impl Array {
         }
     }
 
+    pub fn as_bytes_slice(&self) -> &[i8] {
+        let header = self.header();
+        if !header.component.is_byte_slice() {
+            panic!("cannot export as byte slice")
+        }
+        let length = header.length;
+        let pointer: *mut i8 = self.data.cast();
+        unsafe {
+            from_raw_parts(pointer.cast_const(), length)
+        }
+    }
+
     pub fn as_ref_slice(&self) -> &[u32] {
         let header = self.header();
         let length = header.length / 4;

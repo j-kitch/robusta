@@ -5,6 +5,7 @@ use tracing::debug;
 use crate::java::{Reference, Value};
 use crate::log;
 use crate::method_area::Method;
+use crate::native::file_output_stream::file_output_stream_plugins;
 use crate::native::java_lang::java_lang_plugins;
 use crate::native::java_security::java_security_plugins;
 use crate::native::robusta::robusta_plugins;
@@ -16,6 +17,7 @@ mod stateless;
 mod java_lang;
 mod java_security;
 mod system;
+mod file_output_stream;
 
 pub struct NativeMethods {
     plugins: Vec<Arc<dyn Plugin>>,
@@ -33,6 +35,7 @@ impl NativeMethods {
         plugins.append(&mut java_lang_plugins());
         plugins.append(&mut java_security_plugins());
         plugins.append(&mut system_plugins());
+        plugins.append(&mut file_output_stream_plugins());
         NativeMethods { plugins }
     }
 

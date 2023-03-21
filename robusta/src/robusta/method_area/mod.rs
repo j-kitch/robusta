@@ -125,6 +125,14 @@ impl Class {
             _ => false,
         }
     }
+
+    pub fn is_byte_slice(&self) -> bool {
+        match self {
+            Class::Primitive(primitive) => primitive == &Primitive::Byte,
+            _ => false,
+        }
+    }
+
     pub fn obj(&self) -> ClassRef {
         match self {
             Class::Object(class_ref) => class_ref.clone(),

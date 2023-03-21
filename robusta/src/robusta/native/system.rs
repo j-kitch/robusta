@@ -360,7 +360,7 @@ fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {
     }
 }
 
-fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {
+fn register_natives(_: &Args) -> (Option<Value>, Option<Value>) {
     (None, None)
 }
 
@@ -369,6 +369,7 @@ fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {
     let initial_props = hashmap! {
         "file.encoding" => "UTF-8",
         "file.separator" => "/",
+        "line.separator" => "\n",
         "path.separator" => ":",
         "java.home" => "/Users/kitch/Code/robusta/",
         "java.library.path" => "/Users/kitch/Code/robusta/target/debug",

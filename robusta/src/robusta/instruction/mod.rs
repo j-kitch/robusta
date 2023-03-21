@@ -3,7 +3,7 @@ pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, byte_array_load, byte_array_store, char_array_load, char_array_store, int_array_load, int_array_store};
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_eq, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_eq, if_ref_cmp_ne, lcmp, lookup_switch};
 use crate::instruction::class::{check_cast, instance_of};
-use crate::instruction::conv::{float_to_int, int_to_char, int_to_float, int_to_long};
+use crate::instruction::conv::{float_to_int, int_to_byte, int_to_char, int_to_float, int_to_long};
 use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
@@ -134,6 +134,7 @@ pub fn instruction(thread: &mut Thread) {
         0x85 => int_to_long(thread),
         0x86 => int_to_float(thread),
         0x8B => float_to_int(thread),
+        0x91 => int_to_byte(thread),
         0x92 => int_to_char(thread),
         0x94 => lcmp(thread),
         0x95 => fcmp(thread, -1),
@@ -269,6 +270,7 @@ fn op_name(code: u8) -> &'static str {
         0x85 => "i2l",
         0x86 => "i2f",
         0x8B => "f2i",
+        0x91 => "i2b",
         0x92 => "i2c",
         0x94 => "lcmp",
         0x95 => "fcmpl",
