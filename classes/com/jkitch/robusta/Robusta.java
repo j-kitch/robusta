@@ -16,4 +16,15 @@ public class Robusta {
     public static native void println(int i);
 
     public static native void exit(int code);
+
+    public static void throwThrowable(Throwable throwable) throws Throwable {
+        throw throwable;
+    }
+
+    public static void printStackTrace(Throwable throwable) {
+        printerr(throwable.toString());
+        for (StackTraceElement element : throwable.getStackTrace()) {
+            printerr("\t" + element.getFileName() + ":" + element.getLineNumber() + ": " + element.getClassName() + "." + element.getMethodName());
+        }
+    }
 }
