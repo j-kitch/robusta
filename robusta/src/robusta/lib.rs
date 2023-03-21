@@ -30,7 +30,7 @@ mod instruction;
 pub mod loader;
 mod method_area;
 mod heap;
-mod runtime;
+pub mod runtime;
 mod log;
 mod shim;
 
