@@ -41,6 +41,10 @@ impl Heap {
         }
     }
 
+    pub fn clear(&self) {
+        self.allocator.swap();
+    }
+
     pub fn new() -> Self {
         Heap {
             allocator: Allocator::new(),
