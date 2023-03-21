@@ -239,7 +239,9 @@ impl Thread {
 
         self.reference.map(|r| {
             self.runtime.heap.end_thread(r);
-            self.runtime.threads.get(&self.name).unwrap().end();
+            if let Some(r) = self.runtime.threads.get(&self.name) {
+                r.end();
+            }
         });
     }
 
