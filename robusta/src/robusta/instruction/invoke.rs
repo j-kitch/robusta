@@ -60,6 +60,9 @@ pub fn invoke_interface(thread: &mut Thread) {
 
 fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
     let cur_frame = thread.stack.last_mut().unwrap();
+    if cur_frame.class.eq("PrintArgs") {
+        let _b = 2;
+    }
     let method_idx = cur_frame.read_u16();
     let cur_frame = thread.stack.last_mut().unwrap();
     let method = thread.runtime.method_area.resolve_method(cur_frame.const_pool, method_idx);

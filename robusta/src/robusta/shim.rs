@@ -58,6 +58,14 @@ pub fn create_main_thread() -> ObjectClass {
                         descriptor: MethodType::from_descriptor("()V").unwrap(),
                     },
                     resolved: Once::new(),
+                }),
+                3 => Const::Method(SymbolicReference {
+                    const_key: MethodKey {
+                        class: "java.lang.System".to_string(),
+                        name: "initializeSystemClass".to_string(),
+                        descriptor: MethodType::from_descriptor("()V").unwrap()
+                    },
+                    resolved: Once::new(),
                 })
             }
         },
@@ -78,10 +86,11 @@ pub fn create_main_thread() -> ObjectClass {
                     max_stack: 0,
                     max_locals: 0,
                     code: vec![
+                        0xB8, 0, 3,     // invokestatic System.initializeSystemClass()
                         0xBB, 0, 1,     // new Launcher
                         0x59,           // dup
-                        0xB7, 0, 2,     // invoke init
-                        0xB1,
+                        0xB7, 0, 2,     // invoke <init>
+                        0xB1,           // return
 
                         // 0xBB, 0, 1,     // new ThreadGroup
                         // 0x59,           // dup ThreadGroup ref

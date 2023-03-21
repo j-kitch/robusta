@@ -26,7 +26,9 @@ pub fn get_field(thread: &mut Thread) {
 pub fn get_static(thread: &mut Thread) {
     let curr_frame = thread.stack.last_mut().unwrap();
     let const_pool = curr_frame.const_pool;
-
+    if curr_frame.class.eq("PrintArgs") {
+        let _b = 2;
+    }
     let field_idx = curr_frame.read_u16();
 
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
@@ -57,6 +59,10 @@ pub fn put_static(thread: &mut Thread) {
     let field = thread.runtime.method_area.resolve_static(thread.runtime.clone(), const_pool, field_idx);
     let field = unsafe { field.as_ref().unwrap() };
     let class = unsafe { field.class.as_ref().unwrap() };
+
+    if field.name.eq("out") && class.name.eq("java.lang.System") {
+        let _b = 2;
+    }
 
     let rt = thread.runtime.clone();
     rt.method_area.initialize(thread, class);

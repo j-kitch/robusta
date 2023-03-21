@@ -185,30 +185,36 @@ impl Thread {
     }
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
-               class: String, pool: *const ConstPool, method: *const Method) -> Arc<Self> {
+               class: String, pool: *const ConstPool, method: *const Method, args: Vec<Value>) -> Arc<Self> {
         reference.map(|reference| {
             runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
         });
+
+        let mut frame = Frame {
+            class,
+            const_pool: pool,
+            operand_stack: OperandStack::new(),
+            local_vars: LocalVars::new(),
+            method,
+            pc: 0,
+            native: None,
+            native_args: vec![],
+            native_roots: HashSet::new(),
+            native_ex: None,
+        };
+        let mut i = 0;
+        for arg in &args {
+            frame.local_vars.store_value(i, *arg);
+            i += arg.category() as u16;
+        }
+
         let thread = Arc::new(Thread {
             name: name.clone(),
             reference,
             locks: HashMap::new(),
             safe: Safe::new(name.clone()),
             runtime: runtime.clone(),
-            stack: vec![
-                Frame {
-                    class,
-                    const_pool: pool,
-                    operand_stack: OperandStack::new(),
-                    local_vars: LocalVars::new(),
-                    method,
-                    pc: 0,
-                    native: None,
-                    native_args: vec![],
-                    native_roots: HashSet::new(),
-                    native_ex: None,
-                }
-            ],
+            stack: vec![frame],
         });
 
         runtime.threads2.write().unwrap().push(thread.clone());

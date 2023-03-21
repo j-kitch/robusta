@@ -361,18 +361,7 @@ fn new_instance(args: &Args) -> (Option<Value>, Option<Value>) {
 }
 
 fn register_natives(args: &Args) -> (Option<Value>, Option<Value>) {
-    let system_class = args.runtime.method_area.load_class("java.lang.System");
-
-    let init_method = system_class.find_method(&MethodKey {
-        class: "java.lang.System".to_string(),
-        name: "initializeSystemClass".to_string(),
-        descriptor: MethodType::from_descriptor("()V").unwrap(),
-    }).unwrap();
-
-    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
-
-    let (_, ex) = thread.native_invoke(&*system_class as *const ObjectClass, init_method as *const method_area::Method, vec![]);
-    (None, ex)
+    (None, None)
 }
 
 fn init_properties(args: &Args) -> (Option<Value>, Option<Value>) {

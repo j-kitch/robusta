@@ -1091,10 +1091,9 @@ fn thread_start(args: &Args) -> (Option<Value>, Option<Value>) {
             descriptor: MethodType::from_descriptor("()V").unwrap(),
         }).unwrap() as *const method_area::Method;
 
-        let thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method);
-
-        // insert local vars!
-        thread.as_mut().stack.last_mut().unwrap().local_vars.store_value(0, Value::Reference(thread_ref));
+        let thread = Thread::new(name, Some(thread_ref.clone()), runtime, class, const_pool, method, vec![
+            Value::Reference(thread_ref)
+        ]);
 
         // hack
         unsafe {

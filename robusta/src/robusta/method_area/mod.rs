@@ -275,7 +275,7 @@ impl MethodArea {
             let _b = 2;
         }
         let class = self.classes.load_class(class_name, |name| {
-            let class_file = self.loader.find(name).unwrap();
+            let class_file = self.loader.find(name).expect(class_name);
             let pool = ConstPool::new(&class_file);
 
             let super_class = if class_file.super_class == 0 { None } else {
