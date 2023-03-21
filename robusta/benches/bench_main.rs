@@ -25,8 +25,8 @@ pub fn load_class(c: &mut Criterion) {
 
     for name in ["java.lang.String", "java.lang.Object", "java.util.concurrent.atomic.AtomicLong"] {
         group.bench_with_input(BenchmarkId::from_parameter(name), name, |b, name| {
+            let runtime = Runtime::new();
             b.iter(|| {
-                let runtime = Runtime::new();
                 runtime.method_area.load_outer_class(name)
             });
         });
