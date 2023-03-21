@@ -28,7 +28,7 @@ pub mod native;
 pub mod thread;
 mod instruction;
 pub mod loader;
-mod method_area;
+pub mod method_area;
 mod heap;
 pub mod runtime;
 mod log;
