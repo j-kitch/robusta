@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use nohash_hasher::BuildNoHashHasher;
 
 use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
@@ -81,7 +82,7 @@ impl Safe {
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
-    pub locks: HashMap<Reference, Synchronized>,
+    pub locks: HashMap<u32, Synchronized, BuildNoHashHasher<u32>>,
     pub safe: Safe,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
@@ -97,8 +98,8 @@ unsafe impl Sync for Thread {}
 
 impl Thread {
     pub fn enter_monitor(&mut self, object_ref: Reference) {
-        if self.locks.contains_key(&object_ref) {
-            let sync = self.locks.get_mut(&object_ref).unwrap();
+        if self.locks.contains_key(&object_ref.0) {
+            let sync = self.locks.get_mut(&object_ref.0).unwrap();
             sync.enter();
         } else {
             let object = self.runtime.heap.get_object(object_ref);
@@ -106,15 +107,15 @@ impl Thread {
             self.safe.enter();
             let sync = header.lock.lock();
             self.safe.exit();
-            self.locks.insert(object_ref, sync);
+            self.locks.insert(object_ref.0, sync);
         }
     }
 
     pub fn exit_monitor(&mut self, object_ref: Reference) {
-        let sync = self.locks.get_mut(&object_ref).unwrap();
+        let sync = self.locks.get_mut(&object_ref.0).unwrap();
         let should_remove = sync.exit();
         if should_remove {
-            let sync = self.locks.remove(&object_ref).unwrap();
+            let sync = self.locks.remove(&object_ref.0).unwrap();
             drop(sync);
         }
     }
@@ -146,7 +147,7 @@ impl Thread {
             pc: 0,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         });
 
@@ -199,7 +200,7 @@ impl Thread {
             pc: 0,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
         let mut i = 0;
@@ -211,7 +212,7 @@ impl Thread {
         let thread = Arc::new(Thread {
             name: name.clone(),
             reference,
-            locks: HashMap::new(),
+            locks: HashMap::with_hasher(BuildNoHashHasher::default()),
             safe: Safe::new(name.clone()),
             runtime: runtime.clone(),
             stack: vec![frame],
@@ -294,7 +295,7 @@ impl Thread {
             method,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
 
@@ -317,7 +318,7 @@ impl Thread {
             method,
             native: Some(plugin),
             native_args: args.clone(),
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
 
@@ -325,7 +326,7 @@ impl Thread {
         for arg in args {
             frame.local_vars.store_value(idx, arg.clone());
             if let Value::Reference(reference) = arg {
-                frame.native_roots.insert(reference);
+                frame.native_roots.insert(reference.0);
             }
             idx += arg.category() as u16;
         }
@@ -350,7 +351,7 @@ pub struct Frame {
     /// For native methods only.
     pub native: Option<Arc<dyn Plugin>>,
     pub native_args: Vec<Value>,
-    pub native_roots: HashSet<Reference>,
+    pub native_roots: HashSet<u32, BuildNoHashHasher<u32>>,
     pub native_ex: Option<Reference>,
 }
 
@@ -420,11 +421,11 @@ impl OperandStack {
     }
 
     /// Get the roots out of the operand stack.
-    pub fn roots(&self) -> HashSet<Reference> {
+    pub fn roots(&self) -> HashSet<u32, BuildNoHashHasher<u32>> {
         self.stack.iter()
             .filter_map(|v| {
                 match v {
-                    Value::Reference(reference) => Some(*reference),
+                    Value::Reference(reference) => Some(reference.0),
                     _ => None
                 }
             })
@@ -445,20 +446,20 @@ impl OperandStack {
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.1).
 pub struct LocalVars {
     // Very important we track which of these are references!
-    map: HashMap<u16, Value>,
+    map: HashMap<u16, Value, BuildNoHashHasher<u16>>,
 }
 
 impl LocalVars {
     pub fn new() -> Self {
-        LocalVars { map: HashMap::new() }
+        LocalVars { map: HashMap::with_hasher(BuildNoHashHasher::default()) }
     }
 
     /// Get the roots from this local vars for GC.
-    pub fn roots(&self) -> HashSet<Reference> {
+    pub fn roots(&self) -> HashSet<u32, BuildNoHashHasher<u32>> {
         self.map.values()
             .filter_map(|v| {
                 match v {
-                    Value::Reference(reference) => Some(*reference),
+                    Value::Reference(reference) => Some(reference.0),
                     _ => None
                 }
             }).collect()

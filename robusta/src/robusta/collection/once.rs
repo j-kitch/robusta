@@ -3,6 +3,7 @@ use std::hash::Hash;
 use std::sync::{RwLock, RwLockReadGuard};
 
 use chashmap::CHashMap;
+use nohash_hasher::BuildNoHashHasher;
 
 use crate::java::Reference;
 
@@ -73,7 +74,7 @@ impl<K: Eq + Hash + Clone, V> OnceMap<K, V> {
 }
 
 impl OnceMap<String, Reference> {
-    pub fn current_values(&self) -> HashSet<Reference> {
+    pub fn current_values(&self) -> HashSet<u32, BuildNoHashHasher<u32>> {
         // TODO: Only way I can see of getting all the entries?
         let references: Vec<u32> = vec![0; self.map.len()];
         let idx: usize = 0;
@@ -96,7 +97,7 @@ impl OnceMap<String, Reference> {
         });
 
         references.iter()
-            .map(|r| Reference(*r))
+            .map(|r| *r)
             .collect()
     }
 }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
+use nohash_hasher::BuildNoHashHasher;
 
 use crate::class_file::{ClassAttribute, ClassFile, Code, CodeAttribute, const_pool, ExHandler, Field, LineNumber, LineNumberTable, MAGIC, Method, MethodAttribute, SourceFile, UnknownAttribute};
 use crate::class_file::const_pool::{Class, Const, Double, FieldRef, Float, Integer, InterfaceMethodRef, InvokeDynamic, Long, MethodHandle, MethodRef, MethodType, NameAndType, Utf8};
@@ -32,7 +33,7 @@ impl<'a> Parser<'a> {
             magic,
             minor_version: 0,
             major_version: 0,
-            const_pool: HashMap::new(),
+            const_pool: HashMap::with_hasher(BuildNoHashHasher::default()),
             access_flags: 0,
             this_class: 0,
             super_class: 0,

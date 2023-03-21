@@ -6,6 +6,7 @@ use std::ptr;
 use std::sync::Arc;
 use std::thread::{available_parallelism, Builder, current, sleep};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use nohash_hasher::BuildNoHashHasher;
 
 use rand::{RngCore, thread_rng};
 
@@ -874,7 +875,7 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
         name: format!("<fill-in-stack-trace-{:?}-{}>", current().id(), thread_rng().next_u64()),
         flags: ClassFlags { bits: 0 },
         const_pool: ConstPool {
-            pool: HashMap::new(),
+            pool: HashMap::with_hasher(BuildNoHashHasher::default()),
         },
         super_class: None,
         interfaces: vec![],

@@ -7,6 +7,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::thread::{Builder, current, scope};
 use std::time::Duration;
+use nohash_hasher::BuildNoHashHasher;
 
 use tracing::{debug, trace};
 
@@ -181,7 +182,7 @@ impl CopyCollector {
         debug!(target: log::GC, "All threads stopped");
 
 
-        let mut roots: HashSet<Reference> = HashSet::new();
+        let mut roots: HashSet<u32, BuildNoHashHasher<u32>> = HashSet::with_hasher(BuildNoHashHasher::default());
         for thread in threads.iter() {
             let thread_roots = thread_roots(thread.as_ref());
             roots.extend(thread_roots.iter());
@@ -193,7 +194,7 @@ impl CopyCollector {
         debug!(target: log::GC, gen="gen-1", used=format!("{}mb", used / 1024 / 1024), percentage=format!("{:.2}%", percentage), "Starting Mark&Copy garbage collection");
 
 
-        let mut visited = HashSet::new();
+        let mut visited = HashSet::with_hasher(BuildNoHashHasher::default());
         let mut remaining_to_visit = roots;
 
         while remaining_to_visit.len() > 0 {
@@ -201,7 +202,7 @@ impl CopyCollector {
             remaining_to_visit.remove(&next_object);
 
             // Copy object over to new set.
-            let value = heap.get(next_object);
+            let value = heap.get(Reference(next_object));
             match value {
                 Heaped::Array(mut array) => {
                     let header = unsafe { array.header.as_ref().unwrap() };
@@ -221,11 +222,11 @@ impl CopyCollector {
                     // Need to update pointers in heap.
                     array.header = new_start as *mut ArrayHeader;
                     array.data = unsafe { new_start.add(size_of::<ArrayHeader>()) };
-                    heap.set(next_object, Heaped::Array(array));
+                    heap.set(Reference(next_object), Heaped::Array(array));
 
                     // If its an array of references, we want to add all of those to the set.
                     if header.component.is_reference() {
-                        remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| Reference(*u32)));
+                        remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| *u32));
                     }
                 }
                 Heaped::Object(mut object) => {
@@ -246,14 +247,14 @@ impl CopyCollector {
                     // Need to update pointers in heap.
                     object.header = new_start as *mut ObjectHeader;
                     object.data = unsafe { new_start.add(size_of::<ObjectHeader>()) };
-                    heap.set(next_object, Heaped::Object(object));
+                    heap.set(Reference(next_object), Heaped::Object(object));
 
                     // For every reference in the objects fields, add to set.
                     for parent in class.parents() {
                         for field in &parent.instance_fields {
                             if field.descriptor.is_reference() {
                                 let reference = object.field_from(field);
-                                remaining_to_visit.insert(reference.reference());
+                                remaining_to_visit.insert(reference.reference().0);
                             }
                         }
                     }
@@ -285,11 +286,11 @@ impl CopyCollector {
 }
 
 /// Get all the root objects that a thread has access to.
-pub fn thread_roots(thread: &Thread) -> HashSet<Reference> {
-    let mut refs = HashSet::new();
+pub fn thread_roots(thread: &Thread) -> HashSet<u32, BuildNoHashHasher<u32>> {
+    let mut refs = HashSet::with_hasher(BuildNoHashHasher::default());
 
     // The thread instance for this thread itself.
-    thread.reference.map(|r| refs.insert(r));
+    thread.reference.map(|r| refs.insert(r.0));
 
     // Get all the local vars and operand stack references.
     for frame in &thread.stack {
@@ -301,8 +302,8 @@ pub fn thread_roots(thread: &Thread) -> HashSet<Reference> {
     refs
 }
 
-pub fn heap_roots(heap: &Heap) -> HashSet<Reference> {
-    let mut refs = HashSet::new();
+pub fn heap_roots(heap: &Heap) -> HashSet<u32, BuildNoHashHasher<u32>> {
+    let mut refs = HashSet::with_hasher(BuildNoHashHasher::default());
     // class objects are roots
     refs.extend(heap.class_objects.current_values().iter());
 

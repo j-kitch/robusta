@@ -64,7 +64,7 @@ impl Args {
     pub fn add_local(&self, reference: Reference) {
         let thread = unsafe { self.thread.cast_mut().as_mut().unwrap() };
         let frame = thread.stack.last_mut().unwrap();
-        frame.native_roots.insert(reference);
+        frame.native_roots.insert(reference.0);
     }
 
     pub fn enter_safe(&self) {

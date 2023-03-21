@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use nohash_hasher::BuildNoHashHasher;
 
 use crate::class_file::const_pool::Const;
 
@@ -30,7 +31,7 @@ pub struct ClassFile {
     ///
     /// Each entry is indexed by a `u16` position, that might not be continuous based on the size
     /// of various constants, so we use a `HashMap` to represent the pool.
-    pub const_pool: HashMap<u16, Const>,
+    pub const_pool: HashMap<u16, Const, BuildNoHashHasher<u16>>,
     /// A mask of flags to denote access permissions to properties of this class or interface.
     pub access_flags: u16,
     /// The value of `this_class` must be a valid index into `const_pool`, that entry must be
