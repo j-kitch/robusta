@@ -22,11 +22,12 @@ pub fn load_benchmark(c: &mut Criterion) {
 
 pub fn load_class(c: &mut Criterion) {
     let mut group = c.benchmark_group("Load class object");
+    let mut runtime = Runtime::new();
 
     for name in ["java.lang.String", "java.lang.Object", "java.util.concurrent.atomic.AtomicLong"] {
         group.bench_with_input(BenchmarkId::from_parameter(name), name, |b, name| {
-            let runtime = Runtime::new();
             b.iter(|| {
+                runtime.clear();
                 runtime.method_area.load_outer_class(name)
             });
         });

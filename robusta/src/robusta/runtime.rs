@@ -31,4 +31,8 @@ impl Runtime {
         rt.heap.allocator.set_rt(rt.clone());
         rt
     }
+
+    pub fn clear(&self) {
+        self.method_area.clear();
+    }
 }
