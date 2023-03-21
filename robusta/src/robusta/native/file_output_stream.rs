@@ -1,4 +1,4 @@
-use std::io::{stdout, Write};
+use std::io::{stderr, stdout, Write};
 use std::slice::from_raw_parts;
 use std::sync::Arc;
 use crate::java::{FieldType, MethodType, Value};
@@ -52,6 +52,8 @@ fn write_bytes(args: &Args) -> (Option<Value>, Option<Value>) {
 
     if fd == 1 {
         stdout().write_all(&unsigned_bytes[off..(off+len)]).unwrap();
+    } else if fd == 2 {
+        stderr().write_all(&unsigned_bytes[off..(off+len)]).unwrap();
     } else {
         panic!("Not implemented generic FileOutputStream yet!")
     }

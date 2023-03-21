@@ -1,3 +1,4 @@
+use std::io::{stderr, Write};
 use tracing::debug;
 use crate::{log, method_area};
 use crate::java::{MethodType, Value};
@@ -123,6 +124,8 @@ pub fn a_throw(thread: &mut Thread) {
         thread.stack.pop();
         frame = thread.stack.last_mut();
     }
+
+    stderr().write_fmt(format_args!("Exception in thread \"{}\" ", &thread.name)).unwrap();
 
     // Invoke throwable printStackTrace
     let throwable_method = throw_class.find_method(&MethodKey {
