@@ -1,4 +1,3 @@
-use std::ops::Div;
 use std::u64;
 use crate::java::{Double, Float, Int, Long, Value};
 use crate::thread::Thread;

@@ -4,12 +4,9 @@ use crate::thread::Thread;
 pub fn int_to_byte(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let int = frame.operand_stack.pop().int();
-    let byte = unsafe {
-        let ptr = &int.0 as *const i32;
-        let ptr: *const i8 = ptr.cast();
-        ptr.add(3);
-        ptr.read()
-    };
+    let int_bytes = int.0.to_be_bytes();
+    let byte_bytes = &int_bytes[3..4];
+    let byte = i8::from_be_bytes(byte_bytes.try_into().unwrap());
     frame.operand_stack.push(Value::Int(Int(byte as i32)));
 }
 
@@ -46,12 +43,9 @@ pub fn long_to_int(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
     let long = frame.operand_stack.pop().long().0;
-    let int = unsafe {
-        let ptr = &long as *const i64;
-        let ptr: *const i32 = ptr.cast();
-        let ptr = ptr.add(1);
-        ptr.read()
-    };
+    let long_bytes = long.to_be_bytes();
+    let int_bytes = &long_bytes[4..8];
+    let int = i32::from_be_bytes(int_bytes.try_into().unwrap());
 
     frame.operand_stack.push(Value::Int(Int(int)));
 }
