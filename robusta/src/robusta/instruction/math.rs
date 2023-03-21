@@ -1,3 +1,4 @@
+use std::ops::Div;
 use crate::java::{Float, Int, Long, Value};
 use crate::thread::Thread;
 
@@ -7,6 +8,17 @@ pub fn i_neg(thread: &mut Thread) {
     let value = frame.operand_stack.pop().int();
 
     let result = -value.0;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn i_div(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
+
+    let result = value1.0 / value2.0;
 
     frame.operand_stack.push(Value::Int(Int(result)));
 }

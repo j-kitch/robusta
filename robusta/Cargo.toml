@@ -15,6 +15,7 @@ harness = false
 criterion = "0.4.0"
 
 [dependencies]
+assert_cmd = "2.0.10"
 chashmap = "2.2.2"
 crossbeam = "0.8.2"
 maplit = "1.0.2"

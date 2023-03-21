@@ -3,12 +3,12 @@ pub use new::new;
 use crate::instruction::array::{a_array_load, a_array_store, a_new_array, array_length, byte_array_load, byte_array_store, char_array_load, char_array_store, int_array_load, int_array_store};
 use crate::instruction::branch::{fcmp, goto, if_eq, if_ge, if_gt, if_int_cmp_eq, if_int_cmp_ge, if_int_cmp_gt, if_int_cmp_le, if_int_cmp_lt, if_int_cmp_ne, if_le, if_lt, if_ne, if_non_null, if_null, if_ref_cmp_eq, if_ref_cmp_ne, lcmp, lookup_switch};
 use crate::instruction::class::{check_cast, instance_of};
-use crate::instruction::conv::{float_to_int, int_to_byte, int_to_char, int_to_float, int_to_long};
+use crate::instruction::conv::{float_to_int, int_to_byte, int_to_char, int_to_float, int_to_long, int_to_short};
 use crate::instruction::dup::{dup, dup2, dup_x1};
 use crate::instruction::field::{get_field, get_static, put_field, put_static};
 use crate::instruction::invoke::{invoke_interface, invoke_special, invoke_static, invoke_virtual};
 use crate::instruction::locals::{aload, aload_n, astore, astore_n, fload_n, iload, iload_n, istore, istore_n, lload, lload_n, lstore, lstore_n};
-use crate::instruction::math::{f_mul, i_add, i_inc, i_mul, i_neg, i_sub, iand, ior, irem, ishl, ishr, iushr, ixor, l_add, l_sub, land, lshl};
+use crate::instruction::math::{f_mul, i_add, i_div, i_inc, i_mul, i_neg, i_sub, iand, ior, irem, ishl, ishr, iushr, ixor, l_add, l_sub, land, lshl};
 use crate::instruction::new::new_array;
 use crate::instruction::r#const::{aconst_null, fconst_n, iconst_n, lconst_n, load_constant, load_constant_cat_2_wide, load_constant_wide};
 use crate::instruction::r#return::{a_return, a_throw, d_return, f_return, i_return, l_return, r#return};
@@ -120,6 +120,7 @@ pub fn instruction(thread: &mut Thread) {
         0x65 => l_sub(thread),
         0x68 => i_mul(thread),
         0x6A => f_mul(thread),
+        0x6C => i_div(thread),
         0x70 => irem(thread),
         0x74 => i_neg(thread),
         0x78 => ishl(thread),
@@ -136,6 +137,7 @@ pub fn instruction(thread: &mut Thread) {
         0x8B => float_to_int(thread),
         0x91 => int_to_byte(thread),
         0x92 => int_to_char(thread),
+        0x93 => int_to_short(thread),
         0x94 => lcmp(thread),
         0x95 => fcmp(thread, -1),
         0x96 => fcmp(thread, 1),
@@ -256,6 +258,7 @@ fn op_name(code: u8) -> &'static str {
         0x65 => "lsub",
         0x68 => "imul",
         0x6A => "fmul",
+        0x6C => "idiv",
         0x70 => "irem",
         0x74 => "ineg",
         0x78 => "ishl",
@@ -272,6 +275,7 @@ fn op_name(code: u8) -> &'static str {
         0x8B => "f2i",
         0x91 => "i2b",
         0x92 => "i2c",
+        0x93 => "i2s",
         0x94 => "lcmp",
         0x95 => "fcmpl",
         0x96 => "fcmpg",

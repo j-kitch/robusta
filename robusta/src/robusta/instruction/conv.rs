@@ -19,6 +19,15 @@ pub fn int_to_char(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(char as i32)));
 }
 
+pub fn int_to_short(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let int = frame.operand_stack.pop().int().0;
+    let short = int as i16;
+
+    frame.operand_stack.push(Value::Int(Int(short as i32)));
+}
+
 pub fn int_to_float(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let int = frame.operand_stack.pop().int();
