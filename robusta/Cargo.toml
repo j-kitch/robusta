@@ -7,6 +7,13 @@ edition = "2021"
 name = "robusta"
 path = "src/robusta/lib.rs"
 
+[[bench]]
+name = "bench_main"
+harness = false
+
+[dev-dependencies]
+criterion = "0.4.0"
+
 [dependencies]
 chashmap = "2.2.2"
 crossbeam = "0.8.2"
