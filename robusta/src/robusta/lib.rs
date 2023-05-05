@@ -89,12 +89,11 @@ impl VirtualMachine {
             while jvm_init_t.stack.len() > 0 {
                 jvm_init_t.next();
             }
-
-            // Always safe.
-            jvm_init_t.safe.enter();
-
-            // jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
         };
+
+        // Let's remove the JVM init thread.
+        runtime.threads.clear();
+        runtime.threads2.write().unwrap().clear();
 
         let string_args: Vec<Reference> = args()
             .skip(1)

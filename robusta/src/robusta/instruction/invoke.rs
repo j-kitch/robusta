@@ -103,7 +103,10 @@ fn invoke(thread: &mut Thread, _: &str, is_static: bool, is_virtual: bool) {
 
     if method.is_native {
         debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking native method");
-        let native_method = thread.find_native(method).unwrap();
+        let native_method = thread.find_native(method).expect(format!(
+            "Could not find native method {}.{}{}",
+            class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()
+        ).as_str());
         thread.push_native(class.name.clone(), &class.const_pool as *const ConstPool, method as *const Method, args, native_method);
     } else {
         debug!(target: log::INSTR, method=format!("{}.{}{}", class.name.as_str(), method.name.as_str(), method.descriptor.descriptor()), "Invoking method");

@@ -242,6 +242,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.reflect.Array".to_string(),
+                name: "newArray".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;I)Ljava/lang/Object;").unwrap(),
+            },
+            Arc::new(array_new_array),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Object".to_string(),
                 name: "clone".to_string(),
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Object;").unwrap(),
@@ -805,6 +813,25 @@ fn object_get_class(args: &Args) -> (Option<Value>, Option<Value>) {
     ));
 
     (Some(Value::Reference(class_ref)), None)
+}
+
+fn array_new_array(args: &Args) -> (Option<Value>, Option<Value>) {
+    let component_ref = args.params[0].reference();
+    let component_obj = args.runtime.heap.get_object(component_ref);
+
+    let name_ref = component_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+    let class = args.runtime.method_area.load_outer_class(&name);
+
+    let length = args.params[1].int();
+
+    let array = args.runtime.heap.new_array(class, length);
+
+    (Some(Value::Reference(array)), None)
 }
 
 fn object_clone(args: &Args) -> (Option<Value>, Option<Value>) {
