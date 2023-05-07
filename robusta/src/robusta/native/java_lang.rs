@@ -259,6 +259,14 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Object".to_string(),
+                name: "wait".to_string(),
+                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
+            },
+            Arc::new(object_wait),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
                 name: "hashCode".to_string(),
                 descriptor: MethodType::from_descriptor("()I").unwrap(),
             },
@@ -841,6 +849,30 @@ fn object_clone(args: &Args) -> (Option<Value>, Option<Value>) {
     let copied = args.runtime.heap.copy(object_obj);
 
     (Some(Value::Reference(copied)), None)
+}
+
+fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let object_ref = args.params[0].reference();
+    let millis = args.params[1].long();
+
+    let mut sync = thread.locks.remove(&object_ref.0).expect("Do not hold the lock on this object");
+    let reentry = sync.reentry;
+    drop(sync);
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+
+    let lock = &object_obj.header().lock;
+
+    lock.wait(Some(Duration::from_millis(millis.0 as u64)));
+
+    let mut sync = lock.lock();
+    sync.reentry = reentry;
+    thread.locks.insert(object_ref.0, sync);
+
+    (None, None)
 }
 
 fn object_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
