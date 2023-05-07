@@ -866,11 +866,18 @@ fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
 
     let lock = &object_obj.header().lock;
 
-    lock.wait(Some(Duration::from_millis(millis.0 as u64)));
+    // Entering safe region!
+    thread.safe.enter();
+
+    let timeout = if millis.0 == 0 { None } else { Some(Duration::from_millis(millis.0 as u64)) };
+
+    lock.wait(timeout);
 
     let mut sync = lock.lock();
     sync.reentry = reentry;
     thread.locks.insert(object_ref.0, sync);
+
+    thread.safe.exit();
 
     (None, None)
 }

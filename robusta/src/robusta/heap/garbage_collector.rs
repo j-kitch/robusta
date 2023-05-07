@@ -7,8 +7,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::thread::{Builder, current, scope};
 use std::time::Duration;
-use nohash_hasher::BuildNoHashHasher;
 
+use nohash_hasher::BuildNoHashHasher;
 use tracing::{debug, trace};
 
 use crate::heap::{Heap, Heaped};
@@ -201,60 +201,63 @@ impl CopyCollector {
             let next_object = remaining_to_visit.iter().next().unwrap().clone();
             remaining_to_visit.remove(&next_object);
 
-            // Copy object over to new set.
-            let value = heap.get(Reference(next_object));
-            match value {
-                Heaped::Array(mut array) => {
-                    let header = unsafe { array.header.as_ref().unwrap() };
-                    let start = array.header as usize;
-                    let size = size_of::<ArrayHeader>() + header.length;
+            if next_object != 0 {
 
-                    trace!(target: log::GC, gen="gen-1", obj="array", start, size, "mark & copy");
+                // Copy object over to new set.
+                let value = heap.get(Reference(next_object));
+                match value {
+                    Heaped::Array(mut array) => {
+                        let header = unsafe { array.header.as_ref().unwrap() };
+                        let start = array.header as usize;
+                        let size = size_of::<ArrayHeader>() + header.length;
 
-                    let new_start = heap.allocator.gen.copy(start, size);
+                        trace!(target: log::GC, gen="gen-1", obj="array", start, size, "mark & copy");
+
+                        let new_start = heap.allocator.gen.copy(start, size);
 
 
-                    let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
-                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
+                        let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
+                        let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
 
-                    dest.copy_from_slice(source);
+                        dest.copy_from_slice(source);
 
-                    // Need to update pointers in heap.
-                    array.header = new_start as *mut ArrayHeader;
-                    array.data = unsafe { new_start.add(size_of::<ArrayHeader>()) };
-                    heap.set(Reference(next_object), Heaped::Array(array));
+                        // Need to update pointers in heap.
+                        array.header = new_start as *mut ArrayHeader;
+                        array.data = unsafe { new_start.add(size_of::<ArrayHeader>()) };
+                        heap.set(Reference(next_object), Heaped::Array(array));
 
-                    // If its an array of references, we want to add all of those to the set.
-                    if header.component.is_reference() {
-                        remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| *u32));
+                        // If its an array of references, we want to add all of those to the set.
+                        if header.component.is_reference() {
+                            remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| *u32));
+                        }
                     }
-                }
-                Heaped::Object(mut object) => {
-                    let header = unsafe { object.header.as_ref().unwrap() };
-                    let class = unsafe { header.class.as_ref().unwrap() };
-                    let start = object.header as usize;
-                    let size = size_of::<ObjectHeader>() + class.instance_width;
+                    Heaped::Object(mut object) => {
+                        let header = unsafe { object.header.as_ref().unwrap() };
+                        let class = unsafe { header.class.as_ref().unwrap() };
+                        let start = object.header as usize;
+                        let size = size_of::<ObjectHeader>() + class.instance_width;
 
-                    trace!(target: log::GC, gen="gen-1", obj="object", start, size, "mark & copy");
+                        trace!(target: log::GC, gen="gen-1", obj="object", start, size, "mark & copy");
 
-                    let new_start = heap.allocator.gen.copy(start, size);
+                        let new_start = heap.allocator.gen.copy(start, size);
 
-                    let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
-                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
+                        let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
+                        let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
 
-                    dest.copy_from_slice(source);
+                        dest.copy_from_slice(source);
 
-                    // Need to update pointers in heap.
-                    object.header = new_start as *mut ObjectHeader;
-                    object.data = unsafe { new_start.add(size_of::<ObjectHeader>()) };
-                    heap.set(Reference(next_object), Heaped::Object(object));
+                        // Need to update pointers in heap.
+                        object.header = new_start as *mut ObjectHeader;
+                        object.data = unsafe { new_start.add(size_of::<ObjectHeader>()) };
+                        heap.set(Reference(next_object), Heaped::Object(object));
 
-                    // For every reference in the objects fields, add to set.
-                    for parent in class.parents() {
-                        for field in &parent.instance_fields {
-                            if field.descriptor.is_reference() {
-                                let reference = object.field_from(field);
-                                remaining_to_visit.insert(reference.reference().0);
+                        // For every reference in the objects fields, add to set.
+                        for parent in class.parents() {
+                            for field in &parent.instance_fields {
+                                if field.descriptor.is_reference() {
+                                    let reference = object.field_from(field);
+                                    remaining_to_visit.insert(reference.reference().0);
+                                }
                             }
                         }
                     }

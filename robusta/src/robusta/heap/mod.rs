@@ -76,7 +76,7 @@ impl Heap {
     pub fn get(&self, reference: Reference) -> Heaped {
         let mut references = self.references.write().unwrap();
         let heaped = references.get_mut(&reference.0);
-        heaped.unwrap().clone()
+        heaped.expect(format!("Failed to find reference {}", reference.0).as_str()).clone()
     }
 
     pub fn set(&self, reference: Reference, heaped: Heaped) {
