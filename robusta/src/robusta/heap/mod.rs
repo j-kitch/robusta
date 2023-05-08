@@ -28,6 +28,11 @@ pub struct Heap {
 unsafe impl Send for Heap {}
 
 impl Heap {
+    pub fn num_objects(&self) -> usize {
+        let refs = self.references.read().unwrap();
+        refs.len()
+    }
+
     pub fn retain(&self, retain: &HashSet<u32, BuildNoHashHasher<u32>>) {
         let mut references = self.references.write().unwrap();
 

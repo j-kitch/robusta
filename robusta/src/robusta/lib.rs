@@ -29,7 +29,7 @@ pub mod thread;
 mod instruction;
 pub mod loader;
 pub mod method_area;
-mod heap;
+pub mod heap;
 pub mod runtime;
 mod log;
 mod shim;

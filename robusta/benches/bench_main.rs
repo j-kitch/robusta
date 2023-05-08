@@ -1,9 +1,15 @@
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::process::id;
+use std::sync::mpsc::channel;
 
-use criterion::{BenchmarkId, black_box, Criterion, criterion_group, criterion_main};
+use criterion::{BatchSize, BenchmarkId, black_box, Criterion, criterion_group, criterion_main};
+use nohash_hasher::BuildNoHashHasher;
+use rand::{random, Rng, thread_rng};
+use robusta::heap::garbage_collector::CopyCollector;
 
-use robusta::java::{Int, MethodType};
+use robusta::java::{Int, MethodType, Reference, Value};
 use robusta::loader::{ClassFileLoader, Loader};
 use robusta::method_area::{Class, Method};
 use robusta::method_area::const_pool::MethodKey;
@@ -106,8 +112,44 @@ fn allocation(c: &mut Criterion) {
     }
 }
 
+fn copy_collection(c: &mut Criterion) {
+    let runtime = Runtime::new();
+    let object_class = runtime.method_area.load_class("java.lang.Object");
+
+    c.bench_function("Copy Collection", |b| {
+        b.iter_batched(
+            || {
+                let mut refs: HashSet<u32, BuildNoHashHasher<u32>> = HashSet::with_hasher(BuildNoHashHasher::default());
+                runtime.heap.clear();
+                runtime.heap.allocator.gen.swap();
+                for _ in 0..2000 {
+                    refs.insert(runtime.heap.new_object(object_class.deref()).0);
+                }
+                for _ in 0..2000 {
+                    let arr_ref = runtime.heap.new_array(Class::Object(object_class), Int(500));
+                    let mut obj_arr = runtime.heap.get_array(arr_ref);
+                    for (idx, value) in refs.iter().take(500).enumerate() {
+                        obj_arr.set_element(Int(idx as i32), Value::Reference(Reference(*value)));
+                    }
+                    refs.insert(arr_ref.0);
+                }
+
+                let (_, receiver) = channel();
+                let collector = CopyCollector::new(receiver);
+
+                (refs, collector)
+            },
+            |(references, mut collector)| {
+                collector.visiting(&runtime, references);
+            },
+            BatchSize::SmallInput
+        );
+    });
+}
+
 criterion_group!(benches, load_benchmark);
 criterion_group!(load_classes, load_class);
 criterion_group!(natives, native_methods);
 criterion_group!(allocate, allocation);
-criterion_main!(benches, load_classes, natives, allocate);
+criterion_group!(gc, copy_collection);
+criterion_main!(benches, load_classes, natives, allocate, gc);
