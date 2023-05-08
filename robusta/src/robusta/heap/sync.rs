@@ -33,8 +33,10 @@ impl ObjectLock {
     /// - We don't seem to need to pass re-entry all the way through here?
     /// Only the thread handle actually seems to need to exist here.
     pub fn wait(&self, duration: Option<Duration>) {
-        let mut waiting = self.waiting.write().unwrap();
-        waiting.push(current());
+        {
+            let mut waiting = self.waiting.write().unwrap();
+            waiting.push(current());
+        }
 
         // Blocking wait here.
         if let Some(duration) = duration {

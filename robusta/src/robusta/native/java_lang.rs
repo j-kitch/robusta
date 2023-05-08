@@ -70,7 +70,7 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 name: "notifyAll".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
-            Arc::new(no_op),
+            Arc::new(object_notify_all),
         ),
         stateless(
             Method {
@@ -882,6 +882,23 @@ fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
     (None, None)
 }
 
+fn object_notify_all(args: &Args) -> (Option<Value>, Option<Value>) {
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let object_ref = args.params[0].reference();
+
+    if !thread.locks.contains_key(&object_ref.0) {
+        panic!("Should have ownership of the sync!");
+    }
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+    let lock = &object_obj.header().lock;
+    lock.notify_all();
+
+    (None, None)
+}
+
 fn object_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get_object(object_ref);
@@ -1455,7 +1472,7 @@ fn thread_is_alive(args: &Args) -> (Option<Value>, Option<Value>) {
         descriptor: FieldType::Int,
     }).int();
 
-    let is_alive = if thread_status.0 != 0 { 1 } else { 0 };
+    let is_alive = if thread_status.0 == 1 { 1 } else { 0 };
 
     (Some(Value::Int(Int(is_alive))), None)
 }

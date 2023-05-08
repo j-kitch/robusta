@@ -9,10 +9,10 @@ use tracing::{debug, trace};
 use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
 use crate::instruction::instruction;
-use crate::java::{CategoryOne, MethodType, Reference, Value};
+use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference, Value};
 use crate::log;
 use crate::method_area::{ObjectClass, Method};
-use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::method_area::const_pool::{ConstPool, FieldKey, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 
@@ -234,6 +234,18 @@ impl Thread {
             self.next();
         }
         debug!(target: log::THREAD, method=method_name, "Ended thread");
+
+        // Notify all waiting listeners
+        if let Some(thread_ref) = self.reference {
+            let thread_obj = self.runtime.heap.get_object(thread_ref);
+            thread_obj.set_field(&FieldKey {
+                class: "java.lang.Thread".to_string(),
+                name: "threadStatus".to_string(),
+                descriptor: FieldType::Int,
+            }, Value::Int(Int(2)));
+            thread_obj.header().lock.notify_all();
+        }
+
         // Forever safe!
         self.safe.enter();
 
