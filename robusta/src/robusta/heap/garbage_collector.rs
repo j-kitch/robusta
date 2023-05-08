@@ -162,12 +162,13 @@ impl CopyCollector {
         let heap = &runtime.heap;
 
         let mut visited = HashSet::with_capacity_and_hasher(runtime.heap.num_objects(), BuildNoHashHasher::default());
+        visited.insert(0);
         let mut remaining_to_visit = roots;
-        remaining_to_visit.remove(&0);
 
         while remaining_to_visit.len() > 0 {
             let next_object = remaining_to_visit.iter().next().unwrap().clone();
             remaining_to_visit.remove(&next_object);
+            visited.insert(next_object);
 
             // Copy object over to new set.
             let value = heap.get(Reference(next_object));
@@ -181,10 +182,8 @@ impl CopyCollector {
 
                     let new_start = heap.allocator.gen.copy(start, size);
 
-
                     let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
                     let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
-
                     dest.copy_from_slice(source);
 
                     // Need to update pointers in heap.
@@ -194,11 +193,8 @@ impl CopyCollector {
 
                     // If its an array of references, we want to add all of those to the set.
                     if header.component.is_reference() {
-                        for reference in array.as_ref_slice() {
-                            if *reference != 0 {
-                                remaining_to_visit.insert(*reference);
-                            }
-                        }
+                        remaining_to_visit.extend(array.as_ref_slice().iter()
+                            .filter(|reference| !visited.contains(*reference)));
                     }
                 }
                 Heaped::Object(mut object) => {
@@ -213,7 +209,6 @@ impl CopyCollector {
 
                     let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
                     let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
-
                     dest.copy_from_slice(source);
 
                     // Need to update pointers in heap.
@@ -225,18 +220,15 @@ impl CopyCollector {
                     for parent in class.parents() {
                         for field in &parent.instance_fields {
                             if field.descriptor.is_reference() {
-                                let reference = object.field_from(field);
-                                if reference.reference().0 != 0 {
-                                    remaining_to_visit.insert(reference.reference().0);
+                                let reference = object.field_from(field).reference().0;
+                                if !visited.contains(&reference) {
+                                    remaining_to_visit.insert(reference);
                                 }
                             }
                         }
                     }
                 }
             }
-
-            visited.insert(next_object);
-            remaining_to_visit = remaining_to_visit.difference(&visited).map(|r| *r).collect();
         }
 
         visited
@@ -267,7 +259,7 @@ impl CopyCollector {
         debug!(target: log::GC, "All threads stopped");
 
 
-        let mut roots: HashSet<u32, BuildNoHashHasher<u32>> = HashSet::with_hasher(BuildNoHashHasher::default());
+        let mut roots: HashSet<u32, BuildNoHashHasher<u32>> = HashSet::with_capacity_and_hasher(runtime.heap.num_objects(), BuildNoHashHasher::default());
         for thread in threads.iter() {
             let thread_roots = thread_roots(thread.as_ref());
             roots.extend(thread_roots.iter());
