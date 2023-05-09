@@ -1,4 +1,5 @@
-use crate::java::{Float, Int, Long, Value};
+use std::u64;
+use crate::java::{Double, Float, Int, Long, Value};
 use crate::thread::Thread;
 
 pub fn i_neg(thread: &mut Thread) {
@@ -9,6 +10,28 @@ pub fn i_neg(thread: &mut Thread) {
     let result = -value.0;
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn i_div(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int();
+    let value1 = frame.operand_stack.pop().int();
+
+    let result = value1.0 / value2.0;
+
+    frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn l_div(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long();
+    let value1 = frame.operand_stack.pop().long();
+
+    let result = value1.0 / value2.0;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
 }
 
 pub fn i_add(thread: &mut Thread) {
@@ -44,6 +67,39 @@ pub fn i_sub(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn d_sub(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().double();
+    let value1 = frame.operand_stack.pop().double();
+
+    let result = value1.0 - value2.0;
+
+    frame.operand_stack.push(Value::Double(Double(result)));
+}
+
+pub fn d_add(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().double();
+    let value1 = frame.operand_stack.pop().double();
+
+    let result = value1.0 + value2.0;
+
+    frame.operand_stack.push(Value::Double(Double(result)));
+}
+
+pub fn d_mul(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().double();
+    let value1 = frame.operand_stack.pop().double();
+
+    let result = value1.0 * value2.0;
+
+    frame.operand_stack.push(Value::Double(Double(result)));
+}
+
 pub fn l_sub(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -64,6 +120,17 @@ pub fn i_mul(thread: &mut Thread) {
     let result = value1.0.overflowing_mul(value2.0).0;
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn l_mul(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long();
+    let value1 = frame.operand_stack.pop().long();
+
+    let result = value1.0.overflowing_mul(value2.0).0;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
 }
 
 pub fn f_mul(thread: &mut Thread) {
@@ -110,6 +177,17 @@ pub fn ior(thread: &mut Thread) {
     frame.operand_stack.push(Value::Int(Int(result)));
 }
 
+pub fn lor(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let result = value1 | value2;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
+}
+
 pub fn iushr(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
 
@@ -123,6 +201,21 @@ pub fn iushr(thread: &mut Thread) {
     let result = i32::from_be_bytes(unsigned_result.to_be_bytes());
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn lushr(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let s = value2 & 0b111111;
+
+    let unsigned_value_1 = u64::from_be_bytes(value1.to_be_bytes());
+    let unsigned_result = unsigned_value_1 >> s;
+    let result = i64::from_be_bytes(unsigned_result.to_be_bytes());
+
+    frame.operand_stack.push(Value::Long(Long(result)));
 }
 
 pub fn ishl(thread: &mut Thread) {
@@ -149,6 +242,19 @@ pub fn ishr(thread: &mut Thread) {
     let result = value1 >> s;
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn lshr(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().int().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let s = value2 & 0b111111;
+
+    let result = value1 >> s;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
 }
 
 pub fn lshl(thread: &mut Thread) {
@@ -194,4 +300,15 @@ pub fn irem(thread: &mut Thread) {
     let result = value1 % value2;
 
     frame.operand_stack.push(Value::Int(Int(result)));
+}
+
+pub fn lrem(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+
+    let value2 = frame.operand_stack.pop().long().0;
+    let value1 = frame.operand_stack.pop().long().0;
+
+    let result = value1 % value2;
+
+    frame.operand_stack.push(Value::Long(Long(result)));
 }

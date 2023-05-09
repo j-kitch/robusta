@@ -6,12 +6,12 @@ use std::ptr;
 use std::sync::Arc;
 use std::thread::{available_parallelism, Builder, current, sleep};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use nohash_hasher::BuildNoHashHasher;
 
 use rand::{RngCore, thread_rng};
 
 use crate::class_file::Code;
 use crate::collection::once::Once;
-use crate::collection::wait::ThreadWait;
 use crate::heap::allocator::ArrayHeader;
 use crate::java::{Double, FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
@@ -69,7 +69,7 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 name: "notifyAll".to_string(),
                 descriptor: MethodType::from_descriptor("()V").unwrap(),
             },
-            Arc::new(no_op),
+            Arc::new(object_notify_all),
         ),
         stateless(
             Method {
@@ -241,11 +241,27 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         ),
         stateless(
             Method {
+                class: "java.lang.reflect.Array".to_string(),
+                name: "newArray".to_string(),
+                descriptor: MethodType::from_descriptor("(Ljava/lang/Class;I)Ljava/lang/Object;").unwrap(),
+            },
+            Arc::new(array_new_array),
+        ),
+        stateless(
+            Method {
                 class: "java.lang.Object".to_string(),
                 name: "clone".to_string(),
                 descriptor: MethodType::from_descriptor("()Ljava/lang/Object;").unwrap(),
             },
             Arc::new(object_clone),
+        ),
+        stateless(
+            Method {
+                class: "java.lang.Object".to_string(),
+                name: "wait".to_string(),
+                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
+            },
+            Arc::new(object_wait),
         ),
         stateless(
             Method {
@@ -378,14 +394,6 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Thread".to_string(),
-                name: "join".to_string(),
-                descriptor: MethodType::from_descriptor("()V").unwrap(),
-            },
-            Arc::new(thread_join),
-        ),
-        stateless(
-            Method {
-                class: "java.lang.Thread".to_string(),
                 name: "setPriority0".to_string(),
                 descriptor: MethodType::from_descriptor("(I)V").unwrap(),
             },
@@ -398,14 +406,6 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()Z").unwrap(),
             },
             Arc::new(thread_is_alive),
-        ),
-        stateless(
-            Method {
-                class: "java.lang.Thread".to_string(),
-                name: "join".to_string(),
-                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
-            },
-            Arc::new(thread_join_millis),
         ),
         stateless(
             Method {
@@ -806,6 +806,25 @@ fn object_get_class(args: &Args) -> (Option<Value>, Option<Value>) {
     (Some(Value::Reference(class_ref)), None)
 }
 
+fn array_new_array(args: &Args) -> (Option<Value>, Option<Value>) {
+    let component_ref = args.params[0].reference();
+    let component_obj = args.runtime.heap.get_object(component_ref);
+
+    let name_ref = component_obj.get_field(&FieldKey {
+        class: "java.lang.String".to_string(),
+        name: "name".to_string(),
+        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
+    }).reference();
+    let name = args.runtime.heap.get_string(name_ref);
+    let class = args.runtime.method_area.load_outer_class(&name);
+
+    let length = args.params[1].int();
+
+    let array = args.runtime.heap.new_array(class, length);
+
+    (Some(Value::Reference(array)), None)
+}
+
 fn object_clone(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let object_obj = args.runtime.heap.get(object_ref);
@@ -813,6 +832,58 @@ fn object_clone(args: &Args) -> (Option<Value>, Option<Value>) {
     let copied = args.runtime.heap.copy(object_obj);
 
     (Some(Value::Reference(copied)), None)
+}
+
+fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let object_ref = args.params[0].reference();
+    let millis = args.params[1].long();
+
+    let sync = thread.locks.remove(&object_ref.0).expect("Do not hold the lock on this object");
+    let reentry = sync.drop_all();
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+
+    let lock = &object_obj.header().lock;
+
+    // Entering safe region!
+    thread.safe.enter();
+
+    let timeout = if millis.0 == 0 { None } else { Some(Duration::from_millis(millis.0 as u64)) };
+
+    lock.wait(timeout);
+
+    thread.safe.exit();
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+    let lock = &object_obj.header().lock;
+    thread.safe.enter();
+    let mut sync = lock.lock();
+    sync.reentry = reentry;
+    thread.locks.insert(object_ref.0, sync);
+
+    thread.safe.exit();
+
+    (None, None)
+}
+
+fn object_notify_all(args: &Args) -> (Option<Value>, Option<Value>) {
+
+    let thread = unsafe { args.thread.cast_mut().as_mut().unwrap() };
+
+    let object_ref = args.params[0].reference();
+
+    if !thread.locks.contains_key(&object_ref.0) {
+        panic!("Should have ownership of the sync!");
+    }
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+    let lock = &object_obj.header().lock;
+    lock.notify_all();
+
+    (None, None)
 }
 
 fn object_hash_code(args: &Args) -> (Option<Value>, Option<Value>) {
@@ -874,7 +945,7 @@ fn fill_in_stack_trace(args: &Args) -> (Option<Value>, Option<Value>) {
         name: format!("<fill-in-stack-trace-{:?}-{}>", current().id(), thread_rng().next_u64()),
         flags: ClassFlags { bits: 0 },
         const_pool: ConstPool {
-            pool: HashMap::new(),
+            pool: HashMap::with_hasher(BuildNoHashHasher::default()),
         },
         super_class: None,
         interfaces: vec![],
@@ -1081,8 +1152,6 @@ fn thread_start(args: &Args) -> (Option<Value>, Option<Value>) {
     let runtime = args.runtime.clone();
     let class = thread_obj.class().name.clone();
 
-    runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), thread_ref));
-
     Builder::new().name(name.clone()).spawn(move || {
         let const_pool = &thread_obj.class().const_pool as *const ConstPool;
         let method = thread_obj.class().find_method(&MethodKey {
@@ -1112,44 +1181,6 @@ pub fn thread_sleep(args: &Args) -> (Option<Value>, Option<Value>) {
     args.enter_safe();
     sleep(Duration::from_millis(millis as u64));
     args.exit_safe();
-    (None, None)
-}
-
-pub fn thread_join(args: &Args) -> (Option<Value>, Option<Value>) {
-    let thread_ref = args.params[0].reference();
-    let thread_obj = args.runtime.heap.get_object(thread_ref);
-
-    let name_ref = thread_obj.get_field(&FieldKey {
-        class: "java.lang.Thread".to_string(),
-        name: "name".to_string(),
-        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
-    }).reference();
-    let name = args.runtime.heap.get_string(name_ref);
-
-    args.enter_safe();
-    args.runtime.threads.get(&name).unwrap().join();
-    args.exit_safe();
-
-    (None, None)
-}
-
-pub fn thread_join_millis(args: &Args) -> (Option<Value>, Option<Value>) {
-    let thread_ref = args.params[0].reference();
-    let thread_obj = args.runtime.heap.get_object(thread_ref);
-
-    let millis = args.params[1].long();
-
-    let name_ref = thread_obj.get_field(&FieldKey {
-        class: "java.lang.Thread".to_string(),
-        name: "name".to_string(),
-        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
-    }).reference();
-    let name = args.runtime.heap.get_string(name_ref);
-
-    args.enter_safe();
-    args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
-    args.exit_safe();
-
     (None, None)
 }
 
@@ -1388,7 +1419,7 @@ fn thread_is_alive(args: &Args) -> (Option<Value>, Option<Value>) {
         descriptor: FieldType::Int,
     }).int();
 
-    let is_alive = if thread_status.0 != 0 { 1 } else { 0 };
+    let is_alive = if thread_status.0 == 1 { 1 } else { 0 };
 
     (Some(Value::Int(Int(is_alive))), None)
 }

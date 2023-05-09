@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
+use nohash_hasher::BuildNoHashHasher;
 
 use rand::{RngCore, thread_rng};
 
@@ -18,7 +19,7 @@ pub mod sync;
 
 pub struct Heap {
     pub allocator: Allocator,
-    references: RwLock<HashMap<Reference, Heaped>>,
+    references: RwLock<HashMap<u32, Heaped, BuildNoHashHasher<u32>>>,
     class_objects: OnceMap<String, Reference>,
     string_constants: OnceMap<String, Reference>,
     static_objects: OnceMap<String, Reference>,
@@ -27,10 +28,15 @@ pub struct Heap {
 unsafe impl Send for Heap {}
 
 impl Heap {
-    pub fn retain(&self, retain: &HashSet<Reference>) {
+    pub fn num_objects(&self) -> usize {
+        let refs = self.references.read().unwrap();
+        refs.len()
+    }
+
+    pub fn retain(&self, retain: &HashSet<u32, BuildNoHashHasher<u32>>) {
         let mut references = self.references.write().unwrap();
 
-        let refs_to_remove: Vec<Reference> = references.keys()
+        let refs_to_remove: Vec<u32> = references.keys()
             .filter(|key| !retain.contains(key))
             .map(|key| *key)
             .collect();
@@ -40,10 +46,14 @@ impl Heap {
         }
     }
 
+    pub fn clear(&self) {
+        self.allocator.swap();
+    }
+
     pub fn new() -> Self {
         Heap {
             allocator: Allocator::new(),
-            references: RwLock::new(HashMap::new()),
+            references: RwLock::new(HashMap::with_hasher(BuildNoHashHasher::default())),
             class_objects: OnceMap::new(),
             string_constants: OnceMap::new(),
             static_objects: OnceMap::new(),
@@ -70,13 +80,13 @@ impl Heap {
 
     pub fn get(&self, reference: Reference) -> Heaped {
         let mut references = self.references.write().unwrap();
-        let heaped = references.get_mut(&reference);
-        heaped.unwrap().clone()
+        let heaped = references.get_mut(&reference.0);
+        heaped.expect(format!("Failed to find reference {}", reference.0).as_str()).clone()
     }
 
     pub fn set(&self, reference: Reference, heaped: Heaped) {
         let mut references = self.references.write().unwrap();
-        references.insert(reference, heaped);
+        references.insert(reference.0, heaped);
     }
 
     pub fn get_static(&self, class: &ObjectClass) -> Reference {
@@ -97,7 +107,7 @@ impl Heap {
 
     pub fn get_object(&self, reference: Reference) -> Object {
         let references = self.references.read().unwrap();
-        match references.get(&reference).unwrap() {
+        match references.get(&reference.0).unwrap() {
             Heaped::Object(object) => object.clone(),
             _ => panic!("")
         }
@@ -117,7 +127,7 @@ impl Heap {
 
     pub fn get_array(&self, reference: Reference) -> Array {
         let references = self.references.read().unwrap();
-        match references.get(&reference).unwrap() {
+        match references.get(&reference.0).unwrap() {
             Heaped::Array(array) => array.clone(),
             _ => panic!("")
         }
@@ -172,13 +182,13 @@ impl Heap {
         // TODO: This is probably an awful way to allocate references!
         let reference = {
             let mut next_ref = Reference(rng.next_u32());
-            while references.contains_key(&next_ref) {
+            while references.contains_key(&next_ref.0) {
                 next_ref = Reference(rng.next_u32());
             }
             next_ref
         };
 
-        references.insert(reference, heaped);
+        references.insert(reference.0, heaped);
         reference
     }
 

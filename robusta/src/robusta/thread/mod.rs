@@ -1,17 +1,17 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use nohash_hasher::BuildNoHashHasher;
 use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
-use tracing::{debug, trace};
+use tracing::debug;
 
-use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
 use crate::instruction::instruction;
-use crate::java::{CategoryOne, MethodType, Reference, Value};
+use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference, Value};
 use crate::log;
-use crate::method_area::{ObjectClass, Method};
-use crate::method_area::const_pool::{ConstPool, MethodKey};
+use crate::method_area::{Method, ObjectClass};
+use crate::method_area::const_pool::{ConstPool, FieldKey, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
 
@@ -32,11 +32,9 @@ impl Safe {
 
     /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
-        // trace!("enter safe");
         let mut lock = self.state.lock();
         lock.0 = true;
         self.wait.notify_all();
-        // trace!("entered safe");
     }
 
     pub fn start_gc(&self) {
@@ -53,7 +51,6 @@ impl Safe {
 
     /// Wait for GC to end.
     pub fn exit(&self) {
-        // trace!("exiting safe");
         let mut lock = self.state.lock();
         while lock.1 {
             self.wait.wait_while(&mut lock, |(_, gc)| {
@@ -61,14 +58,12 @@ impl Safe {
             });
         }
         lock.0 = false;
-        // trace!("exited safe");
     }
 
     pub fn end_gc(&self) {
         let mut lock = self.state.lock();
         lock.1 = false;
         self.wait.notify_all();
-        trace!("Started thread {}", self.name.as_str());
     }
 
     pub fn safe_region(&self) {
@@ -81,7 +76,7 @@ impl Safe {
 pub struct Thread {
     pub name: String,
     pub reference: Option<Reference>,
-    pub locks: HashMap<Reference, Synchronized>,
+    pub locks: HashMap<u32, Synchronized, BuildNoHashHasher<u32>>,
     pub safe: Safe,
     /// A reference to the common runtime areas that are shared across one instance of a
     /// running program.
@@ -93,12 +88,13 @@ pub struct Thread {
 }
 
 unsafe impl Send for Thread {}
+
 unsafe impl Sync for Thread {}
 
 impl Thread {
     pub fn enter_monitor(&mut self, object_ref: Reference) {
-        if self.locks.contains_key(&object_ref) {
-            let sync = self.locks.get_mut(&object_ref).unwrap();
+        if self.locks.contains_key(&object_ref.0) {
+            let sync = self.locks.get_mut(&object_ref.0).unwrap();
             sync.enter();
         } else {
             let object = self.runtime.heap.get_object(object_ref);
@@ -106,15 +102,15 @@ impl Thread {
             self.safe.enter();
             let sync = header.lock.lock();
             self.safe.exit();
-            self.locks.insert(object_ref, sync);
+            self.locks.insert(object_ref.0, sync);
         }
     }
 
     pub fn exit_monitor(&mut self, object_ref: Reference) {
-        let sync = self.locks.get_mut(&object_ref).unwrap();
+        let sync = self.locks.get_mut(&object_ref.0).unwrap();
         let should_remove = sync.exit();
         if should_remove {
-            let sync = self.locks.remove(&object_ref).unwrap();
+            let sync = self.locks.remove(&object_ref.0).unwrap();
             drop(sync);
         }
     }
@@ -146,7 +142,7 @@ impl Thread {
             pc: 0,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         });
 
@@ -166,7 +162,6 @@ impl Thread {
 
         while self.stack.len() > depth {
             self.next();
-
         }
 
         // We've hit our native stub frame with the result.
@@ -186,10 +181,6 @@ impl Thread {
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
                class: String, pool: *const ConstPool, method: *const Method, args: Vec<Value>) -> Arc<Self> {
-        reference.map(|reference| {
-            runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
-        });
-
         let mut frame = Frame {
             class,
             const_pool: pool,
@@ -199,7 +190,7 @@ impl Thread {
             pc: 0,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
         let mut i = 0;
@@ -211,7 +202,7 @@ impl Thread {
         let thread = Arc::new(Thread {
             name: name.clone(),
             reference,
-            locks: HashMap::new(),
+            locks: HashMap::with_hasher(BuildNoHashHasher::default()),
             safe: Safe::new(name.clone()),
             runtime: runtime.clone(),
             stack: vec![frame],
@@ -232,18 +223,26 @@ impl Thread {
         while !self.stack.is_empty() {
             self.next();
         }
-        debug!(target: log::THREAD, method=method_name, "Ended thread");
+        debug!(target: log::THREAD, method=method_name, "Ended thread instructions");
+
         // Forever safe!
         self.safe.enter();
 
-        self.reference.map(|r| {
-            self.runtime.heap.end_thread(r);
-            self.runtime.threads.get(&self.name).unwrap().end();
-        });
+        // Notify all waiting listeners
+        if let Some(thread_ref) = self.reference {
+            let thread_obj = self.runtime.heap.get_object(thread_ref);
+            thread_obj.set_field(&FieldKey {
+                class: "java.lang.Thread".to_string(),
+                name: "threadStatus".to_string(),
+                descriptor: FieldType::Int,
+            }, Value::Int(Int(2)));
+            thread_obj.header().lock.notify_all();
+        }
+
+        debug!(target: log::THREAD, method=method_name, "Ended thread");
     }
 
     pub fn next(&mut self) {
-
         self.safe.safe_region();
 
         let curr_frame = self.stack.last_mut().unwrap();
@@ -260,7 +259,7 @@ impl Thread {
                     thread,
                     runtime: self.runtime.clone(),
                     params: args,
-                }
+                },
             );
             self.stack.pop();
             if let Some(ex) = ex {
@@ -294,7 +293,7 @@ impl Thread {
             method,
             native: None,
             native_args: vec![],
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
 
@@ -317,7 +316,7 @@ impl Thread {
             method,
             native: Some(plugin),
             native_args: args.clone(),
-            native_roots: HashSet::new(),
+            native_roots: HashSet::with_hasher(BuildNoHashHasher::default()),
             native_ex: None,
         };
 
@@ -325,14 +324,13 @@ impl Thread {
         for arg in args {
             frame.local_vars.store_value(idx, arg.clone());
             if let Value::Reference(reference) = arg {
-                frame.native_roots.insert(reference);
+                frame.native_roots.insert(reference.0);
             }
             idx += arg.category() as u16;
         }
 
         self.stack.push(frame);
     }
-
 }
 
 /// A single frame in a JVM thread's stack.
@@ -350,7 +348,7 @@ pub struct Frame {
     /// For native methods only.
     pub native: Option<Arc<dyn Plugin>>,
     pub native_args: Vec<Value>,
-    pub native_roots: HashSet<Reference>,
+    pub native_roots: HashSet<u32, BuildNoHashHasher<u32>>,
     pub native_ex: Option<Reference>,
 }
 
@@ -420,11 +418,11 @@ impl OperandStack {
     }
 
     /// Get the roots out of the operand stack.
-    pub fn roots(&self) -> HashSet<Reference> {
+    pub fn roots(&self) -> HashSet<u32, BuildNoHashHasher<u32>> {
         self.stack.iter()
             .filter_map(|v| {
                 match v {
-                    Value::Reference(reference) => Some(*reference),
+                    Value::Reference(reference) => Some(reference.0),
                     _ => None
                 }
             })
@@ -445,20 +443,20 @@ impl OperandStack {
 /// For further information, see [the spec](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-2.html#jvms-2.6.1).
 pub struct LocalVars {
     // Very important we track which of these are references!
-    map: HashMap<u16, Value>,
+    map: HashMap<u16, Value, BuildNoHashHasher<u16>>,
 }
 
 impl LocalVars {
     pub fn new() -> Self {
-        LocalVars { map: HashMap::new() }
+        LocalVars { map: HashMap::with_hasher(BuildNoHashHasher::default()) }
     }
 
     /// Get the roots from this local vars for GC.
-    pub fn roots(&self) -> HashSet<Reference> {
+    pub fn roots(&self) -> HashSet<u32, BuildNoHashHasher<u32>> {
         self.map.values()
             .filter_map(|v| {
                 match v {
-                    Value::Reference(reference) => Some(*reference),
+                    Value::Reference(reference) => Some(reference.0),
                     _ => None
                 }
             }).collect()

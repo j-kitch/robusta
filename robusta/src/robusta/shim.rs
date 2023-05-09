@@ -1,4 +1,5 @@
-use maplit::hashmap;
+use std::collections::HashMap;
+use nohash_hasher::BuildNoHashHasher;
 use crate::class_file::Code;
 use crate::collection::once::Once;
 use crate::java::MethodType;
@@ -6,69 +7,31 @@ use crate::method_area::{ObjectClass, ClassFlags, Method};
 use crate::method_area::const_pool::{ClassKey, Const, ConstPool, MethodKey, SymbolicReference};
 
 pub fn create_main_thread() -> ObjectClass {
+    let mut pool = HashMap::with_hasher(BuildNoHashHasher::default());
+    pool.insert(1, Const::Class(SymbolicReference {
+        const_key: ClassKey { name: "sun.misc.Launcher".to_string() },
+        resolved: Once::new(),
+    }));
+    pool.insert(2, Const::Method(SymbolicReference {
+        const_key: MethodKey {
+            class: "sun.misc.Launcher".to_string(),
+            name: "<init>".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap(),
+        },
+        resolved: Once::new(),
+    }));
+    pool.insert(3, Const::Method(SymbolicReference {
+        const_key: MethodKey {
+            class: "java.lang.System".to_string(),
+            name: "initializeSystemClass".to_string(),
+            descriptor: MethodType::from_descriptor("()V").unwrap()
+        },
+        resolved: Once::new(),
+    }));
     ObjectClass {
         name: "<main-thread>".to_string(),
         flags: ClassFlags { bits: 0 },
-        const_pool: ConstPool {
-            pool: hashmap! {
-                // 1 => Const::Class(SymbolicReference {
-                //     const_key: ClassKey { name: "java.lang.ThreadGroup".to_string() },
-                //     resolved: Once::new(),
-                // }),
-                // 2 => Const::Class(SymbolicReference {
-                //     const_key: ClassKey { name: "java.lang.Thread".to_string() },
-                //     resolved: Once::new(),
-                // }),
-                // 3 => Const::Method(SymbolicReference {
-                //     const_key: MethodKey {
-                //         class: "java.lang.ThreadGroup".to_string(),
-                //         name: "<init>".to_string(),
-                //         descriptor: MethodType::from_descriptor("()V").unwrap(),
-                //     },
-                //     resolved: Once::new()
-                // }),
-                //  4 => Const::Method(SymbolicReference {
-                //     const_key: MethodKey {
-                //         class: "java.lang.ThreadGroup".to_string(),
-                //         name: "<init>".to_string(),
-                //         descriptor: MethodType::from_descriptor("(Ljava/lang/Void;Ljava/lang/ThreadGroup;Ljava/lang/String;)V").unwrap(),
-                //     },
-                //     resolved: Once::new()
-                // }),
-                // 5 => Const::String(SymbolicReference {
-                //     const_key: "main".to_string(),
-                //     resolved: Once::new()
-                // }),
-                // 6 => Const::Method(SymbolicReference {
-                //     const_key: MethodKey {
-                //         class: "java.lang.Thread".to_string(),
-                //         name: "<init>".to_string(),
-                //         descriptor: MethodType::from_descriptor("(Ljava/lang/ThreadGroup;Ljava/lang/String;)V").unwrap(),
-                //     },
-                //     resolved: Once::new()
-                // }),new
-                1 => Const::Class(SymbolicReference {
-                    const_key: ClassKey { name: "sun.misc.Launcher".to_string() },
-                    resolved: Once::new(),
-                }),
-                2 => Const::Method(SymbolicReference {
-                    const_key: MethodKey {
-                        class: "sun.misc.Launcher".to_string(),
-                        name: "<init>".to_string(),
-                        descriptor: MethodType::from_descriptor("()V").unwrap(),
-                    },
-                    resolved: Once::new(),
-                }),
-                3 => Const::Method(SymbolicReference {
-                    const_key: MethodKey {
-                        class: "java.lang.System".to_string(),
-                        name: "initializeSystemClass".to_string(),
-                        descriptor: MethodType::from_descriptor("()V").unwrap()
-                    },
-                    resolved: Once::new(),
-                })
-            }
-        },
+        const_pool: ConstPool { pool },
         super_class: None,
         interfaces: vec![],
         instance_fields: vec![],

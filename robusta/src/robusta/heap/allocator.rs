@@ -303,6 +303,10 @@ impl Allocator {
         }
     }
 
+    pub fn swap(&self) {
+        self.gen.swap();
+    }
+
     pub fn set_rt(&self, rt: Arc<Runtime>) {
         unsafe {
             let alloc = self as *const Allocator;

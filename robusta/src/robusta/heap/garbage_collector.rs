@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::mem::size_of;
-use std::ptr::slice_from_raw_parts_mut;
+use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -8,6 +8,7 @@ use std::thread;
 use std::thread::{Builder, current, scope};
 use std::time::Duration;
 
+use nohash_hasher::BuildNoHashHasher;
 use tracing::{debug, trace};
 
 use crate::heap::{Heap, Heaped};
@@ -138,10 +139,7 @@ pub fn start_gc_thread() -> Sender<Arc<Runtime>> {
     Builder::new()
         .name("GC-Copy".to_string())
         .spawn(move || {
-            let mut collector = CopyCollector {
-                start: receiver,
-                gcs: 0,
-            };
+            let mut collector = CopyCollector::new(receiver);
             collector.run()
         }).unwrap();
 
@@ -149,11 +147,102 @@ pub fn start_gc_thread() -> Sender<Arc<Runtime>> {
 }
 
 impl CopyCollector {
+    pub fn new(start: Receiver<Arc<Runtime>>) -> Self {
+        CopyCollector { start, gcs: 0 }
+    }
+
     pub fn run(&mut self) {
         loop {
             let runtime = self.start.recv().unwrap();
             self.gc(runtime);
         }
+    }
+
+    pub fn visiting(&mut self, runtime: &Arc<Runtime>, roots: HashSet<u32, BuildNoHashHasher<u32>>) -> HashSet<u32, BuildNoHashHasher<u32>> {
+        let heap = &runtime.heap;
+
+        let mut visited = HashSet::with_capacity_and_hasher(runtime.heap.num_objects(), BuildNoHashHasher::default());
+        visited.insert(0);
+        let mut remaining_to_visit = roots;
+
+        while remaining_to_visit.len() > 0 {
+            let next_object = remaining_to_visit.iter().next().unwrap().clone();
+            remaining_to_visit.remove(&next_object);
+            visited.insert(next_object);
+
+            // Copy object over to new set.
+            let value = heap.get(Reference(next_object));
+            match value {
+                Heaped::Array(mut array) => {
+                    let header = unsafe { array.header.as_ref().unwrap() };
+                    let start = array.header as usize;
+                    let size = size_of::<ArrayHeader>() + header.length;
+
+                    trace!(target: log::GC, gen="gen-1", obj="array", start, size, "mark & copy");
+
+                    let new_start = heap.allocator.gen.copy(start, size);
+
+                    let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
+                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
+                    dest.copy_from_slice(source);
+
+                    // Need to update pointers in heap.
+                    array.header = new_start as *mut ArrayHeader;
+                    array.data = unsafe { new_start.add(size_of::<ArrayHeader>()) };
+                    heap.set(Reference(next_object), Heaped::Array(array));
+
+                    // If its an array of references, we want to add all of those to the set.
+                    if header.component.is_reference() {
+                        remaining_to_visit.extend(array.as_ref_slice().iter()
+                            .filter(|reference| !visited.contains(*reference)));
+                    }
+                }
+                Heaped::Object(mut object) => {
+                    let header = unsafe { object.header.as_ref().unwrap() };
+                    let class = unsafe { header.class.as_ref().unwrap() };
+                    let start = object.header as usize;
+                    let size = size_of::<ObjectHeader>() + class.instance_width;
+
+                    trace!(target: log::GC, gen="gen-1", obj="object", start, size, "mark & copy");
+
+                    let new_start = heap.allocator.gen.copy(start, size);
+
+                    let new_header: *const ObjectHeader = new_start.cast();
+                    let new_data: *const u8 = unsafe { new_start.add(size_of::<ObjectHeader>()).cast_const() };
+
+                    unsafe {
+                        // Move the header (careful to move the lock).
+                        let new_header = new_header.cast_mut().as_mut().unwrap();
+                        new_header.class = header.class;
+                        new_header.lock = header.lock.move_me();
+                        new_header.hash_code = header.hash_code;
+                        object.header = new_header as *mut ObjectHeader;
+
+                        // Move the data.
+                        let new_data = slice_from_raw_parts_mut(new_data.cast_mut(), class.instance_width).as_mut().unwrap();
+                        let old_data = slice_from_raw_parts(object.data, class.instance_width).as_ref().unwrap();
+                        new_data.copy_from_slice(old_data);
+                        object.data = new_data.as_mut_ptr();
+                    }
+
+                    heap.set(Reference(next_object), Heaped::Object(object));
+
+                    // For every reference in the objects fields, add to set.
+                    for parent in class.parents() {
+                        for field in &parent.instance_fields {
+                            if field.descriptor.is_reference() {
+                                let reference = object.field_from(field).reference().0;
+                                if !visited.contains(&reference) {
+                                    remaining_to_visit.insert(reference);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        visited
     }
 
     pub fn gc(&mut self, runtime: Arc<Runtime>) {
@@ -181,7 +270,7 @@ impl CopyCollector {
         debug!(target: log::GC, "All threads stopped");
 
 
-        let mut roots: HashSet<Reference> = HashSet::new();
+        let mut roots: HashSet<u32, BuildNoHashHasher<u32>> = HashSet::with_capacity_and_hasher(runtime.heap.num_objects(), BuildNoHashHasher::default());
         for thread in threads.iter() {
             let thread_roots = thread_roots(thread.as_ref());
             roots.extend(thread_roots.iter());
@@ -192,77 +281,7 @@ impl CopyCollector {
         let percentage = (100.0 * (used as f64)) / HEAP_SIZE as f64;
         debug!(target: log::GC, gen="gen-1", used=format!("{}mb", used / 1024 / 1024), percentage=format!("{:.2}%", percentage), "Starting Mark&Copy garbage collection");
 
-
-        let mut visited = HashSet::new();
-        let mut remaining_to_visit = roots;
-
-        while remaining_to_visit.len() > 0 {
-            let next_object = remaining_to_visit.iter().next().unwrap().clone();
-            remaining_to_visit.remove(&next_object);
-
-            // Copy object over to new set.
-            let value = heap.get(next_object);
-            match value {
-                Heaped::Array(mut array) => {
-                    let header = unsafe { array.header.as_ref().unwrap() };
-                    let start = array.header as usize;
-                    let size = size_of::<ArrayHeader>() + header.length;
-
-                    trace!(target: log::GC, gen="gen-1", obj="array", start, size, "mark & copy");
-
-                    let new_start = heap.allocator.gen.copy(start, size);
-
-
-                    let source = unsafe { slice_from_raw_parts_mut(array.header as *mut u8, size).as_mut().unwrap() };
-                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
-
-                    dest.copy_from_slice(source);
-
-                    // Need to update pointers in heap.
-                    array.header = new_start as *mut ArrayHeader;
-                    array.data = unsafe { new_start.add(size_of::<ArrayHeader>()) };
-                    heap.set(next_object, Heaped::Array(array));
-
-                    // If its an array of references, we want to add all of those to the set.
-                    if header.component.is_reference() {
-                        remaining_to_visit.extend(array.as_ref_slice().iter().map(|u32| Reference(*u32)));
-                    }
-                }
-                Heaped::Object(mut object) => {
-                    let header = unsafe { object.header.as_ref().unwrap() };
-                    let class = unsafe { header.class.as_ref().unwrap() };
-                    let start = object.header as usize;
-                    let size = size_of::<ObjectHeader>() + class.instance_width;
-
-                    trace!(target: log::GC, gen="gen-1", obj="object", start, size, "mark & copy");
-
-                    let new_start = heap.allocator.gen.copy(start, size);
-
-                    let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
-                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
-
-                    dest.copy_from_slice(source);
-
-                    // Need to update pointers in heap.
-                    object.header = new_start as *mut ObjectHeader;
-                    object.data = unsafe { new_start.add(size_of::<ObjectHeader>()) };
-                    heap.set(next_object, Heaped::Object(object));
-
-                    // For every reference in the objects fields, add to set.
-                    for parent in class.parents() {
-                        for field in &parent.instance_fields {
-                            if field.descriptor.is_reference() {
-                                let reference = object.field_from(field);
-                                remaining_to_visit.insert(reference.reference());
-                            }
-                        }
-                    }
-                }
-            }
-
-            visited.insert(next_object);
-            remaining_to_visit = remaining_to_visit.difference(&visited).map(|r| *r).collect();
-        }
+        let visited = self.visiting(&runtime, roots);
 
         // What is dead is dead - remove from heap.
         heap.retain(&visited);
@@ -285,11 +304,11 @@ impl CopyCollector {
 }
 
 /// Get all the root objects that a thread has access to.
-pub fn thread_roots(thread: &Thread) -> HashSet<Reference> {
-    let mut refs = HashSet::new();
+pub fn thread_roots(thread: &Thread) -> HashSet<u32, BuildNoHashHasher<u32>> {
+    let mut refs = HashSet::with_hasher(BuildNoHashHasher::default());
 
     // The thread instance for this thread itself.
-    thread.reference.map(|r| refs.insert(r));
+    thread.reference.map(|r| refs.insert(r.0));
 
     // Get all the local vars and operand stack references.
     for frame in &thread.stack {
@@ -301,29 +320,16 @@ pub fn thread_roots(thread: &Thread) -> HashSet<Reference> {
     refs
 }
 
-pub fn heap_roots(heap: &Heap) -> HashSet<Reference> {
-    let mut refs = HashSet::new();
+pub fn heap_roots(heap: &Heap) -> HashSet<u32, BuildNoHashHasher<u32>> {
+    let mut refs = HashSet::with_hasher(BuildNoHashHasher::default());
     // class objects are roots
     refs.extend(heap.class_objects.current_values().iter());
 
     // string constants are roots
     refs.extend(heap.string_constants.current_values().iter());
 
-    // TODO: Have we implemented static objects yet?
-    // info!("C");
     // // static fields are roots
-    // for reference in &heap.static_objects.current_values() {
-    //     info!("D, ref {}", reference.0);
-    //     let object = heap.get_object(*reference);
-    //     info!("E, {}", object.header as usize);
-    //     for field in &object.class().static_fields {
-    //
-    //         if field.descriptor.is_reference() {
-    //             let reference = object.field_from(field).reference();
-    //             refs.insert(reference);
-    //         }
-    //     }
-    // }
+    // refs.extend(heap.static_objects.current_values().iter());
 
     refs
 }

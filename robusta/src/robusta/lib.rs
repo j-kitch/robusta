@@ -1,5 +1,8 @@
+// #![feature(test)]
 //! This module defines the Robusta implementation of a Java Virtual Machine, as defined
 //! in the [specification](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html).
+
+// extern crate test;
 
 extern crate core;
 
@@ -24,10 +27,10 @@ pub mod collection;
 pub mod native;
 pub mod thread;
 mod instruction;
-mod loader;
-mod method_area;
-mod heap;
-mod runtime;
+pub mod loader;
+pub mod method_area;
+pub mod heap;
+pub mod runtime;
 mod log;
 mod shim;
 
@@ -57,7 +60,7 @@ impl VirtualMachine {
 
         let subscriber = fmt()
             .without_time()
-            // .with_ansi(false)
+            .with_ansi(false)
             .with_span_events(FmtSpan::FULL)
             .with_target(true)
             .with_level(true)
@@ -86,12 +89,10 @@ impl VirtualMachine {
             while jvm_init_t.stack.len() > 0 {
                 jvm_init_t.next();
             }
-
-            // Always safe.
-            jvm_init_t.safe.enter();
-
-            // jvm_init_t.stack.last_mut().unwrap().operand_stack.pop().reference()
         };
+
+        // Let's remove the JVM init thread.
+        runtime.threads2.write().unwrap().clear();
 
         let string_args: Vec<Reference> = args()
             .skip(1)

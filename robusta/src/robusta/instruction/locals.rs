@@ -21,6 +21,13 @@ pub fn istore_n(thread: &mut Thread, n: u16) {
     cur_frame.local_vars.store_value(n, value);
 }
 
+pub fn dstore_n(thread: &mut Thread, n: u16) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+    let value = cur_frame.operand_stack.pop();
+
+    cur_frame.local_vars.store_value(n, value);
+}
+
 pub fn lstore_n(thread: &mut Thread, n: u16) {
     let cur_frame = thread.stack.last_mut().unwrap();
     let value = cur_frame.operand_stack.pop();
@@ -38,6 +45,14 @@ pub fn iload_n(thread: &mut Thread, n: u16) {
     let int = cur_frame.local_vars.load_cat_one(n).int();
 
     cur_frame.operand_stack.push(Value::Int(int));
+}
+
+pub fn dload_n(thread: &mut Thread, n: u16) {
+    let cur_frame = thread.stack.last_mut().unwrap();
+
+    let double = cur_frame.local_vars.load_value(n).double();
+
+    cur_frame.operand_stack.push(Value::Double(double));
 }
 
 pub fn lload_n(thread: &mut Thread, n: u16) {
@@ -65,6 +80,13 @@ pub fn istore(thread: &mut Thread) {
     frame.local_vars.store_value(index as u16, Value::Int(value));
 }
 
+pub fn fstore(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.operand_stack.pop().float();
+    frame.local_vars.store_value(index as u16, Value::Float(value));
+}
+
 pub fn lstore(thread: &mut Thread) {
     let frame = thread.stack.last_mut().unwrap();
     let index = frame.read_u8();
@@ -77,6 +99,13 @@ pub fn astore(thread: &mut Thread) {
     let index = frame.read_u8();
     let value = frame.operand_stack.pop().reference();
     frame.local_vars.store_value(index as u16, Value::Reference(value));
+}
+
+pub fn dstore(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.operand_stack.pop().double();
+    frame.local_vars.store_value(index as u16, Value::Double(value));
 }
 
 pub fn iload(thread: &mut Thread) {
@@ -97,6 +126,20 @@ pub fn lload(thread: &mut Thread) {
     let index = frame.read_u8();
     let value = frame.local_vars.load_value(index as u16).long();
     frame.operand_stack.push(Value::Long(value));
+}
+
+pub fn dload(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.local_vars.load_value(index as u16).double();
+    frame.operand_stack.push(Value::Double(value));
+}
+
+pub fn fload(thread: &mut Thread) {
+    let frame = thread.stack.last_mut().unwrap();
+    let index = frame.read_u8();
+    let value = frame.local_vars.load_value(index as u16).float();
+    frame.operand_stack.push(Value::Float(value));
 }
 
 pub fn aload(thread: &mut Thread) {

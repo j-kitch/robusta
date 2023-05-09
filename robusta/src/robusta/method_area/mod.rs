@@ -166,6 +166,14 @@ impl Class {
 }
 
 impl MethodArea {
+    pub fn clear(&self) {
+        unsafe {
+            let ptr: *const Classes = &self.classes as *const Classes;
+            let ptr = ptr.cast_mut();
+            ptr.write(Classes::new());
+        }
+    }
+
     pub fn new(heap: *const Heap) -> Self {
         MethodArea {
             loader: ClassFileLoader::new(vec![

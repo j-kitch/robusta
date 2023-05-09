@@ -1,6 +1,4 @@
 use std::sync::{Arc, RwLock};
-use chashmap::CHashMap;
-use crate::collection::wait::ThreadWait;
 
 use crate::heap::Heap;
 use crate::method_area::MethodArea;
@@ -11,7 +9,6 @@ pub struct Runtime {
     pub heap: Box<Heap>,
     pub method_area: Box<MethodArea>,
     pub native: Box<NativeMethods>,
-    pub threads: CHashMap<String, ThreadWait>,
     pub threads2: RwLock<Vec<Arc<Thread>>>,
 }
 
@@ -25,10 +22,13 @@ impl Runtime {
             heap,
             method_area,
             native: Box::new(NativeMethods::new()),
-            threads: CHashMap::new(),
             threads2: RwLock::new(Vec::new()),
         });
         rt.heap.allocator.set_rt(rt.clone());
         rt
+    }
+
+    pub fn clear(&self) {
+        self.method_area.clear();
     }
 }

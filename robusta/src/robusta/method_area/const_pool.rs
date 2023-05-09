@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use nohash_hasher::BuildNoHashHasher;
 
 use crate::class_file::ClassFile;
 use crate::class_file::const_pool as cp;
@@ -9,14 +10,14 @@ use crate::method_area::{Class, Field, Method};
 /// The run-time constant pool of a class is a collection of constants and symbolic references to
 /// other data in the JVM.
 pub struct ConstPool {
-    pub pool: HashMap<u16, Const>,
+    pub pool: HashMap<u16, Const, BuildNoHashHasher<u16>>,
 }
 
 unsafe impl Send for ConstPool {}
 
 impl ConstPool {
     pub fn new(file: &ClassFile) -> Self {
-        let pool: HashMap<u16, Const> = HashMap::new();
+        let pool: HashMap<u16, Const, BuildNoHashHasher<u16>> = HashMap::with_hasher(BuildNoHashHasher::default());
         let mut pool = ConstPool { pool };
 
         // Want to descend keys to ensure that when we visit references to other constants,

@@ -1,16 +1,25 @@
 [package]
 name = "robusta"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [lib]
 name = "robusta"
 path = "src/robusta/lib.rs"
 
+[[bench]]
+name = "bench_main"
+harness = false
+
+[dev-dependencies]
+criterion = "0.4.0"
+
 [dependencies]
+assert_cmd = "2.0.10"
 chashmap = "2.2.2"
 crossbeam = "0.8.2"
 maplit = "1.0.2"
+nohash-hasher = "0.2.0"
 parking_lot = {version = "0.12.1", features = ["arc_lock"] }
 rand = "0.8.5"
 signal-hook = "0.3.15"

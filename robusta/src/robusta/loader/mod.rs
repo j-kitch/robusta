@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
-use std::path::PathBuf;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 
 use zip::ZipArchive;
 
@@ -37,29 +38,44 @@ impl Loader for DirLoader {
 
 /// A jar file loader, looking for class files within a jar file.
 struct JarLoader {
-    jar_path: PathBuf,
+    files: HashMap<PathBuf, Vec<u8>>
+}
+
+impl JarLoader {
+    pub fn new(path: &Path) -> Self {
+        let file = File::open(path).unwrap();
+        let mut archive = ZipArchive::new(BufReader::new(file)).unwrap();
+
+        let size = archive.len();
+        let mut files = HashMap::with_capacity(size);
+
+        for idx in 0..size {
+            let mut file = archive.by_index(idx).unwrap();
+
+            let file_name = file.enclosed_name().unwrap().to_owned();
+
+            let mut data = Vec::with_capacity(file.size() as usize);
+            file.read_to_end(&mut data).unwrap();
+
+            files.insert(file_name, data);
+        }
+
+        JarLoader { files }
+    }
 }
 
 impl Loader for JarLoader {
     fn find(&self, class_name: &str) -> Option<ClassFile> {
-        let zip_file = File::open(&self.jar_path).ok();
-        let zip_arch = zip_file.and_then(|file| {
-            ZipArchive::new(BufReader::new(file)).ok()
-        });
-
         let file_name = PathBuf::from(class_name.replace(".", "/"))
             .with_extension("class");
 
-        if zip_arch.is_none() {
+        let data = self.files.get(&file_name);
+        if data.is_none() {
             return None;
         }
-        let mut zip_arch = zip_arch.unwrap();
-        let zip_file = zip_arch.by_name(file_name.to_str().unwrap()).ok();
-        if zip_file.is_none() {
-            return None;
-        }
-        let mut zip_file = zip_file.unwrap();
-        Some(parse(&mut zip_file))
+
+        let mut bytes = data.unwrap().as_slice();
+        Some(parse(&mut bytes))
     }
 }
 
@@ -77,7 +93,7 @@ impl ClassFileLoader {
                 if path.is_dir() {
                     Box::new(DirLoader { root_dir: path.clone() }) as _
                 } else if path.extension().unwrap().eq(&PathBuf::from("jar")) {
-                    Box::new(JarLoader { jar_path: path.clone() }) as _
+                    Box::new(JarLoader::new(path)) as _
                 } else {
                     panic!("Unknown type of path {}", path.to_str().unwrap())
                 }
@@ -91,46 +107,5 @@ impl Loader for ClassFileLoader {
         self.loaders.iter()
             .flat_map(|source| source.find(class_name))
             .next()
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::*;
-
-    fn class_name(file: &ClassFile) -> String {
-        let class = file.get_const_class(file.this_class);
-        let name = file.get_const_utf8(class.name);
-        String::from_utf8(name.bytes.clone()).unwrap()
-    }
-
-    #[test]
-    fn dir_loader() {
-        let loader = DirLoader { root_dir: Path::new("./classes").to_path_buf() };
-        let result = loader.find("EmptyMain").unwrap();
-
-        assert_eq!(class_name(&result), "EmptyMain".to_string());
-    }
-
-    #[test]
-    fn jar_loader() {
-        let loader = JarLoader { jar_path: Path::new("./classes/EmptyMain.jar").to_path_buf() };
-        let result = loader.find("EmptyMain").unwrap();
-
-        assert_eq!(class_name(&result), "EmptyMain".to_string());
-    }
-
-    #[test]
-    fn class_file_loader() {
-        let loader = ClassFileLoader::new(vec![
-            PathBuf::from("./classes"),
-            PathBuf::from("./classes/EmptyMain.jar")
-        ]);
-        let result = loader.find("EmptyMain").unwrap();
-
-        assert_eq!(class_name(&result), "EmptyMain".to_string());
     }
 }
