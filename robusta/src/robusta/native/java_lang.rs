@@ -9,10 +9,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use nohash_hasher::BuildNoHashHasher;
 
 use rand::{RngCore, thread_rng};
+use tracing::debug;
 
 use crate::class_file::Code;
 use crate::collection::once::Once;
-use crate::collection::wait::ThreadWait;
 use crate::heap::allocator::ArrayHeader;
 use crate::java::{Double, FieldType, Int, Long, MethodType, Reference, Value};
 use crate::method_area;
@@ -395,14 +395,6 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
         stateless(
             Method {
                 class: "java.lang.Thread".to_string(),
-                name: "join".to_string(),
-                descriptor: MethodType::from_descriptor("()V").unwrap(),
-            },
-            Arc::new(thread_join),
-        ),
-        stateless(
-            Method {
-                class: "java.lang.Thread".to_string(),
                 name: "setPriority0".to_string(),
                 descriptor: MethodType::from_descriptor("(I)V").unwrap(),
             },
@@ -415,14 +407,6 @@ pub fn java_lang_plugins() -> Vec<Arc<dyn Plugin>> {
                 descriptor: MethodType::from_descriptor("()Z").unwrap(),
             },
             Arc::new(thread_is_alive),
-        ),
-        stateless(
-            Method {
-                class: "java.lang.Thread".to_string(),
-                name: "join".to_string(),
-                descriptor: MethodType::from_descriptor("(J)V").unwrap(),
-            },
-            Arc::new(thread_join_millis),
         ),
         stateless(
             Method {
@@ -858,11 +842,12 @@ fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
     let object_ref = args.params[0].reference();
     let millis = args.params[1].long();
 
-    let mut sync = thread.locks.remove(&object_ref.0).expect("Do not hold the lock on this object");
-    let reentry = sync.reentry;
-    drop(sync);
+    let sync = thread.locks.remove(&object_ref.0).expect("Do not hold the lock on this object");
+    let reentry = sync.drop_all();
 
     let object_obj = args.runtime.heap.get_object(object_ref);
+
+    let class_name = unsafe { object_obj.header().class.as_ref().unwrap().name.as_str() };
 
     let lock = &object_obj.header().lock;
 
@@ -873,6 +858,11 @@ fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
 
     lock.wait(timeout);
 
+    thread.safe.exit();
+
+    let object_obj = args.runtime.heap.get_object(object_ref);
+    let lock = &object_obj.header().lock;
+    thread.safe.enter();
     let mut sync = lock.lock();
     sync.reentry = reentry;
     thread.locks.insert(object_ref.0, sync);
@@ -1165,8 +1155,6 @@ fn thread_start(args: &Args) -> (Option<Value>, Option<Value>) {
     let runtime = args.runtime.clone();
     let class = thread_obj.class().name.clone();
 
-    runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), thread_ref));
-
     Builder::new().name(name.clone()).spawn(move || {
         let const_pool = &thread_obj.class().const_pool as *const ConstPool;
         let method = thread_obj.class().find_method(&MethodKey {
@@ -1196,44 +1184,6 @@ pub fn thread_sleep(args: &Args) -> (Option<Value>, Option<Value>) {
     args.enter_safe();
     sleep(Duration::from_millis(millis as u64));
     args.exit_safe();
-    (None, None)
-}
-
-pub fn thread_join(args: &Args) -> (Option<Value>, Option<Value>) {
-    let thread_ref = args.params[0].reference();
-    let thread_obj = args.runtime.heap.get_object(thread_ref);
-
-    let name_ref = thread_obj.get_field(&FieldKey {
-        class: "java.lang.Thread".to_string(),
-        name: "name".to_string(),
-        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
-    }).reference();
-    let name = args.runtime.heap.get_string(name_ref);
-
-    args.enter_safe();
-    args.runtime.threads.get(&name).unwrap().join();
-    args.exit_safe();
-
-    (None, None)
-}
-
-pub fn thread_join_millis(args: &Args) -> (Option<Value>, Option<Value>) {
-    let thread_ref = args.params[0].reference();
-    let thread_obj = args.runtime.heap.get_object(thread_ref);
-
-    let millis = args.params[1].long();
-
-    let name_ref = thread_obj.get_field(&FieldKey {
-        class: "java.lang.Thread".to_string(),
-        name: "name".to_string(),
-        descriptor: FieldType::from_descriptor("Ljava/lang/String;").unwrap(),
-    }).reference();
-    let name = args.runtime.heap.get_string(name_ref);
-
-    args.enter_safe();
-    args.runtime.threads.get(&name).unwrap().join_millis(millis.0);
-    args.exit_safe();
-
     (None, None)
 }
 

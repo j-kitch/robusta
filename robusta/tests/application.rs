@@ -35,6 +35,24 @@ fn hash_code() {
 }
 
 #[test]
+fn wait_and_notify() {
+    let mut robusta = Command::cargo_bin("robusta").unwrap();
+
+    robusta
+        .current_dir("../")
+        .arg("WaitAndNotify")
+        .assert()
+        .success()
+        .code(0)
+        .stdout("First Message
+Second Message
+Waiting for notify
+Notified!
+")
+        .stderr("");
+}
+
+#[test]
 fn inheritance() {
     let mut robusta = Command::cargo_bin("robusta").unwrap();
 

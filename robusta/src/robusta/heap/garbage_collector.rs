@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::mem::size_of;
-use std::ptr::slice_from_raw_parts_mut;
+use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -13,6 +13,7 @@ use tracing::{debug, trace};
 
 use crate::heap::{Heap, Heaped};
 use crate::heap::allocator::{ArrayHeader, HEAP_SIZE, ObjectHeader};
+use crate::instruction::new;
 use crate::java::Reference;
 use crate::log;
 use crate::runtime::Runtime;
@@ -158,7 +159,7 @@ impl CopyCollector {
         }
     }
 
-    pub fn visiting(&mut self, runtime: &Arc<Runtime>, mut roots: HashSet<u32, BuildNoHashHasher<u32>>) -> HashSet<u32, BuildNoHashHasher<u32>> {
+    pub fn visiting(&mut self, runtime: &Arc<Runtime>, roots: HashSet<u32, BuildNoHashHasher<u32>>) -> HashSet<u32, BuildNoHashHasher<u32>> {
         let heap = &runtime.heap;
 
         let mut visited = HashSet::with_capacity_and_hasher(runtime.heap.num_objects(), BuildNoHashHasher::default());
@@ -207,13 +208,24 @@ impl CopyCollector {
 
                     let new_start = heap.allocator.gen.copy(start, size);
 
-                    let source = unsafe { slice_from_raw_parts_mut(object.header as *mut u8, size).as_mut().unwrap() };
-                    let dest = unsafe { slice_from_raw_parts_mut(new_start, size).as_mut().unwrap() };
-                    dest.copy_from_slice(source);
+                    let new_header: *const ObjectHeader = new_start.cast();
+                    let new_data: *const u8 = unsafe { new_start.add(size_of::<ObjectHeader>()).cast_const() };
 
-                    // Need to update pointers in heap.
-                    object.header = new_start as *mut ObjectHeader;
-                    object.data = unsafe { new_start.add(size_of::<ObjectHeader>()) };
+                    unsafe {
+                        // Move the header (careful to move the lock).
+                        let new_header = new_header.cast_mut().as_mut().unwrap();
+                        new_header.class = header.class;
+                        new_header.lock = header.lock.move_me();
+                        new_header.hash_code = header.hash_code;
+                        object.header = new_header as *mut ObjectHeader;
+
+                        // Move the data.
+                        let mut new_data = slice_from_raw_parts_mut(new_data.cast_mut(), class.instance_width).as_mut().unwrap();
+                        let old_data = slice_from_raw_parts(object.data, class.instance_width).as_ref().unwrap();
+                        new_data.copy_from_slice(old_data);
+                        object.data = new_data.as_mut_ptr();
+                    }
+
                     heap.set(Reference(next_object), Heaped::Object(object));
 
                     // For every reference in the objects fields, add to set.

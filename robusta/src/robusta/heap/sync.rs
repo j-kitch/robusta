@@ -1,8 +1,6 @@
-use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use std::thread::{current, park, park_timeout, Thread};
 use std::time::Duration;
-use chashmap::CHashMap;
 
 use parking_lot::{RawMutex, RawThreadId};
 use parking_lot::lock_api::{ArcReentrantMutexGuard, ReentrantMutex};
@@ -60,6 +58,13 @@ impl ObjectLock {
         }
         waiting.clear();
     }
+
+    pub fn move_me(&self) -> Self {
+        ObjectLock {
+            mutex: self.mutex.clone(),
+            waiting: self.waiting.clone(),
+        }
+    }
 }
 
 pub struct Synchronized {
@@ -77,5 +82,10 @@ impl Synchronized {
             self.reentry -= 1;
         }
         self.reentry == 0
+    }
+
+    pub fn drop_all(self) -> usize {
+        drop(self._guard);
+        self.reentry
     }
 }

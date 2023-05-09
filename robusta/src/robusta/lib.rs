@@ -92,7 +92,6 @@ impl VirtualMachine {
         };
 
         // Let's remove the JVM init thread.
-        runtime.threads.clear();
         runtime.threads2.write().unwrap().clear();
 
         let string_args: Vec<Reference> = args()

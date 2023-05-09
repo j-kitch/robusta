@@ -6,7 +6,6 @@ use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
 use tracing::{debug, trace};
 
-use crate::collection::wait::ThreadWait;
 use crate::heap::sync::Synchronized;
 use crate::instruction::instruction;
 use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference, Value};
@@ -33,11 +32,9 @@ impl Safe {
 
     /// Let GC know that we are ready to start GC!
     pub fn enter(&self) {
-        // trace!("enter safe");
         let mut lock = self.state.lock();
         lock.0 = true;
         self.wait.notify_all();
-        // trace!("entered safe");
     }
 
     pub fn start_gc(&self) {
@@ -54,7 +51,6 @@ impl Safe {
 
     /// Wait for GC to end.
     pub fn exit(&self) {
-        // trace!("exiting safe");
         let mut lock = self.state.lock();
         while lock.1 {
             self.wait.wait_while(&mut lock, |(_, gc)| {
@@ -62,14 +58,12 @@ impl Safe {
             });
         }
         lock.0 = false;
-        // trace!("exited safe");
     }
 
     pub fn end_gc(&self) {
         let mut lock = self.state.lock();
         lock.1 = false;
         self.wait.notify_all();
-        trace!("Started thread {}", self.name.as_str());
     }
 
     pub fn safe_region(&self) {
@@ -187,10 +181,6 @@ impl Thread {
 
     pub fn new(name: String, reference: Option<Reference>, runtime: Arc<Runtime>,
                class: String, pool: *const ConstPool, method: *const Method, args: Vec<Value>) -> Arc<Self> {
-        reference.map(|reference| {
-            runtime.threads.insert(name.clone(), ThreadWait::new(runtime.clone(), reference.clone()))
-        });
-
         let mut frame = Frame {
             class,
             const_pool: pool,
@@ -233,7 +223,10 @@ impl Thread {
         while !self.stack.is_empty() {
             self.next();
         }
-        debug!(target: log::THREAD, method=method_name, "Ended thread");
+        debug!(target: log::THREAD, method=method_name, "Ended thread instructions");
+
+        // Forever safe!
+        self.safe.enter();
 
         // Notify all waiting listeners
         if let Some(thread_ref) = self.reference {
@@ -246,15 +239,7 @@ impl Thread {
             thread_obj.header().lock.notify_all();
         }
 
-        // Forever safe!
-        self.safe.enter();
-
-        self.reference.map(|r| {
-            self.runtime.heap.end_thread(r);
-            if let Some(r) = self.runtime.threads.get(&self.name) {
-                r.end();
-            }
-        });
+        debug!(target: log::THREAD, method=method_name, "Ended thread");
     }
 
     pub fn next(&mut self) {
