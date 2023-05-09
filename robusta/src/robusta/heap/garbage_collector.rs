@@ -13,7 +13,6 @@ use tracing::{debug, trace};
 
 use crate::heap::{Heap, Heaped};
 use crate::heap::allocator::{ArrayHeader, HEAP_SIZE, ObjectHeader};
-use crate::instruction::new;
 use crate::java::Reference;
 use crate::log;
 use crate::runtime::Runtime;
@@ -220,7 +219,7 @@ impl CopyCollector {
                         object.header = new_header as *mut ObjectHeader;
 
                         // Move the data.
-                        let mut new_data = slice_from_raw_parts_mut(new_data.cast_mut(), class.instance_width).as_mut().unwrap();
+                        let new_data = slice_from_raw_parts_mut(new_data.cast_mut(), class.instance_width).as_mut().unwrap();
                         let old_data = slice_from_raw_parts(object.data, class.instance_width).as_ref().unwrap();
                         new_data.copy_from_slice(old_data);
                         object.data = new_data.as_mut_ptr();

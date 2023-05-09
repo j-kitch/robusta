@@ -1,16 +1,16 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use nohash_hasher::BuildNoHashHasher;
 
+use nohash_hasher::BuildNoHashHasher;
 use parking_lot::Condvar;
 use parking_lot::lock_api::Mutex;
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::heap::sync::Synchronized;
 use crate::instruction::instruction;
 use crate::java::{CategoryOne, FieldType, Int, MethodType, Reference, Value};
 use crate::log;
-use crate::method_area::{ObjectClass, Method};
+use crate::method_area::{Method, ObjectClass};
 use crate::method_area::const_pool::{ConstPool, FieldKey, MethodKey};
 use crate::native::{Args, Plugin};
 use crate::runtime::Runtime;
@@ -88,6 +88,7 @@ pub struct Thread {
 }
 
 unsafe impl Send for Thread {}
+
 unsafe impl Sync for Thread {}
 
 impl Thread {
@@ -161,7 +162,6 @@ impl Thread {
 
         while self.stack.len() > depth {
             self.next();
-
         }
 
         // We've hit our native stub frame with the result.
@@ -243,7 +243,6 @@ impl Thread {
     }
 
     pub fn next(&mut self) {
-
         self.safe.safe_region();
 
         let curr_frame = self.stack.last_mut().unwrap();
@@ -260,7 +259,7 @@ impl Thread {
                     thread,
                     runtime: self.runtime.clone(),
                     params: args,
-                }
+                },
             );
             self.stack.pop();
             if let Some(ex) = ex {
@@ -332,7 +331,6 @@ impl Thread {
 
         self.stack.push(frame);
     }
-
 }
 
 /// A single frame in a JVM thread's stack.

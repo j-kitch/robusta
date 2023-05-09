@@ -9,7 +9,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use nohash_hasher::BuildNoHashHasher;
 
 use rand::{RngCore, thread_rng};
-use tracing::debug;
 
 use crate::class_file::Code;
 use crate::collection::once::Once;
@@ -846,8 +845,6 @@ fn object_wait(args: &Args) -> (Option<Value>, Option<Value>) {
     let reentry = sync.drop_all();
 
     let object_obj = args.runtime.heap.get_object(object_ref);
-
-    let class_name = unsafe { object_obj.header().class.as_ref().unwrap().name.as_str() };
 
     let lock = &object_obj.header().lock;
 
